@@ -119,6 +119,41 @@ public class InventoryController {
         return toSummary(product, stockLevel);
     }
 
+    /**
+     * Per-branch at-a-glance counts so Owner can spot which branch needs
+     * restocking without switching the main view back and forth - Manager
+     * only ever gets their own branch back here too, same no-cross-branch-
+     * leak rule as every other endpoint in this controller.
+     */
+    @GetMapping("/branch-summary")
+    public List<BranchInventorySummary> branchSummary(Authentication authentication) {
+        Claims claims = claims(authentication);
+        String role = jwtService.extractRole(claims);
+        List<Branch> branches = "OWNER".equals(role)
+            ? branchRepository.findAll()
+            : List.of(resolveBranch(authentication, null));
+
+        List<Product> activeProducts = productRepository.findByActiveTrue();
+        return branches.stream()
+            .map(branch -> summarize(branch, activeProducts))
+            .toList();
+    }
+
+    private BranchInventorySummary summarize(Branch branch, List<Product> activeProducts) {
+        int inStockCount = 0;
+        int lowStockCount = 0;
+        for (Product product : activeProducts) {
+            InventorySummaryResponse summary = toSummary(product, findStockLevel(product, branch));
+            if (summary.quantity() > 0) {
+                inStockCount++;
+            }
+            if (summary.lowStock()) {
+                lowStockCount++;
+            }
+        }
+        return new BranchInventorySummary(branch.getCode(), inStockCount, lowStockCount);
+    }
+
     @GetMapping("/receipts")
     public List<StockReceiptResponse> receipts(
         @RequestParam(required = false) String branchCode, Authentication authentication) {

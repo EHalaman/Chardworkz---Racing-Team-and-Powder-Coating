@@ -21,6 +21,12 @@ export interface ReceiveStockRequest {
   branchCode: string | null;
 }
 
+export interface BranchInventorySummary {
+  branchCode: string;
+  inStockCount: number;
+  lowStockCount: number;
+}
+
 export interface StockReceipt {
   id: number;
   productName: string;
@@ -40,6 +46,12 @@ export class InventoryService {
     return this.http.get<InventoryItem[]>(`${environment.apiBaseUrl}/api/inventory`, {
       params: this.branchParams(branchCode),
     });
+  }
+
+  branchSummary(): Observable<BranchInventorySummary[]> {
+    return this.http.get<BranchInventorySummary[]>(
+      `${environment.apiBaseUrl}/api/inventory/branch-summary`,
+    );
   }
 
   receipts(branchCode?: string | null): Observable<StockReceipt[]> {

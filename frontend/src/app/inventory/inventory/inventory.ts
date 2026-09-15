@@ -1,6 +1,11 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { AuthService } from '../../core/auth';
-import { InventoryItem, InventoryService, StockReceipt } from '../inventory';
+import {
+  BranchInventorySummary,
+  InventoryItem,
+  InventoryService,
+  StockReceipt,
+} from '../inventory';
 
 @Component({
   selector: 'app-inventory',
@@ -16,6 +21,7 @@ export class Inventory implements OnInit {
   readonly submitting = signal(false);
   readonly editingThresholdFor = signal<number | null>(null);
   readonly selectedBranch = signal<string | null>(null);
+  readonly branchSummaries = signal<BranchInventorySummary[]>([]);
 
   readonly branchOptions = [
     { value: 'MAIN', label: 'Main Branch' },
@@ -35,6 +41,9 @@ export class Inventory implements OnInit {
     this.selectedBranch.set(this.auth.currentUser()?.branchCode ?? 'MAIN');
     this.loadInventory();
     this.loadReceipts();
+    if (this.isOwner) {
+      this.loadBranchSummaries();
+    }
   }
 
   selectBranch(branchCode: string): void {
@@ -42,6 +51,10 @@ export class Inventory implements OnInit {
     this.editingThresholdFor.set(null);
     this.loadInventory();
     this.loadReceipts();
+  }
+
+  summaryFor(branchCode: string): BranchInventorySummary | undefined {
+    return this.branchSummaries().find((summary) => summary.branchCode === branchCode);
   }
 
   startEditThreshold(item: InventoryItem): void {
@@ -69,6 +82,9 @@ export class Inventory implements OnInit {
             items.map((i) => (i.productId === updated.productId ? updated : i)),
           );
           this.editingThresholdFor.set(null);
+          if (this.isOwner) {
+            this.loadBranchSummaries();
+          }
         },
         error: () => this.errorMessage.set('Could not update the reorder threshold.'),
       });
@@ -121,6 +137,9 @@ export class Inventory implements OnInit {
           this.successMessage.set(`Received ${parsedQuantity} × "${updated.name}".`);
           setTimeout(() => this.successMessage.set(null), 3000);
           this.loadReceipts();
+          if (this.isOwner) {
+            this.loadBranchSummaries();
+          }
         },
         error: () => {
           this.submitting.set(false);
@@ -140,6 +159,15 @@ export class Inventory implements OnInit {
     this.inventoryService.receipts(this.selectedBranch()).subscribe({
       next: (receipts) => this.receipts.set(receipts),
       error: () => this.errorMessage.set('Could not load recent receipts.'),
+    });
+  }
+
+  private loadBranchSummaries(): void {
+    this.inventoryService.branchSummary().subscribe({
+      next: (summaries) => this.branchSummaries.set(summaries),
+      error: () => {
+        /* Non-critical: the branch buttons just render without count badges. */
+      },
     });
   }
 }
