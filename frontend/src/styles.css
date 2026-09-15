@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+@layer components {
+  .dashboard-card {
+    @apply rounded-3xl border border-gray-200 bg-surface p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800;
+  }
+}

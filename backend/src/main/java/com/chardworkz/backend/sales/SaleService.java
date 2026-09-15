@@ -1,0 +1,102 @@
+package com.chardworkz.backend.sales;
+
+import com.chardworkz.backend.account.Account;
+import com.chardworkz.backend.account.AccountRepository;
+import com.chardworkz.backend.branch.Branch;
+import com.chardworkz.backend.branch.BranchRepository;
+import com.chardworkz.backend.catalog.Product;
+import com.chardworkz.backend.catalog.ProductRepository;
+import com.chardworkz.backend.inventory.StockLevelRepository;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+
+/**
+ * Records a sale synced from the Angular offline queue (Q12). {@code
+ * request.id()} is the client-generated UUID assigned at the moment of sale;
+ * the same id resubmitted on a retried sync must be a no-op, not a duplicate
+ * sale or a second stock decrement - see {@link #recordSale}.
+ */
+@Service
+@RequiredArgsConstructor
+public class SaleService {
+
+    private final SaleRepository saleRepository;
+    private final SaleLineRepository saleLineRepository;
+    private final BranchRepository branchRepository;
+    private final AccountRepository accountRepository;
+    private final ProductRepository productRepository;
+    private final StockLevelRepository stockLevelRepository;
+
+    @Transactional
+    public SaleAckResponse recordSale(CreateSaleRequest request, String branchCode, Long employeeId) {
+        if (saleRepository.existsById(request.id())) {
+            // Idempotent replay of an already-synced sale: skip everything below,
+            // most importantly the stock decrement, or a retried sync would
+            // double-charge inventory for a sale that already happened.
+            return new SaleAckResponse(request.id(), true);
+        }
+
+        Branch branch = branchRepository.findByCode(branchCode)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown branch"));
+        Account employee = accountRepository.findById(employeeId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown employee"));
+
+        Sale sale = Sale.builder()
+            .id(request.id())
+            .branch(branch)
+            .employee(employee)
+            .paymentMethod(request.paymentMethod())
+            .paymentReference(request.paymentReference())
+            .soldAt(request.soldAt())
+            .syncedAt(Instant.now())
+            .subtotal(BigDecimal.ZERO)
+            .total(BigDecimal.ZERO)
+            .build();
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        List<SaleLine> lines = new ArrayList<>();
+        for (CreateSaleLineRequest lineRequest : request.lines()) {
+            Product product = productRepository.findById(lineRequest.productId())
+                .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Unknown product " + lineRequest.productId()));
+            BigDecimal lineTotal = lineRequest.unitPrice().multiply(BigDecimal.valueOf(lineRequest.quantity()));
+            subtotal = subtotal.add(lineTotal);
+
+            lines.add(SaleLine.builder()
+                .sale(sale)
+                .product(product)
+                .quantity(lineRequest.quantity())
+                .unitPrice(lineRequest.unitPrice())
+                .lineTotal(lineTotal)
+                .build());
+        }
+        // No discount/tax concept exists yet (reserved for later, like the
+        // payment_method/sku columns in DEC-007) - total mirrors subtotal.
+        sale.setSubtotal(subtotal);
+        sale.setTotal(subtotal);
+
+        try {
+            saleRepository.save(sale);
+            saleLineRepository.saveAll(lines);
+        } catch (DataIntegrityViolationException e) {
+            // A genuine race: two sync attempts for the same id landed concurrently
+            // and both passed the existsById check above. Treat the loser the same
+            // as an idempotent replay rather than surfacing a 500.
+            return new SaleAckResponse(request.id(), true);
+        }
+
+        for (CreateSaleLineRequest lineRequest : request.lines()) {
+            stockLevelRepository.clampDecrement(lineRequest.productId(), branch.getId(), lineRequest.quantity());
+        }
+
+        return new SaleAckResponse(request.id(), false);
+    }
+}

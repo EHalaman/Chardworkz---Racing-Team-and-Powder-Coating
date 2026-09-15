@@ -1,0 +1,232 @@
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome back</h1>
+    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+      Here's what's happening with your inventory today. All figures below are sample data — no
+      backend is wired up yet.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div *ngFor="let kpi of kpiCards" class="dashboard-card">
+      <p class="text-sm font-normal text-gray-500 dark:text-gray-400">{{ kpi.label }}</p>
+      <div class="mt-2 flex items-baseline gap-2">
+        <span class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ kpi.value }}</span>
+        <span
+          class="text-xs font-medium"
+          [class.text-primary]="kpi.trendUp"
+          [class.text-danger]="!kpi.trendUp"
+        >
+          {{ kpi.trend }}
+        </span>
+      </div>
+      <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">{{ kpi.caption }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div class="dashboard-card lg:col-span-2">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">
+          Inventory Statistics
+        </h2>
+        <div class="flex items-center gap-3 text-xs font-normal text-gray-500 dark:text-gray-400">
+          <span class="flex items-center gap-1.5"
+            ><span class="h-2 w-2 rounded-full bg-primary"></span>Stock In</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="h-2 w-2 rounded-full bg-secondary"></span>Stock Out</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="h-2 w-2 rounded-full bg-danger"></span>Stock Value</span
+          >
+        </div>
+      </div>
+      <div class="h-64">
+        <canvas baseChart [data]="barChartData" [options]="barChartOptions" [type]="'bar'"></canvas>
+      </div>
+    </div>
+
+    <div class="dashboard-card flex flex-col items-center">
+      <h2 class="mb-4 self-start text-base font-semibold text-gray-900 dark:text-gray-100">
+        Sales Overview
+      </h2>
+      <div class="relative h-44 w-44">
+        <canvas
+          baseChart
+          [data]="doughnutChartData"
+          [options]="doughnutChartOptions"
+          [type]="'doughnut'"
+        ></canvas>
+        <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span class="text-2xl font-bold text-gray-900 dark:text-gray-100"
+            >{{ salesGoalPercent }}%</span
+          >
+          <span class="text-xs font-normal text-gray-500 dark:text-gray-400">Sales Goal</span>
+        </div>
+      </div>
+      <div class="mt-4 flex w-full justify-between text-center">
+        <div>
+          <p class="text-xs font-normal text-gray-500 dark:text-gray-400">Number of sales</p>
+          <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            {{ numberOfSales }}
+          </p>
+        </div>
+        <div>
+          <p class="text-xs font-normal text-gray-500 dark:text-gray-400">Total Sales</p>
+          <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ totalSales }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div class="dashboard-card">
+      <h2 class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
+        Recent Activities
+      </h2>
+      <div class="space-y-2">
+        <div
+          *ngFor="let item of recentActivities"
+          class="flex items-center gap-3 rounded-xl bg-nav-bg p-3 dark:bg-slate-700/50"
+        >
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+            [class.bg-primary-light]="item.color === 'primary'"
+            [class.text-primary]="item.color === 'primary'"
+            [class.bg-secondary-light]="item.color === 'secondary'"
+            [class.text-secondary]="item.color === 'secondary'"
+            [class.bg-danger-light]="item.color === 'danger'"
+            [class.text-danger]="item.color === 'danger'"
+          >
+            <svg
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <ng-container [ngSwitch]="item.icon">
+                <path *ngSwitchCase="'add'" d="M12 5v14M5 12h14" />
+                <path *ngSwitchCase="'box'" d="m20 8-8-5-8 5v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8Z" />
+                <path *ngSwitchCase="'check'" d="m5 12 5 5L20 7" />
+                <path *ngSwitchCase="'undo'" d="M9 14 4 9l5-5" />
+                <path *ngSwitchCase="'undo'" d="M4 9h10a6 6 0 0 1 0 12H8" />
+              </ng-container>
+            </svg>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+              {{ item.title }}
+            </p>
+            <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+              {{ item.subtitle }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-card">
+      <h2 class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
+        Alerts &amp; Notifications
+      </h2>
+      <div class="space-y-2">
+        <div
+          *ngFor="let item of alerts"
+          class="flex items-center gap-3 rounded-xl bg-nav-bg p-3 dark:bg-slate-700/50"
+        >
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+            [class.bg-primary-light]="item.color === 'primary'"
+            [class.text-primary]="item.color === 'primary'"
+            [class.bg-secondary-light]="item.color === 'secondary'"
+            [class.text-secondary]="item.color === 'secondary'"
+            [class.bg-danger-light]="item.color === 'danger'"
+            [class.text-danger]="item.color === 'danger'"
+          >
+            <svg
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <ng-container [ngSwitch]="item.icon">
+                <path
+                  *ngSwitchCase="'alert'"
+                  d="M12 9v4m0 4h.01M10.3 3.9 2.5 17a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"
+                />
+                <path *ngSwitchCase="'clock'" d="M12 7v5l3 3" />
+                <circle *ngSwitchCase="'clock'" cx="12" cy="12" r="9" />
+                <path
+                  *ngSwitchCase="'warning'"
+                  d="M12 9v4m0 4h.01M10.3 3.9 2.5 17a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"
+                />
+                <path *ngSwitchCase="'pending'" d="M12 6v6l4 2" />
+                <circle *ngSwitchCase="'pending'" cx="12" cy="12" r="9" />
+              </ng-container>
+            </svg>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+              {{ item.title }}
+            </p>
+            <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+              {{ item.subtitle }}
+            </p>
+          </div>
+          <svg
+            class="h-4 w-4 shrink-0 text-gray-300 dark:text-gray-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m9 6 6 6-6 6" />
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-card">
+      <h2 class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
+        Top Product Recommendation
+      </h2>
+      <div class="space-y-2">
+        <div
+          *ngFor="let product of recommendations"
+          class="flex items-center gap-3 rounded-xl bg-nav-bg p-3 dark:bg-slate-700/50"
+        >
+          <div
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-sm font-semibold text-primary"
+          >
+            {{ product.name.charAt(0) }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+              {{ product.name }}
+            </p>
+            <p class="truncate text-xs font-normal text-gray-400 dark:text-gray-500">
+              ID:{{ product.id }}
+            </p>
+          </div>
+          <div class="shrink-0 text-right">
+            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {{ product.price }}
+            </p>
+            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+              {{ product.orders }} Orders
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

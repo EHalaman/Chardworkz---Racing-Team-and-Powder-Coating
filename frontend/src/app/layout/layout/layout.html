@@ -1,0 +1,283 @@
+<div class="flex h-screen flex-col bg-nav-bg dark:bg-slate-900">
+  <header
+    class="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-surface px-6 dark:border-slate-700 dark:bg-slate-800"
+  >
+    <div class="flex min-w-0 items-center gap-4">
+      <div class="flex shrink-0 items-center gap-2">
+        <div
+          class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white"
+        >
+          C
+        </div>
+        <span class="hidden text-sm font-semibold text-gray-900 dark:text-gray-100 sm:inline"
+          >ChardWorkz</span
+        >
+      </div>
+
+      <div class="flex min-w-0 items-center gap-1 overflow-x-auto">
+        <a
+          *ngFor="let tab of openTabs"
+          [routerLink]="tab.path"
+          [ngClass]="
+            tab.path === activeTabPath
+              ? 'bg-nav-bg border-gray-200 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-100'
+              : 'border-transparent text-gray-500 hover:bg-nav-bg dark:text-gray-400 dark:hover:bg-slate-700'
+          "
+          class="group flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+        >
+          <span class="max-w-[10rem] truncate">{{ tab.title }}</span>
+          <button
+            *ngIf="openTabs.length > 1"
+            type="button"
+            (click)="closeTab($event, tab.path)"
+            aria-label="Close tab"
+            class="rounded-full p-0.5 text-gray-400 opacity-0 transition-opacity hover:bg-gray-300/50 hover:text-gray-700 group-hover:opacity-100 dark:hover:bg-slate-600 dark:hover:text-gray-200"
+          >
+            <svg
+              class="h-3.5 w-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            >
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </a>
+      </div>
+    </div>
+
+    <div class="flex shrink-0 items-center gap-2">
+      <a
+        routerLink="/settings"
+        aria-label="Settings"
+        class="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-nav-bg dark:text-gray-400 dark:hover:bg-slate-700"
+      >
+        <svg
+          class="h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8-3a8 8 0 0 0-.2-1.8l2-1.5-2-3.4-2.3.9a8 8 0 0 0-3-1.7L14 2h-4l-.5 2.5a8 8 0 0 0-3 1.7l-2.3-.9-2 3.4 2 1.5A8 8 0 0 0 4 12c0 .6.1 1.2.2 1.8l-2 1.5 2 3.4 2.3-.9a8 8 0 0 0 3 1.7L10 22h4l.5-2.5a8 8 0 0 0 3-1.7l2.3.9 2-3.4-2-1.5c.1-.6.2-1.2.2-1.8Z"
+          />
+        </svg>
+      </a>
+
+      <app-sync-status-indicator></app-sync-status-indicator>
+
+      <button
+        type="button"
+        aria-label="Notifications"
+        class="relative flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-nav-bg dark:text-gray-400 dark:hover:bg-slate-700"
+      >
+        <svg
+          class="h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M6 8a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 12 6 8Z" />
+          <path d="M10 18a2 2 0 0 0 4 0" />
+        </svg>
+        <span class="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-danger"></span>
+      </button>
+
+      <div class="relative">
+        <button
+          type="button"
+          (click)="toggleRoleMenu()"
+          class="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-nav-bg dark:hover:bg-slate-700"
+        >
+          <div
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-sm font-semibold text-primary"
+          >
+            {{ currentRoleLabel.charAt(0) }}
+          </div>
+          <div class="hidden text-left leading-tight sm:block">
+            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">Viewing as</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {{ currentRoleLabel }}
+            </p>
+          </div>
+          <svg
+            class="h-4 w-4 text-gray-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+
+        <div
+          *ngIf="isRoleMenuOpen"
+          class="absolute right-0 top-full z-10 mt-2 w-40 rounded-lg border border-gray-200 bg-surface p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+        >
+          <button
+            *ngFor="let role of roleOptions"
+            type="button"
+            (click)="setRole(role.value)"
+            [ngClass]="
+              currentRole === role.value
+                ? 'bg-primary-light text-primary'
+                : 'text-gray-700 dark:text-gray-300'
+            "
+            class="block w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-nav-bg dark:hover:bg-slate-700"
+          >
+            {{ role.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <div class="flex items-center py-4 pl-4">
+      <aside
+        class="flex w-16 flex-col items-center gap-1 rounded-3xl border border-gray-200 bg-surface py-4 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+      >
+        <a
+          *ngFor="let item of navItems"
+          [routerLink]="item.path"
+          [title]="item.label"
+          routerLinkActive="bg-primary text-white"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-nav-bg hover:text-gray-900 dark:text-gray-400 dark:hover:bg-slate-700 dark:hover:text-gray-100"
+        >
+          <svg
+            class="h-5 w-5 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <ng-container [ngSwitch]="item.icon">
+              <path
+                *ngSwitchCase="'dashboard'"
+                d="M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z"
+              />
+              <path
+                *ngSwitchCase="'register'"
+                d="M6 2h12l1 5H5l1-5Zm-2 7h16v13H4V9Zm4 4h8v2H8v-2Z"
+              />
+              <path
+                *ngSwitchCase="'products'"
+                d="m20 10-8-6-8 6v10a1 1 0 0 0 1 1h5v-6h4v6h5a1 1 0 0 0 1-1V10Z"
+              />
+              <path
+                *ngSwitchCase="'inventory'"
+                d="M3 7 12 3l9 4-9 4-9-4Zm0 4 9 4 9-4m-18 5 9 4 9-4"
+              />
+              <path *ngSwitchCase="'reports'" d="M4 20V10m6 10V4m6 16v-7" />
+              <path
+                *ngSwitchCase="'roles'"
+                d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4Zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm-4 11c.5-2 2.2-3 4-3s3.5 1 4 3"
+              />
+              <path
+                *ngSwitchCase="'settings'"
+                d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8-3a8 8 0 0 0-.2-1.8l2-1.5-2-3.4-2.3.9a8 8 0 0 0-3-1.7L14 2h-4l-.5 2.5a8 8 0 0 0-3 1.7l-2.3-.9-2 3.4 2 1.5A8 8 0 0 0 4 12c0 .6.1 1.2.2 1.8l-2 1.5 2 3.4 2.3-.9a8 8 0 0 0 3 1.7L10 22h4l.5-2.5a8 8 0 0 0 3-1.7l2.3.9 2-3.4-2-1.5c.1-.6.2-1.2.2-1.8Z"
+              />
+            </ng-container>
+          </svg>
+        </a>
+
+        <div class="my-2 h-px w-8 bg-gray-200 dark:bg-slate-700"></div>
+
+        <button
+          type="button"
+          (click)="toggleTheme()"
+          [title]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
+          class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-nav-bg hover:text-gray-900 dark:text-gray-400 dark:hover:bg-slate-700 dark:hover:text-gray-100"
+        >
+          <svg
+            *ngIf="!isDarkMode()"
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="4" />
+            <path
+              d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+            />
+          </svg>
+          <svg
+            *ngIf="isDarkMode()"
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
+          </svg>
+        </button>
+
+        <div class="flex-1"></div>
+
+        <button
+          type="button"
+          title="Help"
+          class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-nav-bg hover:text-gray-900 dark:text-gray-400 dark:hover:bg-slate-700 dark:hover:text-gray-100"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7" />
+            <path d="M12 17h.01" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          title="Log out"
+          class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-danger-light hover:text-danger"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>
+        </button>
+      </aside>
+    </div>
+
+    <main class="flex-1 overflow-y-auto p-6">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

@@ -1,0 +1,28 @@
+package com.chardworkz.backend.branch;
+
+import jakarta.persistence.*;
+import java.time.Instant;
+import lombok.*;
+
+@Entity
+@Table(name = "branch")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Branch {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 20)
+    private String code;
+
+    @Column(nullable = false, length = 100)
+    private String name;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+}

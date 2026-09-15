@@ -2,32 +2,56 @@
 
 Open, not-yet-scheduled work. Carried forward across sessions — check off and move to `handoff.md`/`DECISIONS.md` once actually picked up.
 
-## Open questions blocking Phase 0 (from `docs/project-initiation-draft.md` §5)
+## Q1–Q12 — resolved 2026-09-15
 
-Each has a stated default in the source document, so none of these are hard blockers — but each should get a real answer from the owner/manager rather than silently running on its default.
+All 12 questions from `docs/project-initiation-draft.md` §5 were answered by the business owner. See that document's §0.1 Change Log, each question's **Resolved** line, and `DECISIONS.md` DEC-018–DEC-021 for the full record. Kept here, checked off, for traceability:
 
-- [ ] **Q1** — Customer-facing storefront vs. staff-only checkout. Biggest open fork; determines whether Phase 3A exists at all. Default if unanswered: staff-only.
-- [ ] **Q2** — Powder-coating / service-booking module in-scope or handled outside the system. Determines whether Phase 3B exists. Default if unanswered: out of scope.
-- [ ] **Q3** — Notification channels: customer-facing, internal-only, both, or neither. Default if unanswered: internal-only email (low-stock to manager).
-- [ ] **Q4** — Payment method scope: GCash only vs. GCash + other e-wallets/cards, and whether a real gateway integration is wanted from Phase 1. Default if unanswered: manual confirmation, no gateway.
-- [ ] **Q5** — Multi-branch inventory/sales sync behavior: independent per branch, or shared/visible across both. Default if unanswered: one shared backend/DB, cross-branch read visibility for manager/owner, no stock-transfer feature.
-- [ ] **Q6** — Confirm the ChardWorkz schema is designed fresh, not copied from any thesis. Default if unanswered: yes, fresh schema (already the working assumption).
-- [ ] **Q7** — Audit logging from Phase 0 or later. Default if unanswered: minimal `audit_event` table in Phase 0 covering price/stock-level changes only.
-- [ ] **Q8** — Sale/service correction handling: void-before-finalize, cancel-before-start, both, or neither. Default if unanswered: void-before-finalize only, no post-finalization reversal.
-- [ ] **Q9** — Reviews/ratings feature, even if deferred past Phase 1. Default if unanswered: out of scope entirely.
-- [ ] **Q10** — Production intent: real business deployment, academic-style deliverable, or both. Default if unanswered: real production.
-- [ ] **Q11** — Mobile admin parity: confirm managers need full phone parity (stock-in approval, reports) rather than desktop-only admin. Default if unanswered: full parity.
-- [ ] **Q12** — Offline/degraded-network behavior at the counter: stop selling, paper fallback, or local queue-and-sync. Default if unanswered: paper fallback with post-hoc re-keying. **Needs deciding before Phase 1 build, not after** — the paper process it replaces has no such dependency.
+- [x] **Q1** — Staff-only for this phase. Matches default.
+- [x] **Q2** — Powder-coating module skipped for this phase. Matches default.
+- [x] **Q3** — Notifications skipped for Phase 1. Matches default.
+- [x] **Q4** — Manual "mark as paid," no gateway. Matches default.
+- [x] **Q5** — One shared backend/DB, main + Masinag visible to Owner/Manager. Matches default.
+- [x] **Q6** — Fresh schema, confirmed. Matches default.
+- [x] **Q7** — Minimal audit table for price/stock changes, from Phase 0. Matches default.
+- [x] **Q8** — Void-before-finalize only, no returns — **but see "Deferred, not rejected" below.**
+- [x] **Q9** — Reviews/ratings skipped. Matches default.
+- [x] **Q10** — Real production, confirmed. **Triggers a new requirement — see "Pre-deployment" below.**
+- [x] **Q11** — Full mobile parity at every breakpoint. Matches default.
+- [x] **Q12** — **Broke from the default.** Local queue + sync-on-reconnect (option c), not paper fallback (option b). Real architectural commitment — see "Offline sale queue" below.
 
-## Phase 0 scaffolding (once questions above are answered or defaults accepted)
+## Offline sale queue (new, from Q12)
 
-- [ ] Initialize the actual repo (frontend/backend/DB) — nothing exists yet, this is greenfield, not a migration.
-- [ ] Design and migrate the normalized schema per the Reference Schema Sketch in `docs/project-initiation-draft.md` §2, reserving `branch_id`, `payment_method`, and `sku`/`barcode` regardless of how Q4/Q5 land.
-- [ ] Implement account auth with role claims (Manager/Employee/Owner) — Spring Security + JWT + Bcrypt.
-- [ ] Build the responsive shell and `LayoutService` breakpoint system before any feature module (explicitly called out in the roadmap as the most common place this kind of scope slips if skipped).
-- [ ] Stub the notification interface (`EmailSender` via Spring Mail implemented; `SmsSender` interface only, no implementation).
+- [x] Design and build the client-side offline sale queue — done 2026-09-15 (`DECISIONS.md` DEC-026): `OfflineSaleQueueService` (IndexedDB via `idb`), client-generated UUID idempotency key, exponential-backoff retry, terminal `FAILED` state, and a visible sync-status pill in the shell header. Backed by a new idempotent `POST /api/sales` endpoint. Verified live in a real browser against a real backend outage/recovery cycle, not just unit-level.
+- [x] Add the idempotency-key field to the `sale` entity when the real schema is designed — done as part of DEC-022 (`sale.id` is the client-supplied UUID).
+- [x] Design this _before_ building the Register screen — done; Register (below) is now unblocked.
+- [ ] Explicitly not in scope for Phase 1: any conflict-resolution logic for a simultaneous multi-register stock oversell during a shared outage — accepted risk, not solved. (Oversell instead clamps `stock_level.quantity` at 0 per the user's explicit choice, DEC-026.)
+
+## Deferred, not rejected (from Q8)
+
+- [ ] Post-finalization sale reversal — the owner explicitly wants this considered for a later phase, distinct from "out of scope." Revisit once Phase 1's void-before-finalize flow is live and real usage patterns are known.
+
+## Pre-deployment (from Q10)
+
+- [ ] Before any real production deployment (or a production-deployment planning doc), read `05 -Skills/production-security-checklist.md` and walk through it against the actual codebase — per the vault's `CLAUDE.md` §6. Do not treat this as optional now that Q10 confirmed real production.
+
+## Phase 0 scaffolding — mostly done, remainder below
+
+- [x] Initialize the actual repo (frontend/backend) — done 2026-09-15, `frontend/` (Angular) and `backend/` (Spring Boot) both scaffolded and verified running.
+- [x] Design and migrate the real normalized schema per the Reference Schema Sketch in `docs/project-initiation-draft.md` §2 — done 2026-09-15 as Flyway migrations + matching JPA entities (`DECISIONS.md` DEC-022), reserving `branch_id`, `payment_method`, and `sku`/`barcode` as planned, plus the new Q12 idempotency key on `sale.id`. Verified against real PostgreSQL 17, see next item.
+- [x] Get a real local PostgreSQL instance running and boot-test `backend/` against it — done 2026-09-15 (`DECISIONS.md` DEC-025): PostgreSQL 17 installed locally, both migrations applied cleanly, Hibernate validate passed against all 10 entities, full login round-trip verified.
+- [x] Implement account auth with role claims (Manager/Employee/Owner) — done 2026-09-15: real JWT auth (`DECISIONS.md` DEC-024), replacing the permit-all placeholder. Verified end-to-end against the `local` profile.
+- [ ] Set real `JWT_SECRET`, `BOOTSTRAP_OWNER_USERNAME`, `BOOTSTRAP_OWNER_PASSWORD`, and `CORS_ALLOWED_ORIGIN` env vars wherever `backend/` actually deploys — the default (non-`local`) config leaves all of these blank on purpose, so production won't boot a working login (or accept any cross-origin frontend call, if ever needed) until these are set.
+- [ ] No endpoints are role-gated yet (`@PreAuthorize`) — there's nothing to gate beyond `/api/ping`, `/api/auth/**`, and `/api/sales` (open to any authenticated account role, deliberately). Revisit once real business endpoints (Products, Roles, etc.) exist with actual per-role distinctions to enforce.
+- [x] Build the responsive shell before any feature module — done 2026-09-15 (floating dock + workspace tabs + role-filtered nav), see `docs/frontend-design-conventions.md`.
+- [ ] Stub the notification interface (`EmailSender` via Spring Mail implemented; `SmsSender` interface only, no implementation) — still not started; low priority since Q3 deferred notifications past Phase 1.
+- [x] Frontend HTTP/auth plumbing (`AuthService`, `authInterceptor`, `environments/`) — done 2026-09-15 as part of the offline queue work (DEC-026); a login page and route guard are still not built, deliberately deferred to Register.
+
+## Next feature screens (frontend)
+
+- [ ] Register — highest-value Employee-facing screen (Phase 1 is staff-only). Unblocked now: the offline sale queue it depends on is built and verified, and so is the auth/HTTP plumbing it needs for a real login form.
+- [ ] Products, Inventory, Sales Reports, Roles, Settings — all still the generic `Placeholder` component; no content built yet.
 
 ## Project housekeeping
 
 - [ ] Confirm the `owner` field set in `PROJECT-CONTEXT.md`/`memory.md`/`handoff.md` ("Eleomar Halaman") is the correct business-side point of contact for ChardWorkz, not just the session user.
-- [ ] Decide whether ChardWorkz gets its own git repo (like `E-Commerce` has) once Phase 0 scaffolding actually starts, or continues living purely as vault documentation until then.
+- [ ] Reconcile `ChardWorkz_Thesis4_Summary.md` against the real `RELATED DOCUMENTS/THESIS4.docx` (currently built from a short user-pasted synopsis only, not the source document).
