@@ -1,0 +1,172 @@
+<div class="space-y-4">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Products</h1>
+    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+      Manage the shared product catalog.
+    </p>
+  </div>
+
+  <div
+    *ngIf="successMessage()"
+    class="rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary dark:bg-primary/20"
+  >
+    {{ successMessage() }}
+  </div>
+  <div
+    *ngIf="errorMessage()"
+    class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+  >
+    {{ errorMessage() }}
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+    <div class="dashboard-card">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Catalog</h2>
+
+      <div class="mt-3 space-y-2">
+        <div
+          *ngFor="let product of products()"
+          class="rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
+        >
+          <div *ngIf="editingId() !== product.id" class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {{ product.name }}
+                <span *ngIf="product.brandTag" class="font-normal text-gray-500 dark:text-gray-400"
+                  >· {{ product.brandTag }}</span
+                >
+              </p>
+              <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                ₱{{ product.unitPrice | number: '1.2-2' }} · {{ product.stockQuantity }} in stock
+              </p>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                [ngClass]="
+                  product.active ? 'bg-primary-light text-primary' : 'bg-danger-light text-danger'
+                "
+                class="rounded-full px-2 py-1 text-xs font-medium"
+              >
+                {{ product.active ? 'Active' : 'Inactive' }}
+              </span>
+              <button
+                type="button"
+                (click)="startEdit(product)"
+                class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                (click)="toggleActive(product)"
+                class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+              >
+                {{ product.active ? 'Deactivate' : 'Activate' }}
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="editingId() === product.id" class="flex flex-wrap items-end gap-2">
+            <div class="flex-1 basis-40">
+              <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Name</label>
+              <input
+                #editName
+                type="text"
+                [value]="product.name"
+                class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+              />
+            </div>
+            <div class="flex-1 basis-32">
+              <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Brand tag</label>
+              <input
+                #editBrandTag
+                type="text"
+                [value]="product.brandTag ?? ''"
+                class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+              />
+            </div>
+            <div class="w-24">
+              <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Price</label>
+              <input
+                #editPrice
+                type="number"
+                min="0"
+                step="0.01"
+                [value]="product.unitPrice"
+                class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+              />
+            </div>
+            <button
+              type="button"
+              (click)="saveEdit(product, editName.value, editBrandTag.value, editPrice.value)"
+              class="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              (click)="cancelEdit()"
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <p
+          *ngIf="products().length === 0"
+          class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+        >
+          No products yet.
+        </p>
+      </div>
+    </div>
+
+    <div class="dashboard-card space-y-3">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">New product</h2>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+        <input
+          #name
+          type="text"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Brand tag</label>
+        <input
+          #brandTag
+          type="text"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Unit price</label>
+        <input
+          #unitPrice
+          type="number"
+          min="0"
+          step="0.01"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <button
+        type="button"
+        [disabled]="submitting()"
+        (click)="
+          createProduct(name.value, brandTag.value, unitPrice.value);
+          name.value = '';
+          brandTag.value = '';
+          unitPrice.value = ''
+        "
+        class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+      >
+        {{ submitting() ? 'Adding…' : 'Add product' }}
+      </button>
+    </div>
+  </div>
+</div>

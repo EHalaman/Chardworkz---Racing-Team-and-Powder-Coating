@@ -1,5 +1,7 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth';
 
@@ -15,10 +17,24 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  const token = inject(AuthService).getToken();
+  const auth = inject(AuthService);
+  const token = auth.getToken();
   if (!token) {
+    // No token to attach - this is either the login request itself (a 401
+    // here just means wrong credentials, not a dead session) or an
+    // already-logged-out state, so no logout/redirect side effect applies.
     return next(req);
   }
 
-  return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
+  return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401) {
+        // A 401 on a request that *did* carry a token means the session died
+        // (expired/invalidated) server-side, not a login failure.
+        auth.logout();
+        inject(Router).navigateByUrl('/login');
+      }
+      return throwError(() => error);
+    }),
+  );
 };

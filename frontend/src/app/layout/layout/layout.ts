@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
+import { AuthService } from '../../core/auth';
 
 export type Role = 'owner' | 'manager' | 'employee';
 
@@ -16,7 +17,9 @@ export interface Tab {
   title: string;
 }
 
-const ALL_NAV_ITEMS: NavItem[] = [
+// Exported so core/role-guard.ts can enforce the exact same per-route roles
+// at the router level instead of duplicating this mapping a second time.
+export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', roles: ['owner', 'manager'] },
   { label: 'Register', path: '/register', icon: 'register', roles: ['manager', 'employee'] },
   { label: 'Products', path: '/products', icon: 'products', roles: ['owner', 'manager'] },
@@ -35,17 +38,6 @@ const THEME_STORAGE_KEY = 'chardworkz-theme';
   templateUrl: './layout.html',
 })
 export class Layout implements OnInit, OnDestroy {
-  readonly roleOptions: { value: Role; label: string }[] = [
-    { value: 'owner', label: 'Owner' },
-    { value: 'manager', label: 'Manager' },
-    { value: 'employee', label: 'Employee' },
-  ];
-
-  /**
-   * Role switcher is a scaffolding aid only, until real auth/JWT-derived
-   * role exists. Defaults to Owner per priority for this build pass.
-   */
-  currentRole: Role = 'owner';
   isRoleMenuOpen = false;
 
   /** Browser-tab-style workspace tabs, opened as routes are visited. */
@@ -59,6 +51,7 @@ export class Layout implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
+    readonly auth: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -81,20 +74,23 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   get navItems(): NavItem[] {
-    return ALL_NAV_ITEMS.filter((item) => item.roles.includes(this.currentRole));
+    const role = this.auth.currentUser()?.role.toLowerCase() as Role | undefined;
+    return role ? ALL_NAV_ITEMS.filter((item) => item.roles.includes(role)) : [];
   }
 
+  /** Title-cases the JWT's uppercase role claim (e.g. "OWNER") for display. */
   get currentRoleLabel(): string {
-    return this.roleOptions.find((r) => r.value === this.currentRole)?.label ?? '';
+    const role = this.auth.currentUser()?.role ?? '';
+    return role.charAt(0) + role.slice(1).toLowerCase();
   }
 
   toggleRoleMenu(): void {
     this.isRoleMenuOpen = !this.isRoleMenuOpen;
   }
 
-  setRole(role: Role): void {
-    this.currentRole = role;
-    this.isRoleMenuOpen = false;
+  logout(): void {
+    this.auth.logout();
+    this.router.navigateByUrl('/login');
   }
 
   openTab(path: string, title: string): void {

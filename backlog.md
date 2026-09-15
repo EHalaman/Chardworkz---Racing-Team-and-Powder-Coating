@@ -41,15 +41,19 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [x] Get a real local PostgreSQL instance running and boot-test `backend/` against it — done 2026-09-15 (`DECISIONS.md` DEC-025): PostgreSQL 17 installed locally, both migrations applied cleanly, Hibernate validate passed against all 10 entities, full login round-trip verified.
 - [x] Implement account auth with role claims (Manager/Employee/Owner) — done 2026-09-15: real JWT auth (`DECISIONS.md` DEC-024), replacing the permit-all placeholder. Verified end-to-end against the `local` profile.
 - [ ] Set real `JWT_SECRET`, `BOOTSTRAP_OWNER_USERNAME`, `BOOTSTRAP_OWNER_PASSWORD`, and `CORS_ALLOWED_ORIGIN` env vars wherever `backend/` actually deploys — the default (non-`local`) config leaves all of these blank on purpose, so production won't boot a working login (or accept any cross-origin frontend call, if ever needed) until these are set.
-- [ ] No endpoints are role-gated yet (`@PreAuthorize`) — there's nothing to gate beyond `/api/ping`, `/api/auth/**`, and `/api/sales` (open to any authenticated account role, deliberately). Revisit once real business endpoints (Products, Roles, etc.) exist with actual per-role distinctions to enforce.
+- [x] Role-gate a real endpoint with `@PreAuthorize` — done 2026-09-15 (`DECISIONS.md` DEC-028): `/api/accounts` is Owner-only, the app's first real per-role gate. `/api/ping`, `/api/auth/**`, `/api/sales`, and `/api/products` remain open to any authenticated account role, deliberately.
 - [x] Build the responsive shell before any feature module — done 2026-09-15 (floating dock + workspace tabs + role-filtered nav), see `docs/frontend-design-conventions.md`.
 - [ ] Stub the notification interface (`EmailSender` via Spring Mail implemented; `SmsSender` interface only, no implementation) — still not started; low priority since Q3 deferred notifications past Phase 1.
-- [x] Frontend HTTP/auth plumbing (`AuthService`, `authInterceptor`, `environments/`) — done 2026-09-15 as part of the offline queue work (DEC-026); a login page and route guard are still not built, deliberately deferred to Register.
+- [x] Frontend HTTP/auth plumbing (`AuthService`, `authInterceptor`, `environments/`) — done 2026-09-15 as part of the offline queue work (DEC-026).
+- [x] Real login page + route guard — done 2026-09-15 (`DECISIONS.md` DEC-027): `auth/login/`, `core/auth-guard.ts`, routing restructured so `/login` renders outside the shell. `Layout`'s fake "Viewing as" switcher is gone, replaced by the real JWT-derived user.
+- [x] Route-level role enforcement — done 2026-09-15 (`DECISIONS.md` DEC-029): `core/role-guard.ts` as `canActivateChild` on the `Layout` route, reusing `Layout.ALL_NAV_ITEMS` as the single source of truth. Verified live: a Manager hitting `/roles` and an Employee hitting `/dashboard` both correctly redirect instead of loading.
 
 ## Next feature screens (frontend)
 
-- [ ] Register — highest-value Employee-facing screen (Phase 1 is staff-only). Unblocked now: the offline sale queue it depends on is built and verified, and so is the auth/HTTP plumbing it needs for a real login form.
-- [ ] Products, Inventory, Sales Reports, Roles, Settings — all still the generic `Placeholder` component; no content built yet.
+- [x] Register — done 2026-09-15 (`DECISIONS.md` DEC-027): search-and-list product lookup, cart, payment method, instant-confirmation checkout into the offline queue. Verified live including a full offline-outage-and-recovery cycle through the real UI.
+- [x] Roles — done 2026-09-15 (`DECISIONS.md` DEC-028): Owner-only staff account creation/list/activate-deactivate, backed by the app's first `@PreAuthorize` role gate. Verified live including logging in as a brand-new (non-bootstrap) Manager account created through the real form.
+- [x] Products — done 2026-09-15 (`DECISIONS.md` DEC-031): Owner/Manager catalog CRUD (create/edit/deactivate-reactivate), verified live including Register's active-only feed updating immediately and the Employee role gate.
+- [ ] Inventory, Sales Reports, Settings — still the generic `Placeholder` component; no content built yet. Inventory (stock receiving/adjustment) is a reasonable next pick — it's the other half of Manager's "product CRUD, stock receiving" responsibility that Products didn't cover.
 
 ## Project housekeeping
 

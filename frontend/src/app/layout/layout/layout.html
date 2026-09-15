@@ -103,7 +103,9 @@
             {{ currentRoleLabel.charAt(0) }}
           </div>
           <div class="hidden text-left leading-tight sm:block">
-            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">Viewing as</p>
+            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+              {{ auth.currentUser()?.fullName }}
+            </p>
             <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
               {{ currentRoleLabel }}
             </p>
@@ -123,20 +125,22 @@
 
         <div
           *ngIf="isRoleMenuOpen"
-          class="absolute right-0 top-full z-10 mt-2 w-40 rounded-lg border border-gray-200 bg-surface p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+          class="absolute right-0 top-full z-10 mt-2 w-48 rounded-lg border border-gray-200 bg-surface p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
         >
+          <div class="px-3 py-2">
+            <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+              {{ auth.currentUser()?.fullName }}
+            </p>
+            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+              {{ currentRoleLabel }} · {{ auth.currentUser()?.branchCode }}
+            </p>
+          </div>
           <button
-            *ngFor="let role of roleOptions"
             type="button"
-            (click)="setRole(role.value)"
-            [ngClass]="
-              currentRole === role.value
-                ? 'bg-primary-light text-primary'
-                : 'text-gray-700 dark:text-gray-300'
-            "
-            class="block w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-nav-bg dark:hover:bg-slate-700"
+            (click)="logout()"
+            class="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-danger transition-colors hover:bg-danger-light dark:hover:bg-danger/20"
           >
-            {{ role.label }}
+            Log out
           </button>
         </div>
       </div>
@@ -257,6 +261,7 @@
         <button
           type="button"
           title="Log out"
+          (click)="logout()"
           class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-danger-light hover:text-danger"
         >
           <svg

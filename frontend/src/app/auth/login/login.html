@@ -1,0 +1,108 @@
+<div class="flex min-h-screen items-center justify-center bg-nav-bg px-4 dark:bg-slate-900">
+  <div class="w-full max-w-sm">
+    <div class="mb-6 flex flex-col items-center gap-2">
+      <div
+        class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-base font-bold text-white"
+      >
+        C
+      </div>
+      <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">ChardWorkz</span>
+    </div>
+
+    <form
+      class="dashboard-card space-y-4"
+      (submit)="$event.preventDefault(); onSubmit(username.value, password.value)"
+    >
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Sign in</h1>
+        <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+          Use your ChardWorkz staff account.
+        </p>
+      </div>
+
+      <div
+        *ngIf="errorMessage()"
+        class="rounded-lg bg-danger-light px-3 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+      >
+        {{ errorMessage() }}
+      </div>
+
+      <div>
+        <label for="username" class="text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Username</label
+        >
+        <input
+          #username
+          id="username"
+          name="username"
+          type="text"
+          required
+          autocomplete="username"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
+        <label for="password" class="text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Password</label
+        >
+        <div class="relative mt-1">
+          <input
+            #password
+            id="password"
+            name="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            required
+            autocomplete="current-password"
+            class="w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 pr-10 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+          />
+          <button
+            type="button"
+            (click)="toggleShowPassword()"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="showPassword()"
+            class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            <svg
+              *ngIf="!showPassword()"
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg
+              *ngIf="showPassword()"
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 3l18 18" />
+              <path
+                d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.1 4M6.6 6.6C4 8.3 2 12 2 12s3.5 7 10 7a10 10 0 0 0 4.2-.9"
+              />
+              <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        [disabled]="submitting()"
+        class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+      >
+        {{ submitting() ? 'Signing in…' : 'Sign in' }}
+      </button>
+    </form>
+  </div>
+</div>
