@@ -12,6 +12,7 @@ import { AuthModule } from './auth/auth-module';
 import { RegisterModule } from './register/register-module';
 import { RolesModule } from './roles/roles-module';
 import { ProductsModule } from './products/products-module';
+import { InventoryModule } from './inventory/inventory-module';
 
 @NgModule({
   declarations: [App],
@@ -25,6 +26,7 @@ import { ProductsModule } from './products/products-module';
     RegisterModule,
     RolesModule,
     ProductsModule,
+    InventoryModule,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),

@@ -1,6 +1,7 @@
 package com.chardworkz.backend.inventory;
 
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
 
     List<StockLevel> findByBranchId(Long branchId);
+
+    Optional<StockLevel> findByProductIdAndBranchId(Long productId, Long branchId);
 
     /**
      * Decrements stock but never below zero (Q12 accepted-oversell-risk decision:

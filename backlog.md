@@ -53,7 +53,8 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [x] Register — done 2026-09-15 (`DECISIONS.md` DEC-027): search-and-list product lookup, cart, payment method, instant-confirmation checkout into the offline queue. Verified live including a full offline-outage-and-recovery cycle through the real UI.
 - [x] Roles — done 2026-09-15 (`DECISIONS.md` DEC-028): Owner-only staff account creation/list/activate-deactivate, backed by the app's first `@PreAuthorize` role gate. Verified live including logging in as a brand-new (non-bootstrap) Manager account created through the real form.
 - [x] Products — done 2026-09-15 (`DECISIONS.md` DEC-031): Owner/Manager catalog CRUD (create/edit/deactivate-reactivate), verified live including Register's active-only feed updating immediately and the Employee role gate.
-- [ ] Inventory, Sales Reports, Settings — still the generic `Placeholder` component; no content built yet. Inventory (stock receiving/adjustment) is a reasonable next pick — it's the other half of Manager's "product CRUD, stock receiving" responsibility that Products didn't cover.
+- [x] Inventory — done 2026-09-15 (`DECISIONS.md` DEC-032): Owner/Manager stock levels, reorder-threshold editing, and stock receiving (using the pre-existing `stock_in`/`supplier` entities). Verified live including the Employee role gate.
+- [ ] Sales Reports, Settings — still the generic `Placeholder` component; no content built yet.
 
 ## Project housekeeping
 

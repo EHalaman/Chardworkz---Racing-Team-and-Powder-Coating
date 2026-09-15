@@ -1,0 +1,219 @@
+<div class="space-y-4">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Inventory</h1>
+    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+      Stock levels and receiving for your branch.
+    </p>
+  </div>
+
+  <div
+    *ngIf="successMessage()"
+    class="rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary dark:bg-primary/20"
+  >
+    {{ successMessage() }}
+  </div>
+  <div
+    *ngIf="errorMessage()"
+    class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+  >
+    {{ errorMessage() }}
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+    <div class="dashboard-card">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Stock levels</h2>
+
+      <div class="mt-3 space-y-2">
+        <div
+          *ngFor="let item of items()"
+          class="rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
+        >
+          <div
+            *ngIf="editingThresholdFor() !== item.productId"
+            class="flex items-center justify-between gap-3"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {{ item.name }}
+                <span *ngIf="item.brandTag" class="font-normal text-gray-500 dark:text-gray-400"
+                  >· {{ item.brandTag }}</span
+                >
+              </p>
+              <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                {{ item.quantity }} in stock · reorder at {{ item.reorderThreshold }}
+              </p>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                *ngIf="item.lowStock"
+                class="rounded-full bg-danger-light px-2 py-1 text-xs font-medium text-danger"
+              >
+                Low stock
+              </span>
+              <button
+                type="button"
+                (click)="startEditThreshold(item)"
+                class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+              >
+                Edit reorder point
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="editingThresholdFor() === item.productId" class="flex items-end gap-2">
+            <p class="flex-1 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {{ item.name }}
+            </p>
+            <div class="w-28">
+              <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Reorder at</label>
+              <input
+                #thresholdInput
+                type="number"
+                min="0"
+                step="1"
+                [value]="item.reorderThreshold"
+                class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+              />
+            </div>
+            <button
+              type="button"
+              (click)="saveThreshold(item, thresholdInput.value)"
+              class="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              (click)="cancelEditThreshold()"
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <p
+          *ngIf="items().length === 0"
+          class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+        >
+          No products yet.
+        </p>
+      </div>
+    </div>
+
+    <div class="dashboard-card space-y-3">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Receive stock</h2>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Product</label>
+        <select
+          #product
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        >
+          <option value="">Select a product…</option>
+          <option *ngFor="let item of items()" [value]="item.productId">
+            {{ item.name }}{{ item.brandTag ? ' · ' + item.brandTag : '' }}
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
+        <input
+          #quantity
+          type="number"
+          min="1"
+          step="1"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Unit cost</label>
+        <input
+          #unitCost
+          type="number"
+          min="0"
+          step="0.01"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Supplier</label>
+        <input
+          #supplierName
+          type="text"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Reference no. (optional)</label
+        >
+        <input
+          #referenceNo
+          type="text"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <button
+        type="button"
+        [disabled]="submitting()"
+        (click)="
+          receiveStock(
+            product.value,
+            quantity.value,
+            unitCost.value,
+            supplierName.value,
+            referenceNo.value
+          );
+          quantity.value = '';
+          unitCost.value = '';
+          supplierName.value = '';
+          referenceNo.value = ''
+        "
+        class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+      >
+        {{ submitting() ? 'Recording…' : 'Record receipt' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="dashboard-card">
+    <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Recent receipts</h2>
+
+    <div class="mt-3 space-y-2">
+      <div
+        *ngFor="let receipt of receipts()"
+        class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
+      >
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+            {{ receipt.productName }}
+            <span class="font-normal text-gray-500 dark:text-gray-400"
+              >· {{ receipt.supplierName }}</span
+            >
+          </p>
+          <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+            {{ receipt.quantity }} @ ₱{{ receipt.unitCost | number: '1.2-2' }} ·
+            {{ receipt.receivedByName }}
+            <span *ngIf="receipt.referenceNo"> · Ref {{ receipt.referenceNo }}</span>
+          </p>
+        </div>
+        <p class="shrink-0 text-xs font-normal text-gray-500 dark:text-gray-400">
+          {{ receipt.receivedAt | date: 'short' }}
+        </p>
+      </div>
+
+      <p
+        *ngIf="receipts().length === 0"
+        class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+      >
+        No stock received yet.
+      </p>
+    </div>
+  </div>
+</div>
