@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -18,6 +18,7 @@ export interface ReceiveStockRequest {
   unitCost: number;
   supplierName: string;
   referenceNo: string | null;
+  branchCode: string | null;
 }
 
 export interface StockReceipt {
@@ -35,12 +36,16 @@ export interface StockReceipt {
 export class InventoryService {
   constructor(private http: HttpClient) {}
 
-  list(): Observable<InventoryItem[]> {
-    return this.http.get<InventoryItem[]>(`${environment.apiBaseUrl}/api/inventory`);
+  list(branchCode?: string | null): Observable<InventoryItem[]> {
+    return this.http.get<InventoryItem[]>(`${environment.apiBaseUrl}/api/inventory`, {
+      params: this.branchParams(branchCode),
+    });
   }
 
-  receipts(): Observable<StockReceipt[]> {
-    return this.http.get<StockReceipt[]>(`${environment.apiBaseUrl}/api/inventory/receipts`);
+  receipts(branchCode?: string | null): Observable<StockReceipt[]> {
+    return this.http.get<StockReceipt[]>(`${environment.apiBaseUrl}/api/inventory/receipts`, {
+      params: this.branchParams(branchCode),
+    });
   }
 
   receive(request: ReceiveStockRequest): Observable<InventoryItem> {
@@ -50,10 +55,20 @@ export class InventoryService {
     );
   }
 
-  updateReorderThreshold(productId: number, reorderThreshold: number): Observable<InventoryItem> {
+  updateReorderThreshold(
+    productId: number,
+    reorderThreshold: number,
+    branchCode?: string | null,
+  ): Observable<InventoryItem> {
     return this.http.patch<InventoryItem>(
       `${environment.apiBaseUrl}/api/inventory/${productId}/reorder-threshold`,
-      { reorderThreshold },
+      { reorderThreshold, branchCode: branchCode ?? null },
     );
+  }
+
+  private branchParams(branchCode?: string | null): HttpParams {
+    let params = new HttpParams();
+    if (branchCode) params = params.set('branchCode', branchCode);
+    return params;
   }
 }

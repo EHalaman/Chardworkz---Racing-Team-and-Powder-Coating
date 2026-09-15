@@ -29,6 +29,14 @@ import org.springframework.web.server.ResponseStatusException;
  * Users section ("Manager - product CRUD, stock receiving, reports"). Unlike
  * {@code ProductController}, nothing here is opened to Employee: the counter
  * flow only ever reads stock via {@code GET /api/products}.
+ *
+ * <p>Owner may target any branch via an optional {@code branchCode} (query
+ * param on reads, request-body field on writes) - same "Owner sees across
+ * both branches, Manager is always forced to their own" split established
+ * for {@code ReportsController} (DEC-033), since PROJECT-CONTEXT.md's Users
+ * section only documents cross-branch monitoring for Owner. A Manager's
+ * {@code branchCode} is always ignored server-side, never trusted from the
+ * request.
  */
 @RestController
 @RequestMapping("/api/inventory")
@@ -46,8 +54,9 @@ public class InventoryController {
     private final JwtService jwtService;
 
     @GetMapping
-    public List<InventorySummaryResponse> list(Authentication authentication) {
-        Branch branch = callerBranch(authentication);
+    public List<InventorySummaryResponse> list(
+        @RequestParam(required = false) String branchCode, Authentication authentication) {
+        Branch branch = resolveBranch(authentication, branchCode);
         return productRepository.findByActiveTrue().stream()
             .map(product -> toSummary(product, findStockLevel(product, branch)))
             .toList();
@@ -60,7 +69,7 @@ public class InventoryController {
         Authentication authentication) {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-        Branch branch = callerBranch(authentication);
+        Branch branch = resolveBranch(authentication, request.branchCode());
 
         StockLevel stockLevel = stockLevelRepository.findByProductIdAndBranchId(productId, branch.getId())
             .orElseGet(() -> newStockLevel(product, branch));
@@ -76,7 +85,7 @@ public class InventoryController {
         @Valid @RequestBody ReceiveStockRequest request, Authentication authentication) {
         Product product = productRepository.findById(request.productId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-        Branch branch = callerBranch(authentication);
+        Branch branch = resolveBranch(authentication, request.branchCode());
         Account receivedBy = accountRepository.getReferenceById(callerAccountId(authentication));
 
         Supplier supplier = supplierRepository.findByNameIgnoreCase(request.supplierName())
@@ -111,8 +120,9 @@ public class InventoryController {
     }
 
     @GetMapping("/receipts")
-    public List<StockReceiptResponse> receipts(Authentication authentication) {
-        Branch branch = callerBranch(authentication);
+    public List<StockReceiptResponse> receipts(
+        @RequestParam(required = false) String branchCode, Authentication authentication) {
+        Branch branch = resolveBranch(authentication, branchCode);
         return stockInLineRepository.findRecentByBranchId(branch.getId()).stream()
             .map(StockReceiptResponse::from)
             .limit(20)
@@ -141,9 +151,13 @@ public class InventoryController {
             quantity <= reorderThreshold);
     }
 
-    private Branch callerBranch(Authentication authentication) {
-        String branchCode = jwtService.extractBranchCode(claims(authentication));
-        return branchRepository.findByCode(branchCode)
+    private Branch resolveBranch(Authentication authentication, String requestedBranchCode) {
+        Claims claims = claims(authentication);
+        String role = jwtService.extractRole(claims);
+        String ownBranchCode = jwtService.extractBranchCode(claims);
+        String effectiveCode =
+            "MANAGER".equals(role) || requestedBranchCode == null ? ownBranchCode : requestedBranchCode;
+        return branchRepository.findByCode(effectiveCode)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown branch"));
     }
 

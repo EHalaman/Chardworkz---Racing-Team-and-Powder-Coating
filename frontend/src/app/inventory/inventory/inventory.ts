@@ -1,4 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { AuthService } from '../../core/auth';
 import { InventoryItem, InventoryService, StockReceipt } from '../inventory';
 
 @Component({
@@ -14,10 +15,31 @@ export class Inventory implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly submitting = signal(false);
   readonly editingThresholdFor = signal<number | null>(null);
+  readonly selectedBranch = signal<string | null>(null);
 
-  constructor(private inventoryService: InventoryService) {}
+  readonly branchOptions = [
+    { value: 'MAIN', label: 'Main Branch' },
+    { value: 'MASINAG', label: 'Masinag Branch' },
+  ];
+
+  constructor(
+    private inventoryService: InventoryService,
+    readonly auth: AuthService,
+  ) {}
+
+  get isOwner(): boolean {
+    return this.auth.currentUser()?.role === 'OWNER';
+  }
 
   ngOnInit(): void {
+    this.selectedBranch.set(this.auth.currentUser()?.branchCode ?? 'MAIN');
+    this.loadInventory();
+    this.loadReceipts();
+  }
+
+  selectBranch(branchCode: string): void {
+    this.selectedBranch.set(branchCode);
+    this.editingThresholdFor.set(null);
     this.loadInventory();
     this.loadReceipts();
   }
@@ -39,15 +61,17 @@ export class Inventory implements OnInit {
     }
 
     this.errorMessage.set(null);
-    this.inventoryService.updateReorderThreshold(item.productId, threshold).subscribe({
-      next: (updated) => {
-        this.items.update((items) =>
-          items.map((i) => (i.productId === updated.productId ? updated : i)),
-        );
-        this.editingThresholdFor.set(null);
-      },
-      error: () => this.errorMessage.set('Could not update the reorder threshold.'),
-    });
+    this.inventoryService
+      .updateReorderThreshold(item.productId, threshold, this.selectedBranch())
+      .subscribe({
+        next: (updated) => {
+          this.items.update((items) =>
+            items.map((i) => (i.productId === updated.productId ? updated : i)),
+          );
+          this.editingThresholdFor.set(null);
+        },
+        error: () => this.errorMessage.set('Could not update the reorder threshold.'),
+      });
   }
 
   receiveStock(
@@ -86,6 +110,7 @@ export class Inventory implements OnInit {
         unitCost: parsedUnitCost,
         supplierName: supplierName.trim(),
         referenceNo: referenceNo.trim() || null,
+        branchCode: this.selectedBranch(),
       })
       .subscribe({
         next: (updated) => {
@@ -105,14 +130,14 @@ export class Inventory implements OnInit {
   }
 
   private loadInventory(): void {
-    this.inventoryService.list().subscribe({
+    this.inventoryService.list(this.selectedBranch()).subscribe({
       next: (items) => this.items.set(items),
       error: () => this.errorMessage.set('Could not load inventory.'),
     });
   }
 
   private loadReceipts(): void {
-    this.inventoryService.receipts().subscribe({
+    this.inventoryService.receipts(this.selectedBranch()).subscribe({
       next: (receipts) => this.receipts.set(receipts),
       error: () => this.errorMessage.set('Could not load recent receipts.'),
     });

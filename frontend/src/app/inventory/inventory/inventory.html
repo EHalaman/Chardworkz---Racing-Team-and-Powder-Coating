@@ -1,9 +1,27 @@
 <div class="space-y-4">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Inventory</h1>
-    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
-      Stock levels and receiving for your branch.
-    </p>
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Inventory</h1>
+      <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+        Stock levels and receiving{{ isOwner ? '' : ' for your branch' }}.
+      </p>
+    </div>
+
+    <div *ngIf="isOwner" class="flex gap-2">
+      <button
+        *ngFor="let option of branchOptions"
+        type="button"
+        (click)="selectBranch(option.value)"
+        [ngClass]="
+          selectedBranch() === option.value
+            ? 'bg-primary text-white'
+            : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+        "
+        class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+      >
+        {{ option.label }}
+      </button>
+    </div>
   </div>
 
   <div
