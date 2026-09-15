@@ -10,6 +10,7 @@ import { Register } from './register/register/register';
 import { Roles } from './roles/roles/roles';
 import { Products } from './products/products/products';
 import { Inventory } from './inventory/inventory/inventory';
+import { Reports } from './reports/reports/reports';
 
 const routes: Routes = [
   { path: 'login', component: Login, data: { title: 'Login' } },
@@ -24,7 +25,7 @@ const routes: Routes = [
       { path: 'register', component: Register, data: { title: 'Register' } },
       { path: 'products', component: Products, data: { title: 'Products' } },
       { path: 'inventory', component: Inventory, data: { title: 'Inventory' } },
-      { path: 'reports', component: Placeholder, data: { title: 'Sales Reports' } },
+      { path: 'reports', component: Reports, data: { title: 'Sales Reports' } },
       { path: 'roles', component: Roles, data: { title: 'Roles' } },
       { path: 'settings', component: Placeholder, data: { title: 'Settings' } },
     ],

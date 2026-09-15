@@ -54,7 +54,8 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [x] Roles — done 2026-09-15 (`DECISIONS.md` DEC-028): Owner-only staff account creation/list/activate-deactivate, backed by the app's first `@PreAuthorize` role gate. Verified live including logging in as a brand-new (non-bootstrap) Manager account created through the real form.
 - [x] Products — done 2026-09-15 (`DECISIONS.md` DEC-031): Owner/Manager catalog CRUD (create/edit/deactivate-reactivate), verified live including Register's active-only feed updating immediately and the Employee role gate.
 - [x] Inventory — done 2026-09-15 (`DECISIONS.md` DEC-032): Owner/Manager stock levels, reorder-threshold editing, and stock receiving (using the pre-existing `stock_in`/`supplier` entities). Verified live including the Employee role gate.
-- [ ] Sales Reports, Settings — still the generic `Placeholder` component; no content built yet.
+- [x] Sales Reports — done 2026-09-15 (`DECISIONS.md` DEC-033): Owner (cross-branch) / Manager (own-branch) revenue, breakdowns, and recent sales. Verified live across all three roles.
+- [ ] Settings — still the generic `Placeholder` component; no content built yet.
 
 ## Project housekeeping
 

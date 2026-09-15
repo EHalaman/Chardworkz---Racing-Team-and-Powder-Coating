@@ -1,0 +1,169 @@
+<div class="space-y-4">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Sales Reports</h1>
+    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+      Revenue and sales activity{{ isOwner ? '' : ' for your branch' }}.
+    </p>
+  </div>
+
+  <div
+    *ngIf="errorMessage()"
+    class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+  >
+    {{ errorMessage() }}
+  </div>
+
+  <div class="dashboard-card flex flex-wrap items-end gap-3">
+    <div>
+      <label class="text-xs font-medium text-gray-700 dark:text-gray-300">From</label>
+      <input
+        #fromInput
+        type="date"
+        [value]="fromDate()"
+        class="mt-1 rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+      />
+    </div>
+    <div>
+      <label class="text-xs font-medium text-gray-700 dark:text-gray-300">To</label>
+      <input
+        #toInput
+        type="date"
+        [value]="toDate()"
+        class="mt-1 rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+      />
+    </div>
+    <button
+      type="button"
+      (click)="applyDateRange(fromInput.value, toInput.value)"
+      class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+    >
+      Apply
+    </button>
+
+    <div *ngIf="isOwner" class="ml-auto flex gap-2">
+      <button
+        *ngFor="let option of branchOptions"
+        type="button"
+        (click)="selectBranch(option.value)"
+        [ngClass]="
+          selectedBranch() === option.value
+            ? 'bg-primary text-white'
+            : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+        "
+        class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="report() as r">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="dashboard-card">
+        <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Total sales</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ r.totalSales }}</p>
+      </div>
+      <div class="dashboard-card">
+        <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Total revenue</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
+          ₱{{ r.totalRevenue | number: '1.2-2' }}
+        </p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div class="dashboard-card">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">By payment method</h2>
+        <div class="mt-3 space-y-2">
+          <div
+            *ngFor="let row of r.byPaymentMethod"
+            class="flex items-center justify-between text-sm"
+          >
+            <span class="font-medium text-gray-700 dark:text-gray-300">{{
+              row.paymentMethod
+            }}</span>
+            <span class="text-gray-500 dark:text-gray-400"
+              >{{ row.count }} · ₱{{ row.revenue | number: '1.2-2' }}</span
+            >
+          </div>
+          <p
+            *ngIf="r.byPaymentMethod.length === 0"
+            class="py-4 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+          >
+            No sales in this range.
+          </p>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">By branch</h2>
+        <div class="mt-3 space-y-2">
+          <div *ngFor="let row of r.byBranch" class="flex items-center justify-between text-sm">
+            <span class="font-medium text-gray-700 dark:text-gray-300">{{ row.branchCode }}</span>
+            <span class="text-gray-500 dark:text-gray-400"
+              >{{ row.count }} · ₱{{ row.revenue | number: '1.2-2' }}</span
+            >
+          </div>
+          <p
+            *ngIf="r.byBranch.length === 0"
+            class="py-4 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+          >
+            No sales in this range.
+          </p>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Top products</h2>
+        <div class="mt-3 space-y-2">
+          <div *ngFor="let row of r.topProducts" class="flex items-center justify-between text-sm">
+            <span class="truncate font-medium text-gray-700 dark:text-gray-300">{{
+              row.productName
+            }}</span>
+            <span class="shrink-0 text-gray-500 dark:text-gray-400"
+              >{{ row.quantitySold }} · ₱{{ row.revenue | number: '1.2-2' }}</span
+            >
+          </div>
+          <p
+            *ngIf="r.topProducts.length === 0"
+            class="py-4 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+          >
+            No sales in this range.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-card">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Recent sales</h2>
+      <div class="mt-3 space-y-2">
+        <div
+          *ngFor="let sale of r.recentSales"
+          class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
+        >
+          <div class="min-w-0">
+            <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+              ₱{{ sale.total | number: '1.2-2' }}
+              <span class="font-normal text-gray-500 dark:text-gray-400"
+                >· {{ sale.paymentMethod }}</span
+              >
+            </p>
+            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+              {{ sale.branchCode }} · {{ sale.employeeName }}
+            </p>
+          </div>
+          <p class="shrink-0 text-xs font-normal text-gray-500 dark:text-gray-400">
+            {{ sale.soldAt | date: 'short' }}
+          </p>
+        </div>
+
+        <p
+          *ngIf="r.recentSales.length === 0"
+          class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+        >
+          No sales in this range.
+        </p>
+      </div>
+    </div>
+  </ng-container>
+</div>
