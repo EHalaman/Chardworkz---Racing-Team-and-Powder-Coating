@@ -51,4 +51,8 @@ public class Product {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    /** Set only by a real "Delete" action, distinguishing it from a plain Deactivate (which leaves this null). Cleared on Reactivate. */
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 }

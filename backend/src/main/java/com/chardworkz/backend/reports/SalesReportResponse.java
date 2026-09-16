@@ -28,5 +28,6 @@ public record SalesReportResponse(
         String branchCode,
         String employeeName,
         String paymentMethod,
+        String paymentReference,
         BigDecimal total) {}
 }

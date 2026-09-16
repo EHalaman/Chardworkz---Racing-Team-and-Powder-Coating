@@ -17,6 +17,7 @@ export class Roles implements OnInit {
   readonly selectedRole = signal<AccountRole>('EMPLOYEE');
   readonly selectedBranch = signal('MAIN');
   readonly showPassword = signal(false);
+  readonly searchTerm = signal('');
 
   readonly roleOptions: { value: AccountRole; label: string }[] = [
     { value: 'OWNER', label: 'Owner' },
@@ -85,6 +86,16 @@ export class Roles implements OnInit {
 
   isSelf(account: Account): boolean {
     return account.username === this.auth.currentUser()?.username;
+  }
+
+  get filteredAccounts(): Account[] {
+    const term = this.searchTerm().trim().toLowerCase();
+    if (!term) {
+      return this.accounts();
+    }
+    return this.accounts().filter(
+      (a) => a.fullName.toLowerCase().includes(term) || a.username.toLowerCase().includes(term),
+    );
   }
 
   private loadAccounts(): void {

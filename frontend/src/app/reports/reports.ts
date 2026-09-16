@@ -27,6 +27,7 @@ export interface RecentSale {
   branchCode: string;
   employeeName: string;
   paymentMethod: string;
+  paymentReference: string | null;
   total: number;
 }
 

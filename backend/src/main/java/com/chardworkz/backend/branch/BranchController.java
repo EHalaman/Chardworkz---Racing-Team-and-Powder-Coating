@@ -1,10 +1,13 @@
 package com.chardworkz.backend.branch;
 
+import com.chardworkz.backend.audit.ActionType;
+import com.chardworkz.backend.audit.ActivityLogService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -21,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class BranchController {
 
     private final BranchRepository branchRepository;
+    private final ActivityLogService activityLogService;
 
     @GetMapping
     public List<BranchResponse> list() {
@@ -28,11 +32,17 @@ public class BranchController {
     }
 
     @PatchMapping("/{id}")
-    public BranchResponse update(@PathVariable Long id, @Valid @RequestBody UpdateBranchRequest request) {
+    public BranchResponse update(
+        @PathVariable Long id, @Valid @RequestBody UpdateBranchRequest request, Authentication authentication) {
         Branch branch = branchRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
         branch.setName(request.name());
         branch.setMonthlySalesGoal(request.monthlySalesGoal());
-        return BranchResponse.from(branchRepository.save(branch));
+        branch = branchRepository.save(branch);
+
+        activityLogService.record(authentication, ActionType.UPDATE, "BRANCH", String.valueOf(branch.getId()),
+            branch.getId(), "Updated branch \"" + branch.getName() + "\" settings");
+
+        return BranchResponse.from(branch);
     }
 }

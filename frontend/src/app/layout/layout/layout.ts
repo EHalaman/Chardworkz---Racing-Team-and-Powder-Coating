@@ -1,4 +1,13 @@
-import { Component, OnDestroy, OnInit, Signal, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  Signal,
+  ViewChild,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subscription, catchError, filter, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
@@ -10,12 +19,22 @@ export type Role = 'owner' | 'manager' | 'employee';
 export interface NavItem {
   label: string;
   path: string;
-  icon: 'dashboard' | 'register' | 'products' | 'inventory' | 'reports' | 'roles' | 'settings';
+  icon:
+    | 'dashboard'
+    | 'register'
+    | 'products'
+    | 'inventory'
+    | 'reports'
+    | 'roles'
+    | 'settings'
+    | 'activity-log';
   roles: Role[];
 }
 
 export interface Tab {
+  /** Pathname only (no query string) - the tab's identity, so filter/query variants of the same route reuse one tab instead of spawning a new one. */
   path: string;
+  queryParams: Record<string, string>;
   title: string;
 }
 
@@ -28,6 +47,12 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Inventory', path: '/inventory', icon: 'inventory', roles: ['owner', 'manager'] },
   { label: 'Sales Reports', path: '/reports', icon: 'reports', roles: ['owner', 'manager'] },
   { label: 'Roles', path: '/roles', icon: 'roles', roles: ['owner'] },
+  {
+    label: 'Activity Log',
+    path: '/activity-log',
+    icon: 'activity-log',
+    roles: ['owner', 'manager'],
+  },
   { label: 'Settings', path: '/settings', icon: 'settings', roles: ['owner'] },
 ];
 
@@ -39,6 +64,7 @@ export const ALL_NAV_ITEMS: NavItem[] = [
  */
 export const HIDDEN_GUARDED_ROUTES: { path: string; roles: Role[] }[] = [
   { path: '/activities', roles: ['owner', 'manager'] },
+  { path: '/products/archived', roles: ['owner', 'manager'] },
 ];
 
 @Component({
@@ -58,6 +84,9 @@ export class Layout implements OnInit, OnDestroy {
   readonly isAlertsOpen = signal(false);
   readonly alerts = signal<DashboardAlert[]>([]);
 
+  @ViewChild('alertsWrapper') private alertsWrapper?: ElementRef<HTMLElement>;
+  @ViewChild('roleMenuWrapper') private roleMenuWrapper?: ElementRef<HTMLElement>;
+
   private routerSub?: Subscription;
 
   constructor(
@@ -68,6 +97,18 @@ export class Layout implements OnInit, OnDestroy {
     private dashboardService: DashboardService,
   ) {
     this.isDarkMode = this.theme.isDarkMode;
+  }
+
+  /** Closes an open dropdown when a click lands outside its own wrapper - neither dropdown is a native <details>/<select>, so nothing does this by default. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as Node;
+    if (this.isAlertsOpen() && !this.alertsWrapper?.nativeElement.contains(target)) {
+      this.isAlertsOpen.set(false);
+    }
+    if (this.isRoleMenuOpen && !this.roleMenuWrapper?.nativeElement.contains(target)) {
+      this.isRoleMenuOpen = false;
+    }
   }
 
   ngOnInit(): void {
@@ -114,6 +155,13 @@ export class Layout implements OnInit, OnDestroy {
     this.isAlertsOpen.update((open) => !open);
   }
 
+  /** Alerts carry no per-item entity id, so this deep-links by alert type rather than to one specific product. */
+  routeToAlert(alert: DashboardAlert): void {
+    this.isAlertsOpen.set(false);
+    const filterValue = alert.type === 'OUT_OF_STOCK' ? 'out-of-stock' : 'low-stock';
+    this.router.navigate(['/inventory'], { queryParams: { filter: filterValue } });
+  }
+
   /** Title-cases the JWT's uppercase role claim (e.g. "OWNER") for display. */
   get currentRoleLabel(): string {
     const role = this.auth.currentUser()?.role ?? '';
@@ -129,10 +177,23 @@ export class Layout implements OnInit, OnDestroy {
     this.router.navigateByUrl('/login');
   }
 
-  openTab(path: string, title: string): void {
+  /**
+   * Keyed by pathname only, not the full URL - `/inventory` and
+   * `/inventory?filter=low-stock` are the same logical tab. An already-open
+   * tab for this pathname is updated in place (new query params, new title)
+   * rather than spawning a duplicate.
+   */
+  openTab(url: string, title: string): void {
+    const path = url.split('?')[0];
+    const queryParams = this.router.parseUrl(url).queryParams;
     this.activeTabPath = path;
-    if (!this.openTabs.some((tab) => tab.path === path)) {
-      this.openTabs.push({ path, title });
+
+    const existing = this.openTabs.find((tab) => tab.path === path);
+    if (existing) {
+      existing.queryParams = queryParams;
+      existing.title = title;
+    } else {
+      this.openTabs.push({ path, queryParams, title });
     }
   }
 
@@ -153,7 +214,7 @@ export class Layout implements OnInit, OnDestroy {
     }
     if (wasActive) {
       const next = this.openTabs[Math.max(0, index - 1)];
-      this.router.navigateByUrl(next.path);
+      this.router.navigate([next.path], { queryParams: next.queryParams });
     }
   }
 

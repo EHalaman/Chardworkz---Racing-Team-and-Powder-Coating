@@ -82,6 +82,15 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [ ] **Estimated margin is a rough approximation** — it uses each product's most-recently-recorded receipt cost, not real FIFO/weighted-average costing. It's `null`/excluded for any product with no receipt history at all — notably every Raider-seed part (V4 seeded `stock_level` directly without matching `stock_in_line` rows) and any SERVICES item. Revisit if real cost tracking is ever built.
 - [ ] Owner cannot currently reach `/register` at all (`Layout.ALL_NAV_ITEMS` doesn't include Owner in that route's roles), so the Shift Summary's Owner/cross-branch view was verified via curl only, never seen live. If Owner ever needs this view, it would make more sense surfaced on the Dashboard (which Owner does see) than by granting Owner Register/POS access.
 
+## UI/UX refinements, RBAC, and Activity Log (from an external proposal, 2026-09-16)
+
+- [x] Header dropdown click-outside handling, alert deep-linking to Inventory, real-time search on Products/Inventory/Sales Reports/Roles, Products pagination+sorting, Products toast — all done (`DECISIONS.md` DEC-039).
+- [x] Products Edit/Delete actions, Archived Products view, configurable Manager permission flags (Settings-toggleable) — done (`DECISIONS.md` DEC-040).
+- [x] Activity Log page (`/activity-log`) backed by a new `activity_log` table — done (`DECISIONS.md` DEC-041).
+- [ ] **Audit log data-volume mitigation (deliberately not built)** — table partitioning by month, soft-delete/`deleted_at` on `activity_log` itself, DB indexes beyond the two already added, and cold-storage archiving to Cloudflare R2 for entries older than 90 days. Explicitly deferred as premature at current volume (~30-200 events/month) — revisit only once real activity_log row counts are large enough that unpartitioned Postgres indexes start struggling, not on a fixed calendar date.
+- [ ] Activity logging currently covers Product (create/update/status/delete) and Account (create/status) and Branch (update) mutations only — Inventory's `receive`/`updateReorderThreshold` were deliberately left uncovered this session (Inventory already has its own `stock_in` historical table serving a similar purpose). Extend to Inventory if a "who changed a reorder threshold" audit trail is ever specifically needed.
+- [ ] Manager-permission system currently covers exactly two flags (Product edit/delete). If Manager-configurable access is ever needed for other actions (e.g. Roles, Inventory), extend the same `permission_flag` table/`PermissionService.isEnabled()` pattern rather than building a second mechanism.
+
 ## Project housekeeping
 
 - [ ] Confirm the `owner` field set in `PROJECT-CONTEXT.md`/`memory.md`/`handoff.md` ("Eleomar Halaman") is the correct business-side point of contact for ChardWorkz, not just the session user.

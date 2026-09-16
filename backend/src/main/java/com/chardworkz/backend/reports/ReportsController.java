@@ -103,6 +103,7 @@ public class ReportsController {
                 sale.getBranch().getCode(),
                 sale.getEmployee().getFullName(),
                 sale.getPaymentMethod().name(),
+                sale.getPaymentReference(),
                 sale.getTotal()))
             .toList();
 

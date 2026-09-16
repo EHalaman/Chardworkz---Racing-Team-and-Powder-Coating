@@ -1,0 +1,114 @@
+<div class="space-y-4">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Activity Log</h1>
+    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+      Who created, updated, or deleted what, and when.
+    </p>
+  </div>
+
+  <div
+    *ngIf="errorMessage()"
+    class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+  >
+    {{ errorMessage() }}
+  </div>
+
+  <div class="dashboard-card">
+    <div class="flex flex-wrap items-end gap-3">
+      <div>
+        <label class="text-xs font-medium text-gray-700 dark:text-gray-300">From</label>
+        <input
+          #fromInput
+          type="date"
+          [value]="fromDate"
+          class="mt-1 rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+      <div>
+        <label class="text-xs font-medium text-gray-700 dark:text-gray-300">To</label>
+        <input
+          #toInput
+          type="date"
+          [value]="toDate"
+          class="mt-1 rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
+        <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Action</label>
+        <select
+          (change)="actionTypeFilter.set($any($event.target).value)"
+          class="mt-1 rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        >
+          <option *ngFor="let option of actionTypeOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-xs font-medium text-gray-700 dark:text-gray-300">User</label>
+        <select
+          (change)="
+            actorFilter.set(
+              $any($event.target).value === 'ALL' ? 'ALL' : +$any($event.target).value
+            )
+          "
+          class="mt-1 rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        >
+          <option value="ALL">All users</option>
+          <option *ngFor="let actor of actorOptions" [value]="actor.id">{{ actor.name }}</option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        (click)="load(fromInput.value, toInput.value)"
+        [disabled]="loading()"
+        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+      >
+        {{ loading() ? 'Loading…' : 'Apply' }}
+      </button>
+    </div>
+
+    <div class="mt-4 space-y-2">
+      <div
+        *ngFor="let entry of filteredEntries"
+        class="flex items-center justify-between gap-3 rounded-xl bg-nav-bg p-3 dark:bg-slate-700/50"
+      >
+        <div class="min-w-0">
+          <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+            {{ entry.summary }}
+          </p>
+          <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+            {{ entry.actorName }} · {{ entry.entityType }}
+            <span *ngIf="entry.branchCode"> · {{ entry.branchCode }}</span>
+          </p>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <span
+            [ngClass]="{
+              'bg-primary-light text-primary': entry.actionType === 'CREATE',
+              'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300':
+                entry.actionType === 'UPDATE',
+              'bg-danger-light text-danger': entry.actionType === 'DELETE',
+            }"
+            class="rounded-full px-2 py-1 text-xs font-medium"
+          >
+            {{ entry.actionType }}
+          </span>
+          <p class="text-xs font-normal text-gray-400 dark:text-gray-500">
+            {{ entry.occurredAt | date: 'MMM d, y, h:mm a' }}
+          </p>
+        </div>
+      </div>
+
+      <p
+        *ngIf="filteredEntries.length === 0"
+        class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+      >
+        No activity in this range.
+      </p>
+    </div>
+  </div>
+</div>

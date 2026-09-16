@@ -1,5 +1,7 @@
 package com.chardworkz.backend.catalog;
 
+import com.chardworkz.backend.audit.ActionType;
+import com.chardworkz.backend.audit.ActivityLogService;
 import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.branch.BranchRepository;
 import com.chardworkz.backend.inventory.StockLevel;
@@ -27,17 +29,25 @@ import org.springframework.web.server.ResponseStatusException;
  *
  * <p>{@code GET /api/products} stays open to any authenticated role
  * (Register needs it for Employees) - the catalog-management endpoints below
- * it are Owner/Manager only, per PROJECT-CONTEXT.md's Users section.
+ * it are Owner/Manager only, per PROJECT-CONTEXT.md's Users section. Edit and
+ * Delete specifically are Owner-only by default, with a configurable
+ * per-flag opt-in for Manager (see {@code permission} package) - narrower
+ * than the rest of this controller, a deliberate, confirmed scope narrowing
+ * from Manager's prior blanket edit access.
  */
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
 
+    private static final String MANAGER_EDIT = "MANAGER_EDIT_PRODUCTS";
+    private static final String MANAGER_DELETE = "MANAGER_DELETE_PRODUCTS";
+
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
     private final BranchRepository branchRepository;
     private final JwtService jwtService;
+    private final ActivityLogService activityLogService;
 
     @GetMapping
     public List<ProductSummaryResponse> list(Authentication authentication) {
@@ -48,6 +58,19 @@ public class ProductController {
     @GetMapping("/admin")
     public List<ProductSummaryResponse> adminList(Authentication authentication) {
         return merge(productRepository.findAll(), authentication);
+    }
+
+    /**
+     * Archived view: anything not shown on the main catalog - deactivated or
+     * deleted products, plus active-but-zero-stock physical products (never
+     * SERVICES, which have no real stock concept - DEC-038).
+     */
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    @GetMapping("/archived")
+    public List<ProductSummaryResponse> archivedList(Authentication authentication) {
+        return merge(productRepository.findAll(), authentication).stream()
+            .filter(p -> !p.active() || (p.category() != Category.SERVICES && p.stockQuantity() == 0))
+            .toList();
     }
 
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
@@ -66,32 +89,75 @@ public class ProductController {
             .build();
         product = productRepository.save(product);
 
+        activityLogService.record(authentication, ActionType.CREATE, "PRODUCT", String.valueOf(product.getId()),
+            null, "Created product \"" + product.getName() + "\"");
+
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(product, authentication));
     }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_EDIT + "'))")
     @PatchMapping("/{id}")
     public ProductSummaryResponse update(
         @PathVariable Long id, @Valid @RequestBody CreateProductRequest request, Authentication authentication) {
-        Product product = productRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        Product product = findOrThrow(id);
         product.setName(request.name());
         product.setBrandTag(request.brandTag());
         product.setUnitPrice(request.unitPrice());
         product.setCategory(request.category());
         product.setUpdatedAt(Instant.now());
-        return toResponse(productRepository.save(product), authentication);
+        product = productRepository.save(product);
+
+        activityLogService.record(authentication, ActionType.UPDATE, "PRODUCT", String.valueOf(product.getId()),
+            null, "Updated product \"" + product.getName() + "\"");
+
+        return toResponse(product, authentication);
     }
 
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     @PatchMapping("/{id}/status")
     public ProductSummaryResponse updateStatus(
         @PathVariable Long id, @Valid @RequestBody UpdateProductStatusRequest request, Authentication authentication) {
-        Product product = productRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        Product product = findOrThrow(id);
         product.setActive(request.active());
         product.setUpdatedAt(Instant.now());
-        return toResponse(productRepository.save(product), authentication);
+        // Reactivating (from either a plain Deactivate or a real Delete) always clears deletedAt - once active again, it's no longer "deleted."
+        if (request.active()) {
+            product.setDeletedAt(null);
+        }
+        product = productRepository.save(product);
+
+        activityLogService.record(authentication, ActionType.UPDATE, "PRODUCT", String.valueOf(product.getId()),
+            null, (request.active() ? "Reactivated" : "Deactivated") + " product \"" + product.getName() + "\"");
+
+        return toResponse(product, authentication);
+    }
+
+    /**
+     * Soft-delete: sets is_active=false, same as Deactivate, but also stamps
+     * deleted_at so the Archived page and activity log can tell a real
+     * Delete apart from a plain Deactivate. Never a real SQL DELETE - product
+     * is referenced by sale_line/stock_level/stock_in_line, and hard-deleting
+     * a sold product would either violate the FK or destroy real sales
+     * history.
+     */
+    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_DELETE + "'))")
+    @DeleteMapping("/{id}")
+    public ProductSummaryResponse delete(@PathVariable Long id, Authentication authentication) {
+        Product product = findOrThrow(id);
+        product.setActive(false);
+        product.setDeletedAt(Instant.now());
+        product.setUpdatedAt(Instant.now());
+        product = productRepository.save(product);
+
+        activityLogService.record(authentication, ActionType.DELETE, "PRODUCT", String.valueOf(product.getId()),
+            null, "Deleted product \"" + product.getName() + "\"");
+
+        return toResponse(product, authentication);
+    }
+
+    private Product findOrThrow(Long id) {
+        return productRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     }
 
     private List<ProductSummaryResponse> merge(List<Product> products, Authentication authentication) {
@@ -109,7 +175,9 @@ public class ProductController {
                 product.getUnitPrice(),
                 product.getCategory(),
                 quantityByProductId.getOrDefault(product.getId(), 0),
-                product.isActive()))
+                product.isActive(),
+                product.getCreatedAt(),
+                product.getDeletedAt()))
             .toList();
     }
 
@@ -122,7 +190,7 @@ public class ProductController {
             .orElse(0);
         return new ProductSummaryResponse(
             product.getId(), product.getName(), product.getBrandTag(), product.getUnitPrice(),
-            product.getCategory(), quantity, product.isActive());
+            product.getCategory(), quantity, product.isActive(), product.getCreatedAt(), product.getDeletedAt());
     }
 
     private Branch callerBranch(Authentication authentication) {

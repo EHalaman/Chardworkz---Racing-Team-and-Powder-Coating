@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, signal } from '@angular/core';
 import { AccountsService } from '../../roles/accounts';
 import { AuthService } from '../../core/auth';
+import { PermissionFlag, PermissionKey, PermissionsService } from '../../core/permissions';
 import { ThemeService } from '../../core/theme';
 import { Branch, BranchesService } from '../branches';
 
@@ -26,17 +27,42 @@ export class Settings implements OnInit {
   readonly showCurrentPassword = signal(false);
   readonly showNewPassword = signal(false);
 
+  readonly permissions = signal<PermissionFlag[]>([]);
+  readonly permissionError = signal<string | null>(null);
+
   constructor(
     private accountsService: AccountsService,
     readonly auth: AuthService,
     readonly theme: ThemeService,
     private branchesService: BranchesService,
+    private permissionsService: PermissionsService,
   ) {}
 
   ngOnInit(): void {
     this.branchesService.list().subscribe({
       next: (branches) => this.branches.set(branches),
       error: () => this.branchError.set('Could not load branches.'),
+    });
+    this.permissionsService.list().subscribe({
+      next: (permissions) => this.permissions.set(permissions),
+      error: () => this.permissionError.set('Could not load permission settings.'),
+    });
+  }
+
+  isPermissionEnabled(key: PermissionKey): boolean {
+    return this.permissions().find((p) => p.permissionKey === key)?.enabled ?? false;
+  }
+
+  togglePermission(key: PermissionKey): void {
+    this.permissionError.set(null);
+    const nextEnabled = !this.isPermissionEnabled(key);
+    this.permissionsService.update(key, nextEnabled).subscribe({
+      next: (updated) => {
+        this.permissions.update((flags) =>
+          flags.map((f) => (f.permissionKey === updated.permissionKey ? updated : f)),
+        );
+      },
+      error: () => this.permissionError.set('Could not update that permission.'),
     });
   }
 

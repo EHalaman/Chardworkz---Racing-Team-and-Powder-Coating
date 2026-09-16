@@ -54,11 +54,27 @@
 
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
     <div class="dashboard-card">
-      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Stock levels</h2>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Stock levels</h2>
+        <span
+          *ngIf="stockFilter() !== 'ALL'"
+          class="rounded-full bg-danger-light px-2 py-1 text-xs font-medium text-danger"
+        >
+          Filtered: {{ stockFilter() === 'low-stock' ? 'Low stock' : 'Out of stock' }}
+        </span>
+      </div>
+
+      <input
+        #searchBox
+        type="text"
+        placeholder="Search by name or brand…"
+        (input)="searchTerm.set(searchBox.value)"
+        class="mt-3 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+      />
 
       <div class="mt-3 space-y-2">
         <div
-          *ngFor="let item of items()"
+          *ngFor="let item of filteredItems"
           class="rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
         >
           <div
@@ -126,10 +142,10 @@
         </div>
 
         <p
-          *ngIf="items().length === 0"
+          *ngIf="filteredItems.length === 0"
           class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
         >
-          No products yet.
+          No matching products.
         </p>
       </div>
     </div>

@@ -1,17 +1,25 @@
 <div class="space-y-4">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Products</h1>
-    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
-      Manage the shared product catalog.
-    </p>
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        {{ archived ? 'Archived Products' : 'Products' }}
+      </h1>
+      <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+        {{
+          archived
+            ? 'Deactivated, deleted, and out-of-stock items.'
+            : 'Manage the shared product catalog.'
+        }}
+      </p>
+    </div>
+    <a
+      [routerLink]="archived ? '/products' : '/products/archived'"
+      class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+    >
+      {{ archived ? '← Back to catalog' : 'View archived' }}
+    </a>
   </div>
 
-  <div
-    *ngIf="successMessage()"
-    class="rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary dark:bg-primary/20"
-  >
-    {{ successMessage() }}
-  </div>
   <div
     *ngIf="errorMessage()"
     class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
@@ -19,14 +27,14 @@
     {{ errorMessage() }}
   </div>
 
-  <div class="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+  <div class="grid grid-cols-1 gap-4" [ngClass]="archived ? '' : 'lg:grid-cols-[2fr_1fr]'">
     <div class="dashboard-card">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Catalog</h2>
         <div class="flex flex-wrap gap-1.5">
           <button
             type="button"
-            (click)="categoryFilter.set('ALL')"
+            (click)="setCategoryFilter('ALL')"
             [ngClass]="
               categoryFilter() === 'ALL'
                 ? 'bg-primary text-white'
@@ -39,7 +47,7 @@
           <button
             *ngFor="let option of categoryOptions"
             type="button"
-            (click)="categoryFilter.set(option.value)"
+            (click)="setCategoryFilter(option.value)"
             [ngClass]="
               categoryFilter() === option.value
                 ? 'bg-primary text-white'
@@ -52,9 +60,27 @@
         </div>
       </div>
 
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <input
+          #searchBox
+          type="text"
+          placeholder="Search by name or brand…"
+          (input)="setSearchTerm(searchBox.value)"
+          class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+        <select
+          (change)="setSortBy($any($event.target).value)"
+          class="rounded-lg border border-gray-300 bg-surface px-2 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        >
+          <option *ngFor="let option of sortOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
       <div class="mt-3 space-y-2">
         <div
-          *ngFor="let product of filteredProducts"
+          *ngFor="let product of pagedProducts"
           class="rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
         >
           <div *ngIf="editingId() !== product.id" class="flex items-center justify-between gap-3">
@@ -82,22 +108,52 @@
                 "
                 class="rounded-full px-2 py-1 text-xs font-medium"
               >
-                {{ product.active ? 'Active' : 'Inactive' }}
+                {{ product.deletedAt ? 'Deleted' : product.active ? 'Active' : 'Inactive' }}
               </span>
-              <button
-                type="button"
-                (click)="startEdit(product)"
-                class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                (click)="toggleActive(product)"
-                class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
-              >
-                {{ product.active ? 'Deactivate' : 'Activate' }}
-              </button>
+
+              <ng-container *ngIf="!archived">
+                <button
+                  *ngIf="canEdit"
+                  type="button"
+                  (click)="startEdit(product)"
+                  class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  (click)="toggleActive(product)"
+                  class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+                >
+                  {{ product.active ? 'Deactivate' : 'Activate' }}
+                </button>
+                <button
+                  *ngIf="canDelete"
+                  type="button"
+                  (click)="deleteProduct(product)"
+                  class="rounded-lg border border-danger px-2 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger-light"
+                >
+                  Delete
+                </button>
+              </ng-container>
+
+              <ng-container *ngIf="archived">
+                <button
+                  type="button"
+                  (click)="reactivate(product)"
+                  class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+                >
+                  Reactivate
+                </button>
+                <a
+                  *ngIf="product.active && product.category !== 'SERVICES'"
+                  [routerLink]="'/inventory'"
+                  [queryParams]="{ restock: product.id }"
+                  class="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+                >
+                  Restock
+                </a>
+              </ng-container>
             </div>
           </div>
 
@@ -168,15 +224,47 @@
         </div>
 
         <p
-          *ngIf="products().length === 0"
+          *ngIf="pagedProducts.length === 0"
           class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
         >
-          No products yet.
+          {{ archived ? 'Nothing archived.' : 'No products yet.' }}
         </p>
+      </div>
+
+      <div *ngIf="totalPages > 1" class="mt-4 flex flex-wrap items-center justify-center gap-1">
+        <button
+          type="button"
+          [disabled]="currentPage() === 1"
+          (click)="goToPage(currentPage() - 1)"
+          class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Previous
+        </button>
+        <button
+          *ngFor="let page of pageNumbers"
+          type="button"
+          (click)="goToPage(page)"
+          [ngClass]="
+            currentPage() === page
+              ? 'bg-primary text-white'
+              : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+          "
+          class="rounded-lg px-3 py-1 text-xs font-medium transition-colors"
+        >
+          {{ page }}
+        </button>
+        <button
+          type="button"
+          [disabled]="currentPage() === totalPages"
+          (click)="goToPage(currentPage() + 1)"
+          class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Next
+        </button>
       </div>
     </div>
 
-    <div class="dashboard-card space-y-3">
+    <div *ngIf="!archived" class="dashboard-card space-y-3">
       <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">New product</h2>
 
       <div>
@@ -245,5 +333,12 @@
         {{ submitting() ? 'Adding…' : 'Add product' }}
       </button>
     </div>
+  </div>
+
+  <div
+    *ngIf="successMessage()"
+    class="fixed bottom-4 right-4 z-50 rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary shadow-lg dark:bg-primary/20"
+  >
+    {{ successMessage() }}
   </div>
 </div>

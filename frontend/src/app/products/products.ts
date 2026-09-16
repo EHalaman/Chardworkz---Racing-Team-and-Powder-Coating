@@ -13,6 +13,8 @@ export interface ProductSummary {
   category: ProductCategory;
   stockQuantity: number;
   active: boolean;
+  createdAt: string;
+  deletedAt: string | null;
 }
 
 export interface ProductRequest {
@@ -34,6 +36,10 @@ export class ProductsService {
     return this.http.get<ProductSummary[]>(`${environment.apiBaseUrl}/api/products/admin`);
   }
 
+  archivedList(): Observable<ProductSummary[]> {
+    return this.http.get<ProductSummary[]>(`${environment.apiBaseUrl}/api/products/archived`);
+  }
+
   create(request: ProductRequest): Observable<ProductSummary> {
     return this.http.post<ProductSummary>(`${environment.apiBaseUrl}/api/products`, request);
   }
@@ -46,5 +52,9 @@ export class ProductsService {
     return this.http.patch<ProductSummary>(`${environment.apiBaseUrl}/api/products/${id}/status`, {
       active,
     });
+  }
+
+  delete(id: number): Observable<ProductSummary> {
+    return this.http.delete<ProductSummary>(`${environment.apiBaseUrl}/api/products/${id}`);
   }
 }

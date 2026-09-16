@@ -1,5 +1,7 @@
 package com.chardworkz.backend.account;
 
+import com.chardworkz.backend.audit.ActionType;
+import com.chardworkz.backend.audit.ActivityLogService;
 import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.branch.BranchRepository;
 import com.chardworkz.backend.security.JwtService;
@@ -34,6 +36,7 @@ public class AccountController {
     private final BranchRepository branchRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final ActivityLogService activityLogService;
 
     @GetMapping
     public List<AccountSummaryResponse> list() {
@@ -41,7 +44,8 @@ public class AccountController {
     }
 
     @PostMapping
-    public ResponseEntity<AccountSummaryResponse> create(@Valid @RequestBody CreateAccountRequest request) {
+    public ResponseEntity<AccountSummaryResponse> create(
+        @Valid @RequestBody CreateAccountRequest request, Authentication authentication) {
         if (accountRepository.existsByUsername(request.username())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already taken");
         }
@@ -67,6 +71,9 @@ public class AccountController {
             // A genuine race on the username unique constraint past the check above.
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already taken");
         }
+
+        activityLogService.record(authentication, ActionType.CREATE, "ACCOUNT", String.valueOf(account.getId()),
+            account.getBranch().getId(), "Created " + account.getRole().name().toLowerCase() + " account \"" + account.getUsername() + "\"");
 
         return ResponseEntity.status(HttpStatus.CREATED).body(AccountSummaryResponse.from(account));
     }
@@ -122,6 +129,12 @@ public class AccountController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
         account.setActive(request.active());
         account.setUpdatedAt(Instant.now());
-        return AccountSummaryResponse.from(accountRepository.save(account));
+        account = accountRepository.save(account);
+
+        activityLogService.record(authentication, ActionType.UPDATE, "ACCOUNT", String.valueOf(account.getId()),
+            account.getBranch().getId(),
+            (request.active() ? "Activated" : "Deactivated") + " account \"" + account.getUsername() + "\"");
+
+        return AccountSummaryResponse.from(account);
     }
 }

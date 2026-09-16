@@ -9,12 +9,6 @@
   </div>
 
   <div
-    *ngIf="successMessage()"
-    class="rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary dark:bg-primary/20"
-  >
-    {{ successMessage() }}
-  </div>
-  <div
     *ngIf="loadError()"
     class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
   >
@@ -236,5 +230,12 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div
+    *ngIf="successMessage()"
+    class="fixed bottom-4 right-4 z-50 rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary shadow-lg dark:bg-primary/20"
+  >
+    {{ successMessage() }}
   </div>
 </div>

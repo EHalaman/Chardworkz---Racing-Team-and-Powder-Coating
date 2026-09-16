@@ -1,6 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { AuthService } from '../../core/auth';
-import { ReportsService, SalesReport } from '../reports';
+import { ReportsService, RecentSale, SalesReport } from '../reports';
 
 @Component({
   selector: 'app-reports',
@@ -22,6 +22,7 @@ export class Reports implements OnInit {
 
   readonly fromDate = signal('');
   readonly toDate = signal('');
+  readonly searchTerm = signal('');
 
   constructor(
     private reportsService: ReportsService,
@@ -30,6 +31,20 @@ export class Reports implements OnInit {
 
   get isOwner(): boolean {
     return this.auth.currentUser()?.role === 'OWNER';
+  }
+
+  get filteredRecentSales(): RecentSale[] {
+    const term = this.searchTerm().trim().toLowerCase();
+    const sales = this.report()?.recentSales ?? [];
+    if (!term) {
+      return sales;
+    }
+    return sales.filter(
+      (sale) =>
+        sale.id.toLowerCase().includes(term) ||
+        sale.employeeName.toLowerCase().includes(term) ||
+        (sale.paymentReference ?? '').toLowerCase().includes(term),
+    );
   }
 
   ngOnInit(): void {

@@ -12,6 +12,7 @@ import { Inventory } from './inventory/inventory/inventory';
 import { Reports } from './reports/reports/reports';
 import { Settings } from './settings/settings/settings';
 import { Activities } from './activities/activities/activities';
+import { ActivityLog } from './activity-log/activity-log/activity-log';
 
 const routes: Routes = [
   { path: 'login', component: Login, data: { title: 'Login' } },
@@ -25,11 +26,17 @@ const routes: Routes = [
       { path: 'dashboard', component: Dashboard, data: { title: 'Dashboard' } },
       { path: 'register', component: Register, data: { title: 'Register' } },
       { path: 'products', component: Products, data: { title: 'Products' } },
+      {
+        path: 'products/archived',
+        component: Products,
+        data: { title: 'Archived Products', archived: true },
+      },
       { path: 'inventory', component: Inventory, data: { title: 'Inventory' } },
       { path: 'reports', component: Reports, data: { title: 'Sales Reports' } },
       { path: 'roles', component: Roles, data: { title: 'Roles' } },
       { path: 'settings', component: Settings, data: { title: 'Settings' } },
       { path: 'activities', component: Activities, data: { title: 'Activity History' } },
+      { path: 'activity-log', component: ActivityLog, data: { title: 'Activity Log' } },
     ],
   },
 ];

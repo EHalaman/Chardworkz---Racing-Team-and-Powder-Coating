@@ -1,5 +1,12 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { AuthService } from '../../core/auth';
+import { PermissionFlag, PermissionsService } from '../../core/permissions';
 import { ProductCategory, ProductRequest, ProductsService, ProductSummary } from '../products';
+
+type SortOption = 'DATE_NEWEST' | 'DATE_OLDEST' | 'PRICE_HIGH' | 'PRICE_LOW';
+
+const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-products',
@@ -8,6 +15,8 @@ import { ProductCategory, ProductRequest, ProductsService, ProductSummary } from
   templateUrl: './products.html',
 })
 export class Products implements OnInit {
+  readonly archived: boolean;
+
   readonly products = signal<ProductSummary[]>([]);
   readonly successMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -16,6 +25,10 @@ export class Products implements OnInit {
   readonly newCategory = signal<ProductCategory>('OTHERS');
   readonly editingCategory = signal<ProductCategory>('OTHERS');
   readonly categoryFilter = signal<ProductCategory | 'ALL'>('ALL');
+  readonly searchTerm = signal('');
+  readonly sortBy = signal<SortOption>('DATE_NEWEST');
+  readonly currentPage = signal(1);
+  readonly permissions = signal<PermissionFlag[]>([]);
 
   readonly categoryOptions: { value: ProductCategory; label: string }[] = [
     { value: 'CARB', label: 'Carb' },
@@ -24,17 +37,115 @@ export class Products implements OnInit {
     { value: 'SERVICES', label: 'Services' },
   ];
 
-  constructor(private productsService: ProductsService) {}
+  readonly sortOptions: { value: SortOption; label: string }[] = [
+    { value: 'DATE_NEWEST', label: 'Date added (Newest)' },
+    { value: 'DATE_OLDEST', label: 'Date added (Oldest)' },
+    { value: 'PRICE_HIGH', label: 'Price (High to Low)' },
+    { value: 'PRICE_LOW', label: 'Price (Low to High)' },
+  ];
+
+  constructor(
+    private productsService: ProductsService,
+    private permissionsService: PermissionsService,
+    readonly auth: AuthService,
+    route: ActivatedRoute,
+  ) {
+    this.archived = route.snapshot.data['archived'] === true;
+  }
 
   ngOnInit(): void {
     this.loadProducts();
+    this.permissionsService.list().subscribe({
+      next: (permissions) => this.permissions.set(permissions),
+      error: () => {
+        // Owner never needs these to act (always allowed); a Manager who fails
+        // to load them just sees Edit/Delete stay hidden, the same as if they
+        // were disabled - fails closed, not open.
+      },
+    });
+  }
+
+  get isOwner(): boolean {
+    return this.auth.currentUser()?.role === 'OWNER';
+  }
+
+  get canEdit(): boolean {
+    return this.isOwner || this.isPermissionEnabled('MANAGER_EDIT_PRODUCTS');
+  }
+
+  get canDelete(): boolean {
+    return this.isOwner || this.isPermissionEnabled('MANAGER_DELETE_PRODUCTS');
+  }
+
+  private isPermissionEnabled(key: string): boolean {
+    return this.permissions().find((p) => p.permissionKey === key)?.enabled ?? false;
   }
 
   get filteredProducts(): ProductSummary[] {
-    const filter = this.categoryFilter();
-    return filter === 'ALL'
-      ? this.products()
-      : this.products().filter((p) => p.category === filter);
+    const category = this.categoryFilter();
+    const term = this.searchTerm().trim().toLowerCase();
+
+    let list = this.products();
+    if (!this.archived) {
+      // Main catalog: active, and either a service (no real stock concept - DEC-038) or actually in stock.
+      list = list.filter((p) => p.active && (p.category === 'SERVICES' || p.stockQuantity > 0));
+    }
+    if (category !== 'ALL') {
+      list = list.filter((p) => p.category === category);
+    }
+    if (term) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(term) || (p.brandTag ?? '').toLowerCase().includes(term),
+      );
+    }
+
+    const sort = this.sortBy();
+    return [...list].sort((a, b) => {
+      switch (sort) {
+        case 'DATE_OLDEST':
+          return a.createdAt.localeCompare(b.createdAt);
+        case 'PRICE_HIGH':
+          return b.unitPrice - a.unitPrice;
+        case 'PRICE_LOW':
+          return a.unitPrice - b.unitPrice;
+        default:
+          return b.createdAt.localeCompare(a.createdAt);
+      }
+    });
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredProducts.length / PAGE_SIZE));
+  }
+
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+  }
+
+  get pagedProducts(): ProductSummary[] {
+    const page = Math.min(this.currentPage(), this.totalPages);
+    const start = (page - 1) * PAGE_SIZE;
+    return this.filteredProducts.slice(start, start + PAGE_SIZE);
+  }
+
+  goToPage(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  setCategoryFilter(category: ProductCategory | 'ALL'): void {
+    this.categoryFilter.set(category);
+    this.currentPage.set(1);
+  }
+
+  setSearchTerm(term: string): void {
+    this.searchTerm.set(term);
+    this.currentPage.set(1);
+  }
+
+  setSortBy(sort: SortOption): void {
+    this.sortBy.set(sort);
+    this.currentPage.set(1);
   }
 
   startEdit(product: ProductSummary): void {
@@ -92,13 +203,42 @@ export class Products implements OnInit {
   toggleActive(product: ProductSummary): void {
     this.errorMessage.set(null);
     this.productsService.setActive(product.id, !product.active).subscribe({
-      next: (updated) => {
-        this.products.update((products) =>
-          products.map((p) => (p.id === updated.id ? updated : p)),
-        );
-      },
+      next: (updated) => this.applyUpdate(product, updated),
       error: () => this.errorMessage.set('Could not update that product.'),
     });
+  }
+
+  deleteProduct(product: ProductSummary): void {
+    this.errorMessage.set(null);
+    this.productsService.delete(product.id).subscribe({
+      next: (updated) => {
+        this.applyUpdate(product, updated);
+        this.successMessage.set(`"${product.name}" deleted.`);
+        setTimeout(() => this.successMessage.set(null), 3000);
+      },
+      error: () => this.errorMessage.set('Could not delete that product.'),
+    });
+  }
+
+  reactivate(product: ProductSummary): void {
+    this.errorMessage.set(null);
+    this.productsService.setActive(product.id, true).subscribe({
+      next: (updated) => this.applyUpdate(product, updated),
+      error: () => this.errorMessage.set('Could not reactivate that product.'),
+    });
+  }
+
+  /** In the main view a status/delete change removes the row locally if it now belongs in Archived (and vice versa), instead of a full refetch. */
+  private applyUpdate(original: ProductSummary, updated: ProductSummary): void {
+    const belongsHere = this.archived
+      ? !updated.active || (updated.category !== 'SERVICES' && updated.stockQuantity === 0)
+      : updated.active && (updated.category === 'SERVICES' || updated.stockQuantity > 0);
+
+    this.products.update((products) =>
+      belongsHere
+        ? products.map((p) => (p.id === updated.id ? updated : p))
+        : products.filter((p) => p.id !== updated.id),
+    );
   }
 
   private toRequest(
@@ -116,7 +256,10 @@ export class Products implements OnInit {
   }
 
   private loadProducts(): void {
-    this.productsService.adminList().subscribe({
+    const request = this.archived
+      ? this.productsService.archivedList()
+      : this.productsService.adminList();
+    request.subscribe({
       next: (products) => this.products.set(products),
       error: () => this.errorMessage.set('Could not load products.'),
     });

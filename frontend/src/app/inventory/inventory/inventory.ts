@@ -1,4 +1,6 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import {
   BranchInventorySummary,
@@ -7,13 +9,15 @@ import {
   StockReceipt,
 } from '../inventory';
 
+type StockFilter = 'ALL' | 'low-stock' | 'out-of-stock';
+
 @Component({
   selector: 'app-inventory',
   standalone: false,
   styleUrl: './inventory.css',
   templateUrl: './inventory.html',
 })
-export class Inventory implements OnInit {
+export class Inventory implements OnInit, OnDestroy {
   readonly items = signal<InventoryItem[]>([]);
   readonly receipts = signal<StockReceipt[]>([]);
   readonly successMessage = signal<string | null>(null);
@@ -22,6 +26,13 @@ export class Inventory implements OnInit {
   readonly editingThresholdFor = signal<number | null>(null);
   readonly selectedBranch = signal<string | null>(null);
   readonly branchSummaries = signal<BranchInventorySummary[]>([]);
+  readonly searchTerm = signal('');
+  readonly stockFilter = signal<StockFilter>('ALL');
+  readonly restockProductId = signal('');
+
+  @ViewChild('product') private productSelect?: ElementRef<HTMLSelectElement>;
+
+  private queryParamsSub?: Subscription;
 
   readonly branchOptions = [
     { value: 'MAIN', label: 'Main Branch' },
@@ -31,19 +42,51 @@ export class Inventory implements OnInit {
   constructor(
     private inventoryService: InventoryService,
     readonly auth: AuthService,
+    private route: ActivatedRoute,
   ) {}
 
   get isOwner(): boolean {
     return this.auth.currentUser()?.role === 'OWNER';
   }
 
+  get filteredItems(): InventoryItem[] {
+    const term = this.searchTerm().trim().toLowerCase();
+    const filter = this.stockFilter();
+    return this.items()
+      .filter(
+        (item) =>
+          !term ||
+          item.name.toLowerCase().includes(term) ||
+          (item.brandTag ?? '').toLowerCase().includes(term),
+      )
+      .filter((item) => {
+        if (filter === 'out-of-stock') return item.quantity === 0;
+        if (filter === 'low-stock') return item.lowStock;
+        return true;
+      });
+  }
+
   ngOnInit(): void {
     this.selectedBranch.set(this.auth.currentUser()?.branchCode ?? 'MAIN');
+    // Reactive, not a one-time snapshot read: the same component instance is
+    // reused when only the query string changes (e.g. reusing an already-open
+    // Inventory tab for a different alert, or navigating back to the plain
+    // /inventory link) - a constructor-only read would leave a stale filter
+    // showing after the query param it came from is gone.
+    this.queryParamsSub = this.route.queryParamMap.subscribe((params) => {
+      this.stockFilter.set((params.get('filter') as StockFilter | null) ?? 'ALL');
+      this.restockProductId.set(params.get('restock') ?? '');
+      this.applyRestockSelection();
+    });
     this.loadInventory();
     this.loadReceipts();
     if (this.isOwner) {
       this.loadBranchSummaries();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.queryParamsSub?.unsubscribe();
   }
 
   selectBranch(branchCode: string): void {
@@ -148,9 +191,25 @@ export class Inventory implements OnInit {
       });
   }
 
+  /** Deferred one tick: the matching <option> only exists in the DOM once *ngFor has re-rendered off whichever signal (items or restockProductId) changed most recently. Safe to call from either direction since it's a no-op without a pending id or select ref. */
+  private applyRestockSelection(): void {
+    const id = this.restockProductId();
+    if (!id) {
+      return;
+    }
+    setTimeout(() => {
+      if (this.productSelect) {
+        this.productSelect.nativeElement.value = id;
+      }
+    });
+  }
+
   private loadInventory(): void {
     this.inventoryService.list(this.selectedBranch()).subscribe({
-      next: (items) => this.items.set(items),
+      next: (items) => {
+        this.items.set(items);
+        this.applyRestockSelection();
+      },
       error: () => this.errorMessage.set('Could not load inventory.'),
     });
   }
