@@ -14,6 +14,7 @@ import { RolesModule } from './roles/roles-module';
 import { ProductsModule } from './products/products-module';
 import { InventoryModule } from './inventory/inventory-module';
 import { ReportsModule } from './reports/reports-module';
+import { SettingsModule } from './settings/settings-module';
 
 @NgModule({
   declarations: [App],
@@ -29,6 +30,7 @@ import { ReportsModule } from './reports/reports-module';
     ProductsModule,
     InventoryModule,
     ReportsModule,
+    SettingsModule,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),

@@ -58,9 +58,10 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [x] Inventory: Owner branch-overview cards — done 2026-09-15 (`DECISIONS.md` DEC-035): at-a-glance per-branch products-in-stock/low-stock counts so Owner can spot a restock problem without switching branches first.
 - [ ] Branch-to-branch stock transfer — not built. Surfaced by an external multi-branch-inventory proposal (2026-09-15); genuinely new (no entity/audit-trail exists for it, unlike receiving), so it's a real feature to scope, not a quick extension. Would need a `stock_transfer` entity mirroring `stock_in`'s audit pattern (from-branch, to-branch, product, quantity, who, when), decrementing one branch's `stock_level` and incrementing the other atomically.
 - [x] Sales Reports — done 2026-09-15 (`DECISIONS.md` DEC-033): Owner (cross-branch) / Manager (own-branch) revenue, breakdowns, and recent sales. Verified live across all three roles.
-- [ ] Settings — still the generic `Placeholder` component; no content built yet.
+- [x] Settings — done 2026-09-16 (`DECISIONS.md` DEC-036): Owner-only account profile (name/password), branch renaming, and a shared dark-mode toggle; notifications shown as a "future phase" notice per Q3. Verified live including Manager/Employee both losing access. This was the last screen rendering the generic `Placeholder`.
 
 ## Project housekeeping
 
 - [ ] Confirm the `owner` field set in `PROJECT-CONTEXT.md`/`memory.md`/`handoff.md` ("Eleomar Halaman") is the correct business-side point of contact for ChardWorkz, not just the session user.
 - [ ] Reconcile `ChardWorkz_Thesis4_Summary.md` against the real `RELATED DOCUMENTS/THESIS4.docx` (currently built from a short user-pasted synopsis only, not the source document).
+- [ ] Manager and Employee currently have no self-service way to change their own password (Settings is Owner-only per DEC-036) — flag if that turns out to matter in practice; would need either a small always-open `/api/accounts/me/password`-style endpoint outside the Owner-only controller gate, or a scaled-down Settings view for non-Owner roles.

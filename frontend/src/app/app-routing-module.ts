@@ -2,7 +2,6 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { authGuard } from './core/auth-guard';
 import { roleGuard } from './core/role-guard';
-import { Placeholder } from './shared/placeholder/placeholder';
 import { Dashboard } from './dashboard/dashboard/dashboard';
 import { Login } from './auth/login/login';
 import { Layout } from './layout/layout/layout';
@@ -11,6 +10,7 @@ import { Roles } from './roles/roles/roles';
 import { Products } from './products/products/products';
 import { Inventory } from './inventory/inventory/inventory';
 import { Reports } from './reports/reports/reports';
+import { Settings } from './settings/settings/settings';
 
 const routes: Routes = [
   { path: 'login', component: Login, data: { title: 'Login' } },
@@ -27,7 +27,7 @@ const routes: Routes = [
       { path: 'inventory', component: Inventory, data: { title: 'Inventory' } },
       { path: 'reports', component: Reports, data: { title: 'Sales Reports' } },
       { path: 'roles', component: Roles, data: { title: 'Roles' } },
-      { path: 'settings', component: Placeholder, data: { title: 'Settings' } },
+      { path: 'settings', component: Settings, data: { title: 'Settings' } },
     ],
   },
 ];

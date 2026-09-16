@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { LoginResponse } from '../core/auth';
 
 export type AccountRole = 'OWNER' | 'MANAGER' | 'EMPLOYEE';
 
@@ -37,6 +38,19 @@ export class AccountsService {
   setActive(id: number, active: boolean): Observable<Account> {
     return this.http.patch<Account>(`${environment.apiBaseUrl}/api/accounts/${id}/status`, {
       active,
+    });
+  }
+
+  updateProfile(fullName: string): Observable<LoginResponse> {
+    return this.http.patch<LoginResponse>(`${environment.apiBaseUrl}/api/accounts/me`, {
+      fullName,
+    });
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.http.patch<void>(`${environment.apiBaseUrl}/api/accounts/me/password`, {
+      currentPassword,
+      newPassword,
     });
   }
 }

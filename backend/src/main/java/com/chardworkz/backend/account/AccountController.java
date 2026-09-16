@@ -3,6 +3,7 @@ package com.chardworkz.backend.account;
 import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.branch.BranchRepository;
 import com.chardworkz.backend.security.JwtService;
+import com.chardworkz.backend.security.LoginResponse;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import java.time.Instant;
@@ -68,6 +69,45 @@ public class AccountController {
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(AccountSummaryResponse.from(account));
+    }
+
+    /**
+     * Settings screen's own-profile edit (Owner-only, same as the rest of this
+     * controller). Re-issues the JWT since fullName is baked into its claims
+     * (see JwtService) - the old token would keep showing the stale name
+     * otherwise, not because the old one is invalid.
+     */
+    @PatchMapping("/me")
+    public LoginResponse updateProfile(@Valid @RequestBody UpdateProfileRequest request, Authentication authentication) {
+        Account account = currentAccount(authentication);
+        account.setFullName(request.fullName());
+        account.setUpdatedAt(Instant.now());
+        account = accountRepository.save(account);
+        return new LoginResponse(
+            jwtService.generateToken(account),
+            account.getUsername(),
+            account.getFullName(),
+            account.getRole().name(),
+            account.getBranch().getCode());
+    }
+
+    @PatchMapping("/me/password")
+    public ResponseEntity<Void> changePassword(
+        @Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
+        Account account = currentAccount(authentication);
+        if (!passwordEncoder.matches(request.currentPassword(), account.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+        }
+        account.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        account.setUpdatedAt(Instant.now());
+        accountRepository.save(account);
+        return ResponseEntity.noContent().build();
+    }
+
+    private Account currentAccount(Authentication authentication) {
+        Claims claims = (Claims) authentication.getDetails();
+        return accountRepository.findById(jwtService.extractAccountId(claims))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
     }
 
     @PatchMapping("/{id}/status")

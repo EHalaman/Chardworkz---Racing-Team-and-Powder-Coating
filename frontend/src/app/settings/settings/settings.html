@@ -1,0 +1,301 @@
+<div class="space-y-4">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+      Your profile, branch details, and app preferences.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div class="dashboard-card space-y-3">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Account profile</h2>
+
+      <div
+        *ngIf="profileMessage()"
+        class="rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary dark:bg-primary/20"
+      >
+        {{ profileMessage() }}
+      </div>
+      <div
+        *ngIf="profileError()"
+        class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+      >
+        {{ profileError() }}
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+        <input
+          type="text"
+          [value]="auth.currentUser()?.username"
+          disabled
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-nav-bg px-3 py-2 text-sm text-gray-500 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-400"
+        />
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Full name</label>
+        <input
+          #fullName
+          type="text"
+          [value]="auth.currentUser()?.fullName"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Role · Branch</label>
+        <input
+          type="text"
+          [value]="auth.currentUser()?.role + ' · ' + auth.currentUser()?.branchCode"
+          disabled
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-nav-bg px-3 py-2 text-sm text-gray-500 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-400"
+        />
+      </div>
+
+      <button
+        type="button"
+        [disabled]="savingProfile()"
+        (click)="saveProfile(fullName.value)"
+        class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+      >
+        {{ savingProfile() ? 'Saving…' : 'Save profile' }}
+      </button>
+    </div>
+
+    <div class="dashboard-card space-y-3">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Change password</h2>
+
+      <div
+        *ngIf="passwordMessage()"
+        class="rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary dark:bg-primary/20"
+      >
+        {{ passwordMessage() }}
+      </div>
+      <div
+        *ngIf="passwordError()"
+        class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+      >
+        {{ passwordError() }}
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Current password</label>
+        <div class="relative mt-1">
+          <input
+            #currentPassword
+            [type]="showCurrentPassword() ? 'text' : 'password'"
+            class="w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 pr-10 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+          />
+          <button
+            type="button"
+            (click)="toggleShowCurrentPassword()"
+            [attr.aria-label]="showCurrentPassword() ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="showCurrentPassword()"
+            class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            <svg
+              *ngIf="!showCurrentPassword()"
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg
+              *ngIf="showCurrentPassword()"
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 3l18 18" />
+              <path
+                d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.1 4M6.6 6.6C4 8.3 2 12 2 12s3.5 7 10 7a10 10 0 0 0 4.2-.9"
+              />
+              <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">New password</label>
+        <div class="relative mt-1">
+          <input
+            #newPassword
+            [type]="showNewPassword() ? 'text' : 'password'"
+            class="w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 pr-10 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+          />
+          <button
+            type="button"
+            (click)="toggleShowNewPassword()"
+            [attr.aria-label]="showNewPassword() ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="showNewPassword()"
+            class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            <svg
+              *ngIf="!showNewPassword()"
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg
+              *ngIf="showNewPassword()"
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 3l18 18" />
+              <path
+                d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.1 4M6.6 6.6C4 8.3 2 12 2 12s3.5 7 10 7a10 10 0 0 0 4.2-.9"
+              />
+              <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+            </svg>
+          </button>
+        </div>
+        <p class="mt-1 text-xs font-normal text-gray-500 dark:text-gray-400">
+          At least 8 characters.
+        </p>
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300"
+          >Confirm new password</label
+        >
+        <input
+          #confirmPassword
+          type="password"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <button
+        type="button"
+        [disabled]="savingPassword()"
+        (click)="
+          changePassword(currentPassword.value, newPassword.value, confirmPassword.value);
+          currentPassword.value = '';
+          newPassword.value = '';
+          confirmPassword.value = ''
+        "
+        class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+      >
+        {{ savingPassword() ? 'Changing…' : 'Change password' }}
+      </button>
+    </div>
+
+    <div class="dashboard-card space-y-3">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Business branches</h2>
+
+      <div
+        *ngIf="branchError()"
+        class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+      >
+        {{ branchError() }}
+      </div>
+
+      <div class="space-y-2">
+        <div
+          *ngFor="let branch of branches()"
+          class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
+        >
+          <ng-container *ngIf="editingBranchId() === branch.id; else branchView">
+            <input
+              #branchName
+              type="text"
+              [value]="branch.name"
+              class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-surface px-2 py-1 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+            />
+            <button
+              type="button"
+              (click)="saveBranchName(branch, branchName.value)"
+              class="shrink-0 rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              (click)="cancelEditBranch()"
+              class="shrink-0 rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+            >
+              Cancel
+            </button>
+          </ng-container>
+          <ng-template #branchView>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {{ branch.name }}
+              </p>
+              <p class="text-xs font-normal text-gray-500 dark:text-gray-400">{{ branch.code }}</p>
+            </div>
+            <button
+              type="button"
+              (click)="startEditBranch(branch)"
+              class="shrink-0 rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+            >
+              Rename
+            </button>
+          </ng-template>
+        </div>
+
+        <p
+          *ngIf="branches().length === 0"
+          class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+        >
+          No branches found.
+        </p>
+      </div>
+    </div>
+
+    <div class="dashboard-card space-y-4">
+      <div>
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">App preferences</h2>
+      </div>
+
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Dark mode</p>
+          <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+            Same toggle as the one in the dock - changing it here changes it everywhere.
+          </p>
+        </div>
+        <button
+          type="button"
+          (click)="theme.toggle()"
+          [attr.aria-pressed]="theme.isDarkMode()"
+          class="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          {{ theme.isDarkMode() ? 'Switch to light' : 'Switch to dark' }}
+        </button>
+      </div>
+
+      <div class="border-t border-gray-200 pt-4 dark:border-slate-700">
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Notifications</p>
+        <p class="mt-1 text-xs font-normal text-gray-500 dark:text-gray-400">
+          Email/SMS alerts (low stock, daily sales summary) are planned for a future phase - not
+          part of Phase 1.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

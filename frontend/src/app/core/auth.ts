@@ -29,6 +29,11 @@ export class AuthService {
       .pipe(tap((response) => this.persistSession(response)));
   }
 
+  /** Called after a self-service profile edit re-issues a token with a new fullName claim. */
+  updateSession(response: LoginResponse): void {
+    this.persistSession(response);
+  }
+
   logout(): void {
     localStorage.removeItem(STORAGE_KEY);
     this.session.set(null);

@@ -1,7 +1,8 @@
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, Signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { ThemeService } from '../../core/theme';
 
 export type Role = 'owner' | 'manager' | 'employee';
 
@@ -26,10 +27,8 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Inventory', path: '/inventory', icon: 'inventory', roles: ['owner', 'manager'] },
   { label: 'Sales Reports', path: '/reports', icon: 'reports', roles: ['owner', 'manager'] },
   { label: 'Roles', path: '/roles', icon: 'roles', roles: ['owner'] },
-  { label: 'Settings', path: '/settings', icon: 'settings', roles: ['owner', 'manager'] },
+  { label: 'Settings', path: '/settings', icon: 'settings', roles: ['owner'] },
 ];
-
-const THEME_STORAGE_KEY = 'chardworkz-theme';
 
 @Component({
   selector: 'app-layout',
@@ -44,7 +43,7 @@ export class Layout implements OnInit, OnDestroy {
   openTabs: Tab[] = [];
   activeTabPath = '';
 
-  readonly isDarkMode = signal(false);
+  readonly isDarkMode: Signal<boolean>;
 
   private routerSub?: Subscription;
 
@@ -52,11 +51,12 @@ export class Layout implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     readonly auth: AuthService,
-  ) {}
+    private theme: ThemeService,
+  ) {
+    this.isDarkMode = this.theme.isDarkMode;
+  }
 
   ngOnInit(): void {
-    this.applyTheme(this.readStoredTheme());
-
     this.routerSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
@@ -122,25 +122,6 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   toggleTheme(): void {
-    const next = !this.isDarkMode();
-    this.applyTheme(next);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, next ? 'dark' : 'light');
-    } catch {
-      // localStorage unavailable (private mode, etc.) - theme just won't persist.
-    }
-  }
-
-  private applyTheme(dark: boolean): void {
-    this.isDarkMode.set(dark);
-    document.documentElement.classList.toggle('dark', dark);
-  }
-
-  private readStoredTheme(): boolean {
-    try {
-      return localStorage.getItem(THEME_STORAGE_KEY) === 'dark';
-    } catch {
-      return false;
-    }
+    this.theme.toggle();
   }
 }
