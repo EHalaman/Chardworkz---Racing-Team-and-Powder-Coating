@@ -220,15 +220,33 @@
           class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
         >
           <ng-container *ngIf="editingBranchId() === branch.id; else branchView">
-            <input
-              #branchName
-              type="text"
-              [value]="branch.name"
-              class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-surface px-2 py-1 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-            />
+            <div class="flex min-w-0 flex-1 flex-wrap items-end gap-2">
+              <div class="min-w-0 flex-1 basis-32">
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Name</label>
+                <input
+                  #branchName
+                  type="text"
+                  [value]="branch.name"
+                  class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                />
+              </div>
+              <div class="w-32">
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300"
+                  >Monthly sales goal (₱)</label
+                >
+                <input
+                  #branchGoal
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [value]="branch.monthlySalesGoal"
+                  class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                />
+              </div>
+            </div>
             <button
               type="button"
-              (click)="saveBranchName(branch, branchName.value)"
+              (click)="saveBranch(branch, branchName.value, branchGoal.value)"
               class="shrink-0 rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
             >
               Save
@@ -246,14 +264,16 @@
               <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {{ branch.name }}
               </p>
-              <p class="text-xs font-normal text-gray-500 dark:text-gray-400">{{ branch.code }}</p>
+              <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                {{ branch.code }} · Goal: ₱{{ branch.monthlySalesGoal | number: '1.2-2' }}/mo
+              </p>
             </div>
             <button
               type="button"
               (click)="startEditBranch(branch)"
               class="shrink-0 rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
             >
-              Rename
+              Edit
             </button>
           </ng-template>
         </div>

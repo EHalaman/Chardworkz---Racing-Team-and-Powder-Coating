@@ -4,6 +4,7 @@ import com.chardworkz.backend.account.Account;
 import com.chardworkz.backend.account.AccountRepository;
 import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.branch.BranchRepository;
+import com.chardworkz.backend.catalog.Category;
 import com.chardworkz.backend.catalog.Product;
 import com.chardworkz.backend.catalog.ProductRepository;
 import com.chardworkz.backend.security.JwtService;
@@ -57,7 +58,7 @@ public class InventoryController {
     public List<InventorySummaryResponse> list(
         @RequestParam(required = false) String branchCode, Authentication authentication) {
         Branch branch = resolveBranch(authentication, branchCode);
-        return productRepository.findByActiveTrue().stream()
+        return productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES).stream()
             .map(product -> toSummary(product, findStockLevel(product, branch)))
             .toList();
     }
@@ -69,6 +70,7 @@ public class InventoryController {
         Authentication authentication) {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        rejectServiceProduct(product);
         Branch branch = resolveBranch(authentication, request.branchCode());
 
         StockLevel stockLevel = stockLevelRepository.findByProductIdAndBranchId(productId, branch.getId())
@@ -85,6 +87,7 @@ public class InventoryController {
         @Valid @RequestBody ReceiveStockRequest request, Authentication authentication) {
         Product product = productRepository.findById(request.productId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        rejectServiceProduct(product);
         Branch branch = resolveBranch(authentication, request.branchCode());
         Account receivedBy = accountRepository.getReferenceById(callerAccountId(authentication));
 
@@ -133,9 +136,9 @@ public class InventoryController {
             ? branchRepository.findAll()
             : List.of(resolveBranch(authentication, null));
 
-        List<Product> activeProducts = productRepository.findByActiveTrue();
+        List<Product> stockedProducts = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
         return branches.stream()
-            .map(branch -> summarize(branch, activeProducts))
+            .map(branch -> summarize(branch, stockedProducts))
             .toList();
     }
 
@@ -162,6 +165,13 @@ public class InventoryController {
             .map(StockReceiptResponse::from)
             .limit(20)
             .toList();
+    }
+
+    /** Services carry no stock_level concept - reject any attempt to manage stock for one server-side. */
+    private void rejectServiceProduct(Product product) {
+        if (product.getCategory() == Category.SERVICES) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service items are not stock-tracked");
+        }
     }
 
     private StockLevel findStockLevel(Product product, Branch branch) {

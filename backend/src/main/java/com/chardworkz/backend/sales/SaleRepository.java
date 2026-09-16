@@ -10,4 +10,8 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     List<Sale> findBySoldAtBetweenAndBranchIdOrderBySoldAtDesc(Instant from, Instant to, Long branchId);
 
     List<Sale> findBySoldAtBetweenOrderBySoldAtDesc(Instant from, Instant to);
+
+    List<Sale> findTop50ByBranchIdOrderBySoldAtDesc(Long branchId);
+
+    List<Sale> findTop50ByOrderBySoldAtDesc();
 }

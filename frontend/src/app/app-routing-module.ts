@@ -11,6 +11,7 @@ import { Products } from './products/products/products';
 import { Inventory } from './inventory/inventory/inventory';
 import { Reports } from './reports/reports/reports';
 import { Settings } from './settings/settings/settings';
+import { Activities } from './activities/activities/activities';
 
 const routes: Routes = [
   { path: 'login', component: Login, data: { title: 'Login' } },
@@ -28,6 +29,7 @@ const routes: Routes = [
       { path: 'reports', component: Reports, data: { title: 'Sales Reports' } },
       { path: 'roles', component: Roles, data: { title: 'Roles' } },
       { path: 'settings', component: Settings, data: { title: 'Settings' } },
+      { path: 'activities', component: Activities, data: { title: 'Activity History' } },
     ],
   },
 ];

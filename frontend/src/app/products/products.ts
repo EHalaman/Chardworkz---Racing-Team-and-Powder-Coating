@@ -3,11 +3,14 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+export type ProductCategory = 'CARB' | 'FI' | 'OTHERS' | 'SERVICES';
+
 export interface ProductSummary {
   id: number;
   name: string;
   brandTag: string | null;
   unitPrice: number;
+  category: ProductCategory;
   stockQuantity: number;
   active: boolean;
 }
@@ -16,6 +19,7 @@ export interface ProductRequest {
   name: string;
   brandTag: string | null;
   unitPrice: number;
+  category: ProductCategory;
 }
 
 @Injectable({ providedIn: 'root' })

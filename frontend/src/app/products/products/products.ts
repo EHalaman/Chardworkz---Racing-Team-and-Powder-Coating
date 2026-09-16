@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { ProductRequest, ProductsService, ProductSummary } from '../products';
+import { ProductCategory, ProductRequest, ProductsService, ProductSummary } from '../products';
 
 @Component({
   selector: 'app-products',
@@ -13,6 +13,16 @@ export class Products implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly submitting = signal(false);
   readonly editingId = signal<number | null>(null);
+  readonly newCategory = signal<ProductCategory>('OTHERS');
+  readonly editingCategory = signal<ProductCategory>('OTHERS');
+  readonly categoryFilter = signal<ProductCategory | 'ALL'>('ALL');
+
+  readonly categoryOptions: { value: ProductCategory; label: string }[] = [
+    { value: 'CARB', label: 'Carb' },
+    { value: 'FI', label: 'FI' },
+    { value: 'OTHERS', label: 'Others' },
+    { value: 'SERVICES', label: 'Services' },
+  ];
 
   constructor(private productsService: ProductsService) {}
 
@@ -20,8 +30,16 @@ export class Products implements OnInit {
     this.loadProducts();
   }
 
+  get filteredProducts(): ProductSummary[] {
+    const filter = this.categoryFilter();
+    return filter === 'ALL'
+      ? this.products()
+      : this.products().filter((p) => p.category === filter);
+  }
+
   startEdit(product: ProductSummary): void {
     this.errorMessage.set(null);
+    this.editingCategory.set(product.category);
     this.editingId.set(product.id);
   }
 
@@ -30,7 +48,7 @@ export class Products implements OnInit {
   }
 
   createProduct(name: string, brandTag: string, unitPrice: string): void {
-    const request = this.toRequest(name, brandTag, unitPrice);
+    const request = this.toRequest(name, brandTag, unitPrice, this.newCategory());
     if (!request) {
       this.errorMessage.set('Enter a name and a valid price.');
       return;
@@ -53,7 +71,7 @@ export class Products implements OnInit {
   }
 
   saveEdit(product: ProductSummary, name: string, brandTag: string, unitPrice: string): void {
-    const request = this.toRequest(name, brandTag, unitPrice);
+    const request = this.toRequest(name, brandTag, unitPrice, this.editingCategory());
     if (!request) {
       this.errorMessage.set('Enter a name and a valid price.');
       return;
@@ -83,13 +101,18 @@ export class Products implements OnInit {
     });
   }
 
-  private toRequest(name: string, brandTag: string, unitPrice: string): ProductRequest | null {
+  private toRequest(
+    name: string,
+    brandTag: string,
+    unitPrice: string,
+    category: ProductCategory,
+  ): ProductRequest | null {
     const trimmedName = name.trim();
     const price = Number(unitPrice);
     if (!trimmedName || !Number.isFinite(price) || price < 0) {
       return null;
     }
-    return { name: trimmedName, brandTag: brandTag.trim() || null, unitPrice: price };
+    return { name: trimmedName, brandTag: brandTag.trim() || null, unitPrice: price, category };
   }
 
   private loadProducts(): void {

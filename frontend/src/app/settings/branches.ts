@@ -7,6 +7,7 @@ export interface Branch {
   id: number;
   code: string;
   name: string;
+  monthlySalesGoal: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -17,7 +18,10 @@ export class BranchesService {
     return this.http.get<Branch[]>(`${environment.apiBaseUrl}/api/branches`);
   }
 
-  updateName(id: number, name: string): Observable<Branch> {
-    return this.http.patch<Branch>(`${environment.apiBaseUrl}/api/branches/${id}`, { name });
+  update(id: number, name: string, monthlySalesGoal: number): Observable<Branch> {
+    return this.http.patch<Branch>(`${environment.apiBaseUrl}/api/branches/${id}`, {
+      name,
+      monthlySalesGoal,
+    });
   }
 }

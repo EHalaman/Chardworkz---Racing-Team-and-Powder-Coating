@@ -1,6 +1,7 @@
 package com.chardworkz.backend.branch;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.*;
 
@@ -22,6 +23,9 @@ public class Branch {
 
     @Column(nullable = false, length = 100)
     private String name;
+
+    @Column(name = "monthly_sales_goal", nullable = false, precision = 12, scale = 2)
+    private BigDecimal monthlySalesGoal;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

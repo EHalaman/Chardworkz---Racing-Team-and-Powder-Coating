@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateChildFn, Router } from '@angular/router';
-import { ALL_NAV_ITEMS, Role } from '../layout/layout/layout';
+import { ALL_NAV_ITEMS, HIDDEN_GUARDED_ROUTES, Role } from '../layout/layout/layout';
 import { AuthService } from './auth';
 
 /**
@@ -8,6 +8,10 @@ import { AuthService } from './auth';
  * cosmetic only - this is the actual enforcement for a direct URL hit (e.g. a
  * Manager typing /roles). Reuses ALL_NAV_ITEMS as the single source of truth
  * for which roles may reach which path, rather than a second role list here.
+ * HIDDEN_GUARDED_ROUTES covers drill-through routes (e.g. /activities) that
+ * are reachable via a link rather than the dock rail - without checking it
+ * too, a route absent from ALL_NAV_ITEMS would be open to every role by
+ * default instead of denied.
  */
 export const roleGuard: CanActivateChildFn = (_childRoute, state) => {
   const auth = inject(AuthService);
@@ -18,8 +22,10 @@ export const roleGuard: CanActivateChildFn = (_childRoute, state) => {
     return inject(Router).createUrlTree(['/login']);
   }
 
-  const navItem = ALL_NAV_ITEMS.find((item) => item.path === state.url);
-  if (!navItem || navItem.roles.includes(role)) {
+  const guarded =
+    ALL_NAV_ITEMS.find((item) => item.path === state.url) ??
+    HIDDEN_GUARDED_ROUTES.find((item) => item.path === state.url);
+  if (!guarded || guarded.roles.includes(role)) {
     return true;
   }
 

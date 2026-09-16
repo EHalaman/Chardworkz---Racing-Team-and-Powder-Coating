@@ -1,8 +1,9 @@
-import { Component, OnDestroy, OnInit, Signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, Signal, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { Subscription, filter } from 'rxjs';
+import { Subscription, catchError, filter, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import { ThemeService } from '../../core/theme';
+import { DashboardAlert, DashboardService } from '../../dashboard/dashboard';
 
 export type Role = 'owner' | 'manager' | 'employee';
 
@@ -30,6 +31,16 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Settings', path: '/settings', icon: 'settings', roles: ['owner'] },
 ];
 
+/**
+ * Drill-through routes reachable via a link (not the dock rail) but still
+ * needing the same per-role enforcement - core/role-guard.ts checks this
+ * list too, not just ALL_NAV_ITEMS, so a route left out of the rail doesn't
+ * silently become open to every role by default.
+ */
+export const HIDDEN_GUARDED_ROUTES: { path: string; roles: Role[] }[] = [
+  { path: '/activities', roles: ['owner', 'manager'] },
+];
+
 @Component({
   selector: 'app-layout',
   standalone: false,
@@ -44,6 +55,8 @@ export class Layout implements OnInit, OnDestroy {
   activeTabPath = '';
 
   readonly isDarkMode: Signal<boolean>;
+  readonly isAlertsOpen = signal(false);
+  readonly alerts = signal<DashboardAlert[]>([]);
 
   private routerSub?: Subscription;
 
@@ -52,6 +65,7 @@ export class Layout implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     readonly auth: AuthService,
     private theme: ThemeService,
+    private dashboardService: DashboardService,
   ) {
     this.isDarkMode = this.theme.isDarkMode;
   }
@@ -67,6 +81,16 @@ export class Layout implements OnInit, OnDestroy {
         const title = child?.snapshot.data['title'] ?? '';
         this.openTab(this.router.url, title);
       });
+
+    // Employee has no Products/Inventory/Reports access, so stock alerts
+    // (the only alert type today) wouldn't be actionable for that role -
+    // skip the fetch entirely rather than surfacing a 403 or a dead bell.
+    if (this.canSeeAlerts) {
+      this.dashboardService
+        .alerts()
+        .pipe(catchError(() => of([])))
+        .subscribe((alerts) => this.alerts.set(alerts));
+    }
   }
 
   ngOnDestroy(): void {
@@ -76,6 +100,18 @@ export class Layout implements OnInit, OnDestroy {
   get navItems(): NavItem[] {
     const role = this.auth.currentUser()?.role.toLowerCase() as Role | undefined;
     return role ? ALL_NAV_ITEMS.filter((item) => item.roles.includes(role)) : [];
+  }
+
+  get isOwner(): boolean {
+    return this.auth.currentUser()?.role === 'OWNER';
+  }
+
+  get canSeeAlerts(): boolean {
+    return this.auth.currentUser()?.role !== 'EMPLOYEE';
+  }
+
+  toggleAlerts(): void {
+    this.isAlertsOpen.update((open) => !open);
   }
 
   /** Title-cases the JWT's uppercase role claim (e.g. "OWNER") for display. */

@@ -15,6 +15,7 @@ import { ProductsModule } from './products/products-module';
 import { InventoryModule } from './inventory/inventory-module';
 import { ReportsModule } from './reports/reports-module';
 import { SettingsModule } from './settings/settings-module';
+import { ActivitiesModule } from './activities/activities-module';
 
 @NgModule({
   declarations: [App],
@@ -31,6 +32,7 @@ import { SettingsModule } from './settings/settings-module';
     InventoryModule,
     ReportsModule,
     SettingsModule,
+    ActivitiesModule,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),

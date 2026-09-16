@@ -39,6 +39,10 @@ public class Product {
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private Category category;
+
     @Column(name = "is_active", nullable = false)
     private boolean active;
 

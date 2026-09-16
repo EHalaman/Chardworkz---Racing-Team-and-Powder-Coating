@@ -1,7 +1,9 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { catchError, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import { OfflineSaleQueueService } from '../../offline-sales/offline-sale-queue';
 import { ProductsService, ProductSummary } from '../../products/products';
+import { ShiftSummary, ShiftSummaryService } from '../shift-summary';
 
 interface CartLine {
   product: ProductSummary;
@@ -23,6 +25,7 @@ export class Register implements OnInit {
   readonly paymentMethod = signal<PaymentMethod>('CASH');
   readonly successMessage = signal<string | null>(null);
   readonly loadError = signal<string | null>(null);
+  readonly shiftSummary = signal<ShiftSummary | null>(null);
 
   readonly paymentMethods: { value: PaymentMethod; label: string }[] = [
     { value: 'CASH', label: 'Cash' },
@@ -33,6 +36,7 @@ export class Register implements OnInit {
   constructor(
     private productsService: ProductsService,
     private queue: OfflineSaleQueueService,
+    private shiftSummaryService: ShiftSummaryService,
     readonly auth: AuthService,
   ) {}
 
@@ -43,6 +47,18 @@ export class Register implements OnInit {
       // a connectivity drop - only the initial fetch can fail like this.
       error: () => this.loadError.set('Could not load products. Check your connection and reload.'),
     });
+    this.loadShiftSummary();
+  }
+
+  get isEmployee(): boolean {
+    return this.auth.currentUser()?.role === 'EMPLOYEE';
+  }
+
+  private loadShiftSummary(): void {
+    this.shiftSummaryService
+      .today()
+      .pipe(catchError(() => of(null)))
+      .subscribe((summary) => this.shiftSummary.set(summary));
   }
 
   get filteredProducts(): ProductSummary[] {
@@ -117,6 +133,7 @@ export class Register implements OnInit {
 
     this.successMessage.set(`Sale recorded — ₱${total.toFixed(2)}. Syncing…`);
     this.clearCart();
+    this.loadShiftSummary();
     setTimeout(() => this.successMessage.set(null), 3000);
   }
 }

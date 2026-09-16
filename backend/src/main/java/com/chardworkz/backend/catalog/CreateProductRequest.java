@@ -6,4 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record CreateProductRequest(
-    @NotBlank String name, String brandTag, @NotNull @DecimalMin("0") BigDecimal unitPrice) {}
+    @NotBlank String name,
+    String brandTag,
+    @NotNull @DecimalMin("0") BigDecimal unitPrice,
+    @NotNull Category category) {}

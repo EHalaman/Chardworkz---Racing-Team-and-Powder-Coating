@@ -105,12 +105,14 @@ export class Settings implements OnInit {
     this.editingBranchId.set(null);
   }
 
-  saveBranchName(branch: Branch, name: string): void {
-    if (!name.trim()) {
+  saveBranch(branch: Branch, name: string, monthlySalesGoal: string): void {
+    const goal = Number(monthlySalesGoal);
+    if (!name.trim() || !Number.isFinite(goal) || goal < 0) {
+      this.branchError.set('Enter a name and a valid monthly sales goal.');
       return;
     }
     this.branchError.set(null);
-    this.branchesService.updateName(branch.id, name.trim()).subscribe({
+    this.branchesService.update(branch.id, name.trim(), goal).subscribe({
       next: (updated) => {
         this.branches.update((branches) =>
           branches.map((b) => (b.id === updated.id ? updated : b)),

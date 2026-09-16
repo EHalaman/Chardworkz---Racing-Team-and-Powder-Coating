@@ -59,6 +59,28 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [ ] Branch-to-branch stock transfer — not built. Surfaced by an external multi-branch-inventory proposal (2026-09-15); genuinely new (no entity/audit-trail exists for it, unlike receiving), so it's a real feature to scope, not a quick extension. Would need a `stock_transfer` entity mirroring `stock_in`'s audit pattern (from-branch, to-branch, product, quantity, who, when), decrementing one branch's `stock_level` and incrementing the other atomically.
 - [x] Sales Reports — done 2026-09-15 (`DECISIONS.md` DEC-033): Owner (cross-branch) / Manager (own-branch) revenue, breakdowns, and recent sales. Verified live across all three roles.
 - [x] Settings — done 2026-09-16 (`DECISIONS.md` DEC-036): Owner-only account profile (name/password), branch renaming, and a shared dark-mode toggle; notifications shown as a "future phase" notice per Q3. Verified live including Manager/Employee both losing access. This was the last screen rendering the generic `Placeholder`.
+- [x] Dashboard — done 2026-09-16 (`DECISIONS.md` DEC-037): replaced all mock KPIs/chart/alerts/activity/top-products with real data composed from existing Products/Inventory/Sales endpoints, a real notification bell, and a new `/activities` full-history page. See "Product categories & sales goal" and "Raider parts catalog seed" below for the schema work that went with it.
+
+## Product categories & sales goal (from the Dashboard audit proposal, 2026-09-16)
+
+- [x] Add `product.category` (CARB/FI/OTHERS/SERVICES) with a Products-screen filter/badge — done (`DECISIONS.md` DEC-037), migration `V3`.
+- [x] Add a per-branch `monthly_sales_goal`, editable in Settings, driving the Dashboard's Sales Goal donut — done (`DECISIONS.md` DEC-037), migration `V3`.
+- [ ] Manager/Employee self-service password change is still not available (see "Project housekeeping" below) — unrelated to this batch, just still open.
+
+## Raider parts catalog seed (from the Dashboard audit proposal, 2026-09-16)
+
+- [x] Seed the Suzuki Raider R150 FI OEM parts (17 items, category `FI`) alongside the existing generic test products — done (`DECISIONS.md` DEC-037), migration `V4`.
+- [ ] **Prices are AI-estimated placeholders, not real retail/supplier prices** — the business owner explicitly accepted this "to edit later." Correct them via the real Products screen before they're relied on for any real sale. Not tracked per-item here; check `V4__seed_raider_parts.sql`'s product list against real pricing when available.
+- [ ] Generic 'test' products were deliberately left in place, not deleted, alongside the Raider parts — a cleanup pass (deactivate or remove test data) is a separate, explicit decision for later, not bundled into this seed.
+
+## Service vs. physical items & Shift Summary (from a UI-review proposal, 2026-09-16)
+
+- [x] Exclude SERVICES-category products from all stock-tracking logic (Inventory list/receive/reorder-threshold, Dashboard stock value/low-stock/alerts) — done (`DECISIONS.md` DEC-038). Fixed a real latent bug in the process: any SERVICES item would otherwise have shown as permanently "out of stock" everywhere.
+- [x] Register shows SERVICES items as "Always available," no stock count — done (`DECISIONS.md` DEC-038).
+- [x] "Today's Shift Summary" widget on Register (`GET /api/sales/shift-summary`) — done (`DECISIONS.md` DEC-038): Employee sees branch-wide transactions/cash/e-wallet for today; Manager adds revenue/estimated margin, own-branch-only; Owner gets a cross-branch view + per-branch breakdown (not reachable live today since Owner has no `/register` access — see below).
+- [x] Relabeled "Unit Price" → "Selling Price (SRP)" and added a tooltip to "Unit Cost" — done (`DECISIONS.md` DEC-038), reusing the existing plain `title`-attribute tooltip pattern.
+- [ ] **Estimated margin is a rough approximation** — it uses each product's most-recently-recorded receipt cost, not real FIFO/weighted-average costing. It's `null`/excluded for any product with no receipt history at all — notably every Raider-seed part (V4 seeded `stock_level` directly without matching `stock_in_line` rows) and any SERVICES item. Revisit if real cost tracking is ever built.
+- [ ] Owner cannot currently reach `/register` at all (`Layout.ALL_NAV_ITEMS` doesn't include Owner in that route's roles), so the Shift Summary's Owner/cross-branch view was verified via curl only, never seen live. If Owner ever needs this view, it would make more sense surfaced on the Dashboard (which Owner does see) than by granting Owner Register/POS access.
 
 ## Project housekeeping
 

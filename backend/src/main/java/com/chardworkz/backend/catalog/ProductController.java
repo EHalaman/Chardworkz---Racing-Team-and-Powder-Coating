@@ -59,6 +59,7 @@ public class ProductController {
             .name(request.name())
             .brandTag(request.brandTag())
             .unitPrice(request.unitPrice())
+            .category(request.category())
             .active(true)
             .createdAt(now)
             .updatedAt(now)
@@ -77,6 +78,7 @@ public class ProductController {
         product.setName(request.name());
         product.setBrandTag(request.brandTag());
         product.setUnitPrice(request.unitPrice());
+        product.setCategory(request.category());
         product.setUpdatedAt(Instant.now());
         return toResponse(productRepository.save(product), authentication);
     }
@@ -105,6 +107,7 @@ public class ProductController {
                 product.getName(),
                 product.getBrandTag(),
                 product.getUnitPrice(),
+                product.getCategory(),
                 quantityByProductId.getOrDefault(product.getId(), 0),
                 product.isActive()))
             .toList();
@@ -118,8 +121,8 @@ public class ProductController {
             .map(StockLevel::getQuantity)
             .orElse(0);
         return new ProductSummaryResponse(
-            product.getId(), product.getName(), product.getBrandTag(), product.getUnitPrice(), quantity,
-            product.isActive());
+            product.getId(), product.getName(), product.getBrandTag(), product.getUnitPrice(),
+            product.getCategory(), quantity, product.isActive());
     }
 
     private Branch callerBranch(Authentication authentication) {
