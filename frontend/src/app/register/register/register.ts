@@ -3,6 +3,7 @@ import { catchError, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import { OfflineSaleQueueService } from '../../offline-sales/offline-sale-queue';
 import { ProductsService, ProductSummary } from '../../products/products';
+import { SaleReceipt, SalesService } from '../sales';
 import { ShiftSummary, ShiftSummaryService } from '../shift-summary';
 
 interface CartLine {
@@ -11,6 +12,12 @@ interface CartLine {
 }
 
 type PaymentMethod = 'CASH' | 'GCASH' | 'EWALLET_OTHER';
+
+/** Friendly labels for the two known branches - matches the same static mapping already used in Inventory/Reports. Kept local rather than a network round-trip so the receipt still renders offline. */
+const BRANCH_NAMES: Record<string, string> = {
+  MAIN: 'Main Branch',
+  MASINAG: 'Masinag Branch',
+};
 
 @Component({
   selector: 'app-register',
@@ -27,6 +34,11 @@ export class Register implements OnInit {
   readonly loadError = signal<string | null>(null);
   readonly shiftSummary = signal<ShiftSummary | null>(null);
 
+  readonly activeReceipt = signal<SaleReceipt | null>(null);
+  readonly isDrawerOpen = signal(false);
+  readonly recentTransactions = signal<SaleReceipt[]>([]);
+  readonly recentTransactionsError = signal<string | null>(null);
+
   readonly paymentMethods: { value: PaymentMethod; label: string }[] = [
     { value: 'CASH', label: 'Cash' },
     { value: 'GCASH', label: 'GCash' },
@@ -37,6 +49,7 @@ export class Register implements OnInit {
     private productsService: ProductsService,
     private queue: OfflineSaleQueueService,
     private shiftSummaryService: ShiftSummaryService,
+    private salesService: SalesService,
     readonly auth: AuthService,
   ) {}
 
@@ -48,6 +61,7 @@ export class Register implements OnInit {
       error: () => this.loadError.set('Could not load products. Check your connection and reload.'),
     });
     this.loadShiftSummary();
+    this.loadRecentTransactions();
   }
 
   get isEmployee(): boolean {
@@ -59,6 +73,33 @@ export class Register implements OnInit {
       .today()
       .pipe(catchError(() => of(null)))
       .subscribe((summary) => this.shiftSummary.set(summary));
+  }
+
+  /** Best-effort: only reflects sales already synced to the backend, so a just-completed offline-queued sale may not appear here until it syncs - the receipt modal already covers the "right after this sale" case regardless of sync state. */
+  private loadRecentTransactions(): void {
+    this.salesService.today().subscribe({
+      next: (sales) => {
+        this.recentTransactionsError.set(null);
+        this.recentTransactions.set(sales);
+      },
+      error: () => this.recentTransactionsError.set('Could not load recent transactions.'),
+    });
+  }
+
+  toggleDrawer(): void {
+    this.isDrawerOpen.update((open) => !open);
+  }
+
+  reprint(sale: SaleReceipt): void {
+    this.activeReceipt.set(sale);
+  }
+
+  closeReceipt(): void {
+    this.activeReceipt.set(null);
+  }
+
+  printReceipt(): void {
+    window.print();
   }
 
   get filteredProducts(): ProductSummary[] {
@@ -103,17 +144,20 @@ export class Register implements OnInit {
     this.cart.set([]);
   }
 
-  async completeSale(paymentReference: string): Promise<void> {
+  async completeSale(customerName: string, paymentReference: string): Promise<void> {
     const lines = this.cart();
     if (lines.length === 0) {
       return;
     }
 
     const total = lines.reduce((sum, l) => sum + l.product.unitPrice * l.quantity, 0);
+    const trimmedCustomerName = customerName.trim() || null;
+    const soldAt = new Date().toISOString();
 
-    await this.queue.enqueueSale({
+    const saleId = await this.queue.enqueueSale({
       paymentMethod: this.paymentMethod(),
       paymentReference: paymentReference || null,
+      customerName: trimmedCustomerName,
       lines: lines.map((l) => ({
         productId: l.product.id,
         quantity: l.quantity,
@@ -131,9 +175,38 @@ export class Register implements OnInit {
       }),
     );
 
+    // Display-only, not a real business key (see SaleReceiptResponse on the
+    // backend) - derived from today's transaction count already loaded for
+    // the Shift Summary widget, so the receipt renders instantly without
+    // waiting on a network round-trip even if this sale is still offline-queued.
+    const sequence = (this.shiftSummary()?.transactionsCount ?? 0) + 1;
+    const datePart = soldAt.slice(0, 10).replace(/-/g, '');
+    const branchCode = this.auth.currentUser()?.branchCode ?? '';
+
+    this.activeReceipt.set({
+      id: saleId,
+      transactionNumber: `TXN-${datePart}-${String(sequence).padStart(4, '0')}`,
+      customerName: trimmedCustomerName,
+      branchName: BRANCH_NAMES[branchCode] ?? branchCode,
+      employeeName: this.auth.currentUser()?.fullName ?? '',
+      soldAt,
+      paymentMethod: this.paymentMethod(),
+      paymentReference: paymentReference || null,
+      subtotal: total,
+      total,
+      lines: lines.map((l) => ({
+        productName: l.product.name,
+        category: l.product.category,
+        quantity: l.quantity,
+        unitPrice: l.product.unitPrice,
+        lineTotal: l.product.unitPrice * l.quantity,
+      })),
+    });
+
     this.successMessage.set(`Sale recorded — ₱${total.toFixed(2)}. Syncing…`);
     this.clearCart();
     this.loadShiftSummary();
+    this.loadRecentTransactions();
     setTimeout(() => this.successMessage.set(null), 3000);
   }
 }

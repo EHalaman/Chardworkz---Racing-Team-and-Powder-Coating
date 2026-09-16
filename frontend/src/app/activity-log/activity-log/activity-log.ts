@@ -45,6 +45,11 @@ export class ActivityLog implements OnInit {
     return Array.from(seen, ([id, name]) => ({ id, name }));
   }
 
+  /** actorOptions returns a new array every check; trackBy keeps *ngFor from tearing down and recreating every <option> (which could otherwise reset the select's own displayed value) on every change-detection pass. */
+  trackByActorId(_index: number, actor: { id: number }): number {
+    return actor.id;
+  }
+
   get filteredEntries(): ActivityLogEntry[] {
     return this.entries()
       .filter((e) => this.actionTypeFilter() === 'ALL' || e.actionType === this.actionTypeFilter())

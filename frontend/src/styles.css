@@ -16,3 +16,25 @@ body {
     @apply rounded-3xl border border-gray-200 bg-surface p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800;
   }
 }
+
+/*
+ * Printable receipt: hides everything except the element with this class
+ * when printing, regardless of which component rendered it. Kept global
+ * (not in a component stylesheet) since Angular's emulated view encapsulation
+ * would otherwise scope a bare `body` selector to attributes it never
+ * applies to the real <body> element.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: fixed;
+    inset: 0;
+    padding: 0;
+  }
+}

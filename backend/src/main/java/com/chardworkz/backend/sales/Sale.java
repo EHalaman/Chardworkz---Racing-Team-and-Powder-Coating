@@ -47,6 +47,10 @@ public class Sale {
     @Column(name = "payment_reference", length = 100)
     private String paymentReference;
 
+    /** Optional, walk-in-friendly - most counter sales have no formal customer record. */
+    @Column(name = "customer_name", length = 150)
+    private String customerName;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
 

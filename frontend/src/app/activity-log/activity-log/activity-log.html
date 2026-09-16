@@ -57,7 +57,9 @@
           class="mt-1 rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
         >
           <option value="ALL">All users</option>
-          <option *ngFor="let actor of actorOptions" [value]="actor.id">{{ actor.name }}</option>
+          <option *ngFor="let actor of actorOptions; trackBy: trackByActorId" [value]="actor.id">
+            {{ actor.name }}
+          </option>
         </select>
       </div>
 

@@ -15,6 +15,7 @@ export interface QueuedSaleLine {
 export interface NewSalePayload {
   paymentMethod: string;
   paymentReference?: string | null;
+  customerName?: string | null;
   lines: QueuedSaleLine[];
 }
 
@@ -141,6 +142,7 @@ export class OfflineSaleQueueService {
           id: sale.id,
           paymentMethod: sale.paymentMethod,
           paymentReference: sale.paymentReference ?? null,
+          customerName: sale.customerName ?? null,
           soldAt: sale.soldAt,
           lines: sale.lines,
         }),

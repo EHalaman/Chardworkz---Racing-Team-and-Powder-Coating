@@ -91,6 +91,13 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [ ] Activity logging currently covers Product (create/update/status/delete) and Account (create/status) and Branch (update) mutations only — Inventory's `receive`/`updateReorderThreshold` were deliberately left uncovered this session (Inventory already has its own `stock_in` historical table serving a similar purpose). Extend to Inventory if a "who changed a reorder threshold" audit trail is ever specifically needed.
 - [ ] Manager-permission system currently covers exactly two flags (Product edit/delete). If Manager-configurable access is ever needed for other actions (e.g. Roles, Inventory), extend the same `permission_flag` table/`PermissionService.isEnabled()` pattern rather than building a second mechanism.
 
+## Register receipts, customer name, and shift history (from an external proposal, 2026-09-16)
+
+- [x] Customer Name field on Register, printable receipt modal, Recent Transactions drawer with reprint, `GET /api/sales/today` — all done (`DECISIONS.md` DEC-044).
+- [x] Investigated the reported Activity Log "All Users" filter bug — could not reproduce; the filter is client-side only (no backend `actorId` param is even sent today). Found and fixed an unrelated `*ngFor` perf smell instead (`DECISIONS.md` DEC-043).
+- [ ] The receipt's `transactionNumber` is a display-only approximation (derived from the Shift Summary count at the moment of sale, not an atomic server sequence) — a sale completed on one register while another register's sale is mid-sync could in principle get the same number on its instant receipt. Not a real business key (`sale.id` still is), and not worth solving with a real atomic counter unless this actually causes real confusion in practice.
+- [ ] No real "labor cost" field exists for services — a SERVICES line's receipt amount is just its `unit_price`, same as any physical part. If a future need arises to separate "parts cost" from "labor cost" within one service line, that's a new schema concept, not present today.
+
 ## Project housekeeping
 
 - [ ] Confirm the `owner` field set in `PROJECT-CONTEXT.md`/`memory.md`/`handoff.md` ("Eleomar Halaman") is the correct business-side point of contact for ChardWorkz, not just the session user.

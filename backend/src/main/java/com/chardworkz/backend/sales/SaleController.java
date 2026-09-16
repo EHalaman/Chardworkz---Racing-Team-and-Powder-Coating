@@ -100,6 +100,68 @@ public class SaleController {
         return response;
     }
 
+    /**
+     * Today's individual sales at the caller's own branch, full line-item
+     * detail - backs the Register screen's "Recent Transactions" drawer and
+     * receipt reprint. Everyone with Register access (Employee/Manager) sees
+     * every sale at their branch today regardless of who rang it up, same
+     * scope as {@link #shiftSummary}'s Employee view - a cashier reprinting a
+     * receipt for a colleague's earlier sale is a normal counter scenario.
+     */
+    @GetMapping("/today")
+    public List<SaleReceiptResponse> today(Authentication authentication) {
+        Claims claims = (Claims) authentication.getDetails();
+        Branch branch = ownBranch(claims);
+
+        ZoneId zone = ZoneId.systemDefault();
+        LocalDate today = LocalDate.now(zone);
+        Instant dayStart = today.atStartOfDay(zone).toInstant();
+        Instant dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant();
+
+        List<Sale> sales = salesForDay(branch.getId(), dayStart, dayEnd);
+        // Oldest-first for a stable, human-readable per-day sequence number,
+        // then reversed so the response itself stays newest-first for the UI.
+        List<Sale> oldestFirst = new ArrayList<>(sales);
+        oldestFirst.sort(java.util.Comparator.comparing(Sale::getSoldAt));
+
+        Map<java.util.UUID, String> transactionNumberById = new HashMap<>();
+        String datePart = today.toString().replace("-", "");
+        for (int i = 0; i < oldestFirst.size(); i++) {
+            transactionNumberById.put(
+                oldestFirst.get(i).getId(), String.format("TXN-%s-%04d", datePart, i + 1));
+        }
+
+        List<SaleLine> allLines = sales.isEmpty()
+            ? List.of()
+            : saleLineRepository.findBySaleIdIn(sales.stream().map(Sale::getId).toList());
+        Map<java.util.UUID, List<SaleLine>> linesBySaleId = new HashMap<>();
+        for (SaleLine line : allLines) {
+            linesBySaleId.computeIfAbsent(line.getSale().getId(), id -> new ArrayList<>()).add(line);
+        }
+
+        return sales.stream()
+            .map(sale -> new SaleReceiptResponse(
+                sale.getId(),
+                transactionNumberById.get(sale.getId()),
+                sale.getCustomerName(),
+                branch.getName(),
+                sale.getEmployee().getFullName(),
+                sale.getSoldAt(),
+                sale.getPaymentMethod().name(),
+                sale.getPaymentReference(),
+                sale.getSubtotal(),
+                sale.getTotal(),
+                linesBySaleId.getOrDefault(sale.getId(), List.of()).stream()
+                    .map(line -> new SaleReceiptResponse.ReceiptLine(
+                        line.getProduct().getName(),
+                        line.getProduct().getCategory(),
+                        line.getQuantity(),
+                        line.getUnitPrice(),
+                        line.getLineTotal()))
+                    .toList()))
+            .toList();
+    }
+
     private List<Sale> salesForDay(Long branchId, Instant from, Instant to) {
         return saleRepository.findBySoldAtBetweenAndBranchIdOrderBySoldAtDesc(from, to, branchId);
     }

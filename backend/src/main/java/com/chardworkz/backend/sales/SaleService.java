@@ -55,6 +55,7 @@ public class SaleService {
             .employee(employee)
             .paymentMethod(request.paymentMethod())
             .paymentReference(request.paymentReference())
+            .customerName(request.customerName())
             .soldAt(request.soldAt())
             .syncedAt(Instant.now())
             .subtotal(BigDecimal.ZERO)
