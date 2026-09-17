@@ -32,3 +32,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local dev secrets (never commit - vault repo is public) ###
+run-dev.local.ps1

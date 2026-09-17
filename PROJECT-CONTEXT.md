@@ -4,7 +4,7 @@ type: project-context
 status: draft
 owner: "Eleomar Halaman"
 created: 2026-09-07
-updated: 2026-09-15
+updated: 2026-09-17
 ai_access: internal
 ai_generated: true
 review_status: draft
@@ -18,6 +18,7 @@ canonical: false
 - **2026-09-15 (later)** — All 12 open questions in `docs/project-initiation-draft.md` §5 answered by the business owner. See that document's §0.1 Change Log and each question's **Resolved** line for full detail; `DECISIONS.md` DEC-018/DEC-019/DEC-020 log the decisions. Biggest outcome: **Q12 broke from its stated default** — the register now has a committed Phase 1 requirement to keep selling offline via a local queue that syncs on reconnect, not the paper-fallback default. Constraints and Current Phase below updated accordingly.
 - **2026-09-15** — Added `ChardWorkz_Thesis4_Summary.md`, a 4th reference capstone in the same POS/Inventory domain as Thesis 1–3 (built from a short synopsis, not a full source document — see that file's source note). It surfaces two details not explicit elsewhere in the reconciled set: a **suspend-sale** capability (hold an in-progress sale, resume later) and **invoice printing** (THESIS1's receipt is explicitly display-only). Both are candidates for `backlog.md` / `docs/project-initiation-draft.md`, not yet promoted into the resolved scope below. This is reference material only, same as Thesis 1–3 — see Authorities.
 - **2026-09-15 (build)** — Reconciles a conflict `DECISIONS.md` DEC-014 flagged back when the frontend shell was first built: the Owner-only "Roles" nav tab (a direct build instruction from the business owner) contradicted this file's own Users section, which said Manager handles employee accounts and Owner is read-only-only. Since staff account creation/management is now actually built (`DECISIONS.md` DEC-028) as Owner-only, the Users section below is updated to match reality rather than carry the stale, never-implemented description forward.
+- **2026-09-17** — Hosting target locked (`DECISIONS.md` DEC-054): Vercel (frontend) / Railway (Spring Boot backend + managed Postgres) / Cloudflare R2 (media/asset storage). Previously only an assumption baked into a backlog revisit-trigger's wording, not a recorded decision. See Constraints below.
 
 ## Objective
 
@@ -35,6 +36,7 @@ Replace ChardWorkz Racing Team and Powder Coating Services' fully paper-based sa
 
 - **No production deployment exists yet.** `frontend/` and `backend/` scaffolds exist (since 2026-09-15) but hold no real feature modules, no live database, and no auth beyond a permit-all placeholder — treat everything below as the target architecture, not what's deployed.
 - **Target stack (resolved, not open):** Angular (NgModules) + Tailwind CSS frontend; Spring Boot (Java/Maven) backend; PostgreSQL; Spring Security + JWT + Bcrypt auth (uniform across all roles).
+- **Hosting target (resolved 2026-09-17, DEC-054):** Vercel (frontend static build) / Railway (Spring Boot backend + managed Postgres) / Cloudflare R2 (media/asset storage — separate from R2's other, still-deferred use as `activity_log` cold-archive storage, see `backlog.md`).
 - **Responsive web only, no native app.** One Angular build across three breakpoint classes (counter desktop / staff tablet / phone). Mobile parity for managers is a requirement, not an afterthought — see `memory.md`.
 - **Three source theses are reference patterns only, never literal templates.** None of their data dictionaries, payment scopes, or security approaches are copied as-is — each has a documented defect (see `docs/project-initiation-draft.md` §0 Reconciled log).
 - **Phase 1 is staff-only — confirmed 2026-09-15 (Q1/Q2 resolved).** Customer storefront and the powder-coating job module remain documented, separately-attachable phases (3A, 3B) but are explicitly not being built this phase — not a default anymore, an actual decision.
