@@ -35,7 +35,10 @@ export class Register implements OnInit {
   readonly shiftSummary = signal<ShiftSummary | null>(null);
 
   readonly activeReceipt = signal<SaleReceipt | null>(null);
+  readonly isReceiptClosing = signal(false);
   readonly isDrawerOpen = signal(false);
+  readonly isDrawerMounted = signal(false);
+  readonly isToastLeaving = signal(false);
   readonly recentTransactions = signal<SaleReceipt[]>([]);
   readonly recentTransactionsError = signal<string | null>(null);
   readonly transactionSearchTerm = signal('');
@@ -69,26 +72,79 @@ export class Register implements OnInit {
     return this.auth.currentUser()?.role === 'EMPLOYEE';
   }
 
+  /**
+   * Won't let a fetch that raced ahead of a just-completed sale's background
+   * sync (same cause as loadRecentTransactions() below) regress the
+   * transaction count/totals completeSale() already bumped optimistically -
+   * takes the higher of the two for those fields, but still adopts whatever
+   * the fetch says for margin/byBranch, which aren't computable client-side.
+   */
   private loadShiftSummary(): void {
     this.shiftSummaryService
       .today()
       .pipe(catchError(() => of(null)))
-      .subscribe((summary) => this.shiftSummary.set(summary));
+      .subscribe((summary) => {
+        this.shiftSummary.update((current) => {
+          if (!summary) {
+            return current;
+          }
+          if (!current || summary.transactionsCount >= current.transactionsCount) {
+            return summary;
+          }
+          return {
+            ...summary,
+            transactionsCount: current.transactionsCount,
+            cashTotal: current.cashTotal,
+            ewalletTotal: current.ewalletTotal,
+          };
+        });
+      });
   }
 
-  /** Best-effort: only reflects sales already synced to the backend, so a just-completed offline-queued sale may not appear here until it syncs - the receipt modal already covers the "right after this sale" case regardless of sync state. */
+  /**
+   * Merges rather than overwrites: completeSale() prepends a sale here
+   * optimistically before it has necessarily synced (enqueueSale() only
+   * awaits the IndexedDB write, not the background network sync - a
+   * same-tick reload used to always race ahead of it and win, silently
+   * dropping the just-completed sale until the next unrelated reload). Any
+   * optimistic entry the server doesn't know about yet is kept until a
+   * later fetch confirms it (by id), so nothing is ever lost or duplicated.
+   */
   private loadRecentTransactions(): void {
     this.salesService.today().subscribe({
       next: (sales) => {
         this.recentTransactionsError.set(null);
-        this.recentTransactions.set(sales);
+        this.recentTransactions.update((current) => {
+          const fetchedIds = new Set(sales.map((s) => s.id));
+          const stillOptimistic = current.filter((s) => !fetchedIds.has(s.id));
+          return [...stillOptimistic, ...sales].sort((a, b) => b.soldAt.localeCompare(a.soldAt));
+        });
       },
       error: () => this.recentTransactionsError.set('Could not load recent transactions.'),
     });
   }
 
+  /**
+   * Keeps the drawer mounted for the duration of its slide-out animation -
+   * an *ngIf tied straight to isDrawerOpen would rip the panel out of the
+   * DOM instantly and skip the exit transition entirely. The isDrawerOpen()
+   * re-check inside the timeout guards against a close-then-reopen within
+   * the 220ms window: without it, this stale callback would unmount the
+   * drawer right after the reopen had just mounted it, leaving the toggle
+   * button reading "Close" over an invisible, unmounted panel.
+   */
   toggleDrawer(): void {
-    this.isDrawerOpen.update((open) => !open);
+    if (this.isDrawerOpen()) {
+      this.isDrawerOpen.set(false);
+      setTimeout(() => {
+        if (!this.isDrawerOpen()) {
+          this.isDrawerMounted.set(false);
+        }
+      }, 220);
+    } else {
+      this.isDrawerMounted.set(true);
+      this.isDrawerOpen.set(true);
+    }
   }
 
   get filteredTransactions(): SaleReceipt[] {
@@ -104,12 +160,28 @@ export class Register implements OnInit {
     );
   }
 
+  /** Resets isReceiptClosing in case a close's pending timeout (see closeReceipt()) hasn't fired yet - otherwise this new receipt would render mid-exit-animation and then get wrongly dismissed when that stale timeout does fire. */
   reprint(sale: SaleReceipt): void {
+    this.isReceiptClosing.set(false);
     this.activeReceipt.set(sale);
   }
 
+  /**
+   * Same delayed-unmount trick as toggleDrawer(), keyed off activeReceipt
+   * itself instead of a separate mounted flag since it already doubles as
+   * one. The isReceiptClosing() re-check guards the same close-then-reopen
+   * race toggleDrawer() has: without it, closing then immediately reprinting
+   * another sale within 180ms would have this stale callback null out the
+   * newly reprinted receipt instead of the one that was actually closed.
+   */
   closeReceipt(): void {
-    this.activeReceipt.set(null);
+    this.isReceiptClosing.set(true);
+    setTimeout(() => {
+      if (this.isReceiptClosing()) {
+        this.activeReceipt.set(null);
+        this.isReceiptClosing.set(false);
+      }
+    }, 180);
   }
 
   printReceipt(): void {
@@ -197,7 +269,7 @@ export class Register implements OnInit {
     const datePart = soldAt.slice(0, 10).replace(/-/g, '');
     const branchCode = this.auth.currentUser()?.branchCode ?? '';
 
-    this.activeReceipt.set({
+    const receipt: SaleReceipt = {
       id: saleId,
       transactionNumber: `TXN-${datePart}-${String(sequence).padStart(4, '0')}`,
       customerName: trimmedCustomerName,
@@ -215,12 +287,38 @@ export class Register implements OnInit {
         unitPrice: l.product.unitPrice,
         lineTotal: l.product.unitPrice * l.quantity,
       })),
+    };
+
+    this.activeReceipt.set(receipt);
+
+    // Same instant-feedback reasoning as the receipt above: enqueueSale()
+    // only awaits the local IndexedDB write, not the background network
+    // sync, so the drawer/summary must not wait on a fetch that's racing
+    // (and reliably loses) against that sync. loadRecentTransactions()
+    // below merges this in safely once the fetch actually confirms it.
+    this.recentTransactions.update((current) => [receipt, ...current]);
+    this.shiftSummary.update((summary) => {
+      if (!summary) {
+        return summary;
+      }
+      const isCash = this.paymentMethod() === 'CASH';
+      return {
+        ...summary,
+        transactionsCount: summary.transactionsCount + 1,
+        cashTotal: summary.cashTotal + (isCash ? total : 0),
+        ewalletTotal: summary.ewalletTotal + (isCash ? 0 : total),
+      };
     });
 
     this.successMessage.set(`Sale recorded — ₱${total.toFixed(2)}. Syncing…`);
+    this.isToastLeaving.set(false);
     this.clearCart();
     this.loadShiftSummary();
     this.loadRecentTransactions();
-    setTimeout(() => this.successMessage.set(null), 3000);
+    setTimeout(() => this.isToastLeaving.set(true), 2700);
+    setTimeout(() => {
+      this.successMessage.set(null);
+      this.isToastLeaving.set(false);
+    }, 3000);
   }
 }

@@ -86,9 +86,13 @@ export class Products implements OnInit {
     const term = this.searchTerm().trim().toLowerCase();
 
     let list = this.products();
+    // Main catalog: just active - a zero-stock physical product stays here
+    // with an "Out of stock" badge instead of disappearing into Archived,
+    // which otherwise swallowed every brand-new product before its first
+    // stock receipt (nothing's been received for it yet). Archived is
+    // reserved for an explicit Deactivate/Delete now (see DEC-047).
     if (!this.archived) {
-      // Main catalog: active, and either a service (no real stock concept - DEC-038) or actually in stock.
-      list = list.filter((p) => p.active && (p.category === 'SERVICES' || p.stockQuantity > 0));
+      list = list.filter((p) => p.active);
     }
     if (category !== 'ALL') {
       list = list.filter((p) => p.category === category);
@@ -228,11 +232,9 @@ export class Products implements OnInit {
     });
   }
 
-  /** In the main view a status/delete change removes the row locally if it now belongs in Archived (and vice versa), instead of a full refetch. */
+  /** In the main view a Deactivate/Delete/Reactivate removes the row locally if it now belongs on the other page, instead of a full refetch. */
   private applyUpdate(original: ProductSummary, updated: ProductSummary): void {
-    const belongsHere = this.archived
-      ? !updated.active || (updated.category !== 'SERVICES' && updated.stockQuantity === 0)
-      : updated.active && (updated.category === 'SERVICES' || updated.stockQuantity > 0);
+    const belongsHere = this.archived ? !updated.active : updated.active;
 
     this.products.update((products) =>
       belongsHere

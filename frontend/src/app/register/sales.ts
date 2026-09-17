@@ -33,4 +33,9 @@ export class SalesService {
   today(): Observable<SaleReceipt[]> {
     return this.http.get<SaleReceipt[]>(`${environment.apiBaseUrl}/api/sales/today`);
   }
+
+  /** Backs Sales Reports' clickable recent-sales cards (Manager/Owner) - unlike today(), not limited to the caller's own branch/day. */
+  receipt(saleId: string): Observable<SaleReceipt> {
+    return this.http.get<SaleReceipt>(`${environment.apiBaseUrl}/api/reports/sales/${saleId}`);
+  }
 }

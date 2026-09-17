@@ -5,11 +5,7 @@
         {{ archived ? 'Archived Products' : 'Products' }}
       </h1>
       <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
-        {{
-          archived
-            ? 'Deactivated, deleted, and out-of-stock items.'
-            : 'Manage the shared product catalog.'
-        }}
+        {{ archived ? 'Deactivated and deleted items.' : 'Manage the shared product catalog.' }}
       </p>
     </div>
     <a
@@ -103,6 +99,17 @@
             </div>
             <div class="flex shrink-0 items-center gap-2">
               <span
+                *ngIf="
+                  !archived &&
+                  product.active &&
+                  product.category !== 'SERVICES' &&
+                  product.stockQuantity === 0
+                "
+                class="rounded-full bg-danger-light px-2 py-1 text-xs font-medium text-danger"
+              >
+                Out of stock
+              </span>
+              <span
                 [ngClass]="
                   product.active ? 'bg-primary-light text-primary' : 'bg-danger-light text-danger'
                 "
@@ -112,6 +119,16 @@
               </span>
 
               <ng-container *ngIf="!archived">
+                <a
+                  *ngIf="
+                    product.active && product.category !== 'SERVICES' && product.stockQuantity === 0
+                  "
+                  [routerLink]="'/inventory'"
+                  [queryParams]="{ restock: product.id }"
+                  class="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+                >
+                  Restock
+                </a>
                 <button
                   *ngIf="canEdit"
                   type="button"
@@ -145,14 +162,6 @@
                 >
                   Reactivate
                 </button>
-                <a
-                  *ngIf="product.active && product.category !== 'SERVICES'"
-                  [routerLink]="'/inventory'"
-                  [queryParams]="{ restock: product.id }"
-                  class="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
-                >
-                  Restock
-                </a>
               </ng-container>
             </div>
           </div>

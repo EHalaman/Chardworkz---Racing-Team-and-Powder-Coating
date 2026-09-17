@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { AuthService } from '../../core/auth';
+import { SaleReceipt, SalesService } from '../../register/sales';
 import { ReportsService, RecentSale, SalesReport } from '../reports';
 
 @Component({
@@ -24,8 +25,13 @@ export class Reports implements OnInit {
   readonly toDate = signal('');
   readonly searchTerm = signal('');
 
+  readonly activeReceipt = signal<SaleReceipt | null>(null);
+  readonly isReceiptClosing = signal(false);
+  readonly receiptError = signal<string | null>(null);
+
   constructor(
     private reportsService: ReportsService,
+    private salesService: SalesService,
     readonly auth: AuthService,
   ) {}
 
@@ -60,6 +66,33 @@ export class Reports implements OnInit {
     this.fromDate.set(from);
     this.toDate.set(to);
     this.loadReport();
+  }
+
+  /** This page is already Owner/Manager-only via the route guard (see Layout.ALL_NAV_ITEMS) - no extra per-role check needed here for who can open a receipt. */
+  openReceipt(saleId: string): void {
+    this.receiptError.set(null);
+    this.salesService.receipt(saleId).subscribe({
+      next: (receipt) => {
+        this.isReceiptClosing.set(false);
+        this.activeReceipt.set(receipt);
+      },
+      error: () => this.receiptError.set('Could not load that transaction.'),
+    });
+  }
+
+  /** Same delayed-unmount + close-then-reopen guard as Register's receipt modal (see register.ts) - keeps the pop-out animation from being cut short, and a stale close timeout from dismissing a receipt opened right after it. */
+  closeReceipt(): void {
+    this.isReceiptClosing.set(true);
+    setTimeout(() => {
+      if (this.isReceiptClosing()) {
+        this.activeReceipt.set(null);
+        this.isReceiptClosing.set(false);
+      }
+    }, 180);
+  }
+
+  printReceipt(): void {
+    window.print();
   }
 
   private loadReport(): void {

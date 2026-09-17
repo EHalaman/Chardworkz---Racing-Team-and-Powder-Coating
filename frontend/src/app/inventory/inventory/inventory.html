@@ -56,25 +56,39 @@
     <div class="dashboard-card">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Stock levels</h2>
-        <span
+        <button
           *ngIf="stockFilter() !== 'ALL'"
-          class="rounded-full bg-danger-light px-2 py-1 text-xs font-medium text-danger"
+          type="button"
+          (click)="clearStockFilter()"
+          class="flex items-center gap-1 rounded-full bg-danger-light px-2 py-1 text-xs font-medium text-danger transition-transform duration-150 active:scale-95"
         >
           Filtered: {{ stockFilter() === 'low-stock' ? 'Low stock' : 'Out of stock' }}
-        </span>
+          <span aria-hidden="true">✕</span>
+        </button>
       </div>
 
-      <input
-        #searchBox
-        type="text"
-        placeholder="Search by name or brand…"
-        (input)="searchTerm.set(searchBox.value)"
-        class="mt-3 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-      />
+      <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+        <input
+          #searchBox
+          type="text"
+          placeholder="Search by name or brand…"
+          (input)="setSearchTerm(searchBox.value)"
+          class="w-full flex-1 rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+        <select
+          [value]="sortBy()"
+          (change)="setSortBy($any($event.target).value)"
+          class="rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        >
+          <option *ngFor="let option of sortOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
 
       <div class="mt-3 space-y-2">
         <div
-          *ngFor="let item of filteredItems"
+          *ngFor="let item of pagedItems"
           class="rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
         >
           <div
@@ -148,22 +162,85 @@
           No matching products.
         </p>
       </div>
+
+      <div *ngIf="totalPages > 1" class="mt-4 flex flex-wrap items-center justify-center gap-1">
+        <button
+          type="button"
+          [disabled]="currentPage() === 1"
+          (click)="goToPage(currentPage() - 1)"
+          class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Previous
+        </button>
+        <button
+          *ngFor="let page of pageNumbers"
+          type="button"
+          (click)="goToPage(page)"
+          [ngClass]="
+            currentPage() === page
+              ? 'bg-primary text-white'
+              : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+          "
+          class="rounded-lg px-3 py-1 text-xs font-medium transition-colors"
+        >
+          {{ page }}
+        </button>
+        <button
+          type="button"
+          [disabled]="currentPage() === totalPages"
+          (click)="goToPage(currentPage() + 1)"
+          class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Next
+        </button>
+      </div>
     </div>
 
     <div class="dashboard-card space-y-3">
       <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Receive stock</h2>
 
-      <div>
+      <div #productCombobox class="relative">
         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Product</label>
-        <select
-          #product
+        <input
+          #productSearchBox
+          type="text"
+          role="combobox"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isProductDropdownOpen()"
+          placeholder="Search a product to receive stock for…"
+          [value]="productSearchTerm()"
+          (input)="onProductSearchInput(productSearchBox.value)"
+          (focus)="openProductDropdown()"
+          (keydown)="onProductSearchKeydown($event)"
           class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+
+        <ul
+          *ngIf="isProductDropdownOpen() && productSearchResults.length > 0"
+          role="listbox"
+          class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-surface py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
         >
-          <option value="">Select a product…</option>
-          <option *ngFor="let item of items()" [value]="item.productId">
-            {{ item.name }}{{ item.brandTag ? ' · ' + item.brandTag : '' }}
-          </option>
-        </select>
+          <li
+            *ngFor="let item of productSearchResults; let i = index"
+            role="option"
+            (click)="selectProduct(item)"
+            [class.bg-nav-bg]="i === highlightedProductIndex()"
+            [class.dark:bg-slate-700]="i === highlightedProductIndex()"
+            class="cursor-pointer px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+          >
+            {{ item.name
+            }}<span *ngIf="item.brandTag" class="text-gray-500 dark:text-gray-400">
+              · {{ item.brandTag }}</span
+            >
+          </li>
+        </ul>
+
+        <p
+          *ngIf="isProductDropdownOpen() && productSearchResults.length === 0"
+          class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm text-gray-500 shadow-lg dark:border-slate-600 dark:bg-slate-800 dark:text-gray-400"
+        >
+          No matching products.
+        </p>
       </div>
 
       <div>
@@ -216,19 +293,13 @@
         type="button"
         [disabled]="submitting()"
         (click)="
-          receiveStock(
-            product.value,
-            quantity.value,
-            unitCost.value,
-            supplierName.value,
-            referenceNo.value
-          );
+          receiveStock(quantity.value, unitCost.value, supplierName.value, referenceNo.value);
           quantity.value = '';
           unitCost.value = '';
           supplierName.value = '';
           referenceNo.value = ''
         "
-        class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+        class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors transition-transform duration-150 hover:bg-primary-hover active:scale-[0.98] disabled:opacity-60"
       >
         {{ submitting() ? 'Recording…' : 'Record receipt' }}
       </button>

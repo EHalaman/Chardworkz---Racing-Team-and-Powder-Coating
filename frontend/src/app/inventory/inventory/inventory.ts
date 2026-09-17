@@ -1,4 +1,12 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
@@ -10,6 +18,9 @@ import {
 } from '../inventory';
 
 type StockFilter = 'ALL' | 'low-stock' | 'out-of-stock';
+type StockSortOption = 'DEFAULT' | 'QTY_LOW' | 'QTY_HIGH';
+
+const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-inventory',
@@ -29,8 +40,22 @@ export class Inventory implements OnInit, OnDestroy {
   readonly searchTerm = signal('');
   readonly stockFilter = signal<StockFilter>('ALL');
   readonly restockProductId = signal('');
+  readonly sortBy = signal<StockSortOption>('DEFAULT');
+  readonly currentPage = signal(1);
 
-  @ViewChild('product') private productSelect?: ElementRef<HTMLSelectElement>;
+  readonly sortOptions: { value: StockSortOption; label: string }[] = [
+    { value: 'DEFAULT', label: 'Default order' },
+    { value: 'QTY_LOW', label: 'Stock quantity (Low to High)' },
+    { value: 'QTY_HIGH', label: 'Stock quantity (High to Low)' },
+  ];
+
+  /** Receive Stock's product combobox - a plain signal pair instead of a template-ref select, since a hand-rolled dropdown owns its own rendering and doesn't need the [value]-on-a-native-<select> ViewChild/setTimeout workaround the old picker required (see git history: that hack existed only because Angular's dirty-check skips reapplying a bound value when the underlying <option> list changes shape without the value itself changing). */
+  readonly productSearchTerm = signal('');
+  readonly selectedProductId = signal('');
+  readonly isProductDropdownOpen = signal(false);
+  readonly highlightedProductIndex = signal(0);
+
+  @ViewChild('productCombobox') private productComboboxWrapper?: ElementRef<HTMLElement>;
 
   private queryParamsSub?: Subscription;
 
@@ -49,10 +74,71 @@ export class Inventory implements OnInit, OnDestroy {
     return this.auth.currentUser()?.role === 'OWNER';
   }
 
+  /** Mirrors Layout's own dropdown-close-on-outside-click - same reasoning: this isn't a native <select>/<details>, so nothing closes it by default. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as Node;
+    if (
+      this.isProductDropdownOpen() &&
+      !this.productComboboxWrapper?.nativeElement.contains(target)
+    ) {
+      this.isProductDropdownOpen.set(false);
+    }
+  }
+
+  get productSearchResults(): InventoryItem[] {
+    const term = this.productSearchTerm().trim().toLowerCase();
+    if (!term) {
+      return this.items();
+    }
+    return this.items().filter(
+      (item) =>
+        item.name.toLowerCase().includes(term) ||
+        (item.brandTag ?? '').toLowerCase().includes(term),
+    );
+  }
+
+  onProductSearchInput(value: string): void {
+    this.productSearchTerm.set(value);
+    this.selectedProductId.set('');
+    this.highlightedProductIndex.set(0);
+    this.isProductDropdownOpen.set(true);
+  }
+
+  openProductDropdown(): void {
+    this.isProductDropdownOpen.set(true);
+  }
+
+  selectProduct(item: InventoryItem): void {
+    this.selectedProductId.set(String(item.productId));
+    this.productSearchTerm.set(item.brandTag ? `${item.name} · ${item.brandTag}` : item.name);
+    this.isProductDropdownOpen.set(false);
+  }
+
+  onProductSearchKeydown(event: KeyboardEvent): void {
+    const results = this.productSearchResults;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.isProductDropdownOpen.set(true);
+      this.highlightedProductIndex.update((i) => Math.min(i + 1, results.length - 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.highlightedProductIndex.update((i) => Math.max(i - 1, 0));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const item = results[this.highlightedProductIndex()];
+      if (item) {
+        this.selectProduct(item);
+      }
+    } else if (event.key === 'Escape') {
+      this.isProductDropdownOpen.set(false);
+    }
+  }
+
   get filteredItems(): InventoryItem[] {
     const term = this.searchTerm().trim().toLowerCase();
     const filter = this.stockFilter();
-    return this.items()
+    const list = this.items()
       .filter(
         (item) =>
           !term ||
@@ -64,6 +150,48 @@ export class Inventory implements OnInit, OnDestroy {
         if (filter === 'low-stock') return item.lowStock;
         return true;
       });
+
+    const sort = this.sortBy();
+    if (sort === 'DEFAULT') {
+      return list;
+    }
+    return [...list].sort((a, b) =>
+      sort === 'QTY_LOW' ? a.quantity - b.quantity : b.quantity - a.quantity,
+    );
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredItems.length / PAGE_SIZE));
+  }
+
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+  }
+
+  get pagedItems(): InventoryItem[] {
+    const page = Math.min(this.currentPage(), this.totalPages);
+    const start = (page - 1) * PAGE_SIZE;
+    return this.filteredItems.slice(start, start + PAGE_SIZE);
+  }
+
+  goToPage(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  setSearchTerm(term: string): void {
+    this.searchTerm.set(term);
+    this.currentPage.set(1);
+  }
+
+  setSortBy(sort: StockSortOption): void {
+    this.sortBy.set(sort);
+    this.currentPage.set(1);
+  }
+
+  /** The filter itself stays route-driven (see ngOnInit) - this only overrides the local signal so "clear" doesn't require a navigation, matching how every other filter/search control on this page already behaves. */
+  clearStockFilter(): void {
+    this.stockFilter.set('ALL');
+    this.currentPage.set(1);
   }
 
   ngOnInit(): void {
@@ -76,6 +204,7 @@ export class Inventory implements OnInit, OnDestroy {
     this.queryParamsSub = this.route.queryParamMap.subscribe((params) => {
       this.stockFilter.set((params.get('filter') as StockFilter | null) ?? 'ALL');
       this.restockProductId.set(params.get('restock') ?? '');
+      this.currentPage.set(1);
       this.applyRestockSelection();
     });
     this.loadInventory();
@@ -134,13 +263,12 @@ export class Inventory implements OnInit, OnDestroy {
   }
 
   receiveStock(
-    productId: string,
     quantity: string,
     unitCost: string,
     supplierName: string,
     referenceNo: string,
   ): void {
-    const parsedProductId = Number(productId);
+    const parsedProductId = Number(this.selectedProductId());
     const parsedQuantity = Number(quantity);
     const parsedUnitCost = Number(unitCost);
     if (!parsedProductId) {
@@ -179,6 +307,8 @@ export class Inventory implements OnInit, OnDestroy {
           );
           this.successMessage.set(`Received ${parsedQuantity} × "${updated.name}".`);
           setTimeout(() => this.successMessage.set(null), 3000);
+          this.selectedProductId.set('');
+          this.productSearchTerm.set('');
           this.loadReceipts();
           if (this.isOwner) {
             this.loadBranchSummaries();
@@ -191,17 +321,24 @@ export class Inventory implements OnInit, OnDestroy {
       });
   }
 
-  /** Deferred one tick: the matching <option> only exists in the DOM once *ngFor has re-rendered off whichever signal (items or restockProductId) changed most recently. Safe to call from either direction since it's a no-op without a pending id or select ref. */
+  /**
+   * Preselects the combobox for the Archived Products "Restock" quick-action
+   * link (?restock=<id>). Safe to call from either direction (items or
+   * restockProductId changing) since it's a no-op without a pending id or a
+   * loaded matching item yet - unlike the native-<select> version this
+   * replaced, a plain signal set() doesn't need a deferred tick or a
+   * ViewChild, since this combobox's own template renders straight off
+   * these signals rather than relying on the DOM's <option> matching.
+   */
   private applyRestockSelection(): void {
     const id = this.restockProductId();
     if (!id) {
       return;
     }
-    setTimeout(() => {
-      if (this.productSelect) {
-        this.productSelect.nativeElement.value = id;
-      }
-    });
+    const item = this.items().find((i) => String(i.productId) === id);
+    if (item) {
+      this.selectProduct(item);
+    }
   }
 
   private loadInventory(): void {

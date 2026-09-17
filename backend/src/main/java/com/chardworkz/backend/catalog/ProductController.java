@@ -61,15 +61,18 @@ public class ProductController {
     }
 
     /**
-     * Archived view: anything not shown on the main catalog - deactivated or
-     * deleted products, plus active-but-zero-stock physical products (never
-     * SERVICES, which have no real stock concept - DEC-038).
+     * Archived view: deactivated or deleted products only. A zero-stock but
+     * still-active physical product used to land here too, which meant every
+     * brand-new product landed here immediately (nothing has been received
+     * for it yet) - it now stays in the main catalog with an "Out of stock"
+     * badge instead (see DEC-047's follow-up fix); Archived is reserved for
+     * an explicit Deactivate/Delete action.
      */
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     @GetMapping("/archived")
     public List<ProductSummaryResponse> archivedList(Authentication authentication) {
         return merge(productRepository.findAll(), authentication).stream()
-            .filter(p -> !p.active() || (p.category() != Category.SERVICES && p.stockQuantity() == 0))
+            .filter(p -> !p.active())
             .toList();
     }
 

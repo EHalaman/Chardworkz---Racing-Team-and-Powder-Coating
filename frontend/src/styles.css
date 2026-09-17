@@ -11,6 +11,40 @@ body {
   margin: 0;
 }
 
+/*
+ * Mobile-native touch fixes (Emil Kowalski checklist): no tap-highlight
+ * flash, no accidental double-tap-to-zoom on controls, and no iOS auto-zoom
+ * on focus (Safari zooms any focused input/select/textarea below 16px).
+ * Global because these apply uniformly to every interactive element in the
+ * app - a per-component opt-in would just get missed on the next new button.
+ */
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @layer components {
   .dashboard-card {
     @apply rounded-3xl border border-gray-200 bg-surface p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800;

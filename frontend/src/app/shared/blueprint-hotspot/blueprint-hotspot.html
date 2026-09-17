@@ -1,0 +1,44 @@
+<div
+  class="relative w-full select-none overflow-hidden rounded-2xl bg-nav-bg dark:bg-slate-800"
+  (click)="closeCard()"
+>
+  <img [src]="imageUrl" [alt]="imageAlt" class="block w-full" draggable="false" />
+
+  <button
+    *ngFor="let hotspot of hotspots; trackBy: trackByHotspotId"
+    type="button"
+    (click)="$event.stopPropagation(); togglePin(hotspot)"
+    [style.left.%]="hotspot.xPercent"
+    [style.top.%]="hotspot.yPercent"
+    [class.animate-pin-pulse]="activeId() !== hotspot.id"
+    [class.scale-125]="activeId() === hotspot.id"
+    [class.ring-4]="activeId() === hotspot.id"
+    [attr.aria-expanded]="activeId() === hotspot.id"
+    [attr.aria-label]="'Show details for ' + hotspot.name"
+    class="absolute z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-primary text-xs font-bold text-white shadow-md ring-primary/30 transition-transform duration-200 ease-spring active:scale-90"
+  >
+    +
+  </button>
+
+  <div
+    *ngIf="activePart as part"
+    class="hotspot-card absolute z-20 w-48 animate-pop-in rounded-xl bg-surface p-3 shadow-xl dark:bg-slate-700"
+    [style.left.%]="part.xPercent"
+    [style.top.%]="part.yPercent"
+    (click)="$event.stopPropagation()"
+  >
+    <button
+      type="button"
+      (click)="closeCard()"
+      aria-label="Close"
+      class="absolute right-1.5 top-1.5 text-gray-400 transition-transform duration-150 hover:text-gray-600 active:scale-90 dark:hover:text-gray-200"
+    >
+      ✕
+    </button>
+    <p class="pr-4 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ part.name }}</p>
+    <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+      {{ part.brandTag || 'No brand' }}
+    </p>
+    <p class="mt-1 text-sm font-medium text-primary">₱{{ part.unitPrice.toFixed(2) }}</p>
+  </div>
+</div>

@@ -9,6 +9,7 @@ import com.chardworkz.backend.reports.SalesReportResponse.TopProduct;
 import com.chardworkz.backend.sales.Sale;
 import com.chardworkz.backend.sales.SaleLine;
 import com.chardworkz.backend.sales.SaleLineRepository;
+import com.chardworkz.backend.sales.SaleReceiptResponse;
 import com.chardworkz.backend.sales.SaleRepository;
 import com.chardworkz.backend.security.JwtService;
 import io.jsonwebtoken.Claims;
@@ -16,15 +17,18 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -109,6 +113,71 @@ public class ReportsController {
 
         return new SalesReportResponse(
             resolvedFrom, resolvedTo, sales.size(), totalRevenue, byPaymentMethod, byBranch, topProducts, recentSales);
+    }
+
+    /**
+     * Itemized receipt for one sale from this page's own recent-sales list -
+     * backs the clickable-card receipt modal for Manager/Owner. Reuses
+     * {@link SaleReceiptResponse}, the same shape Register's own receipt
+     * modal and "Recent Transactions" reprint already use (DEC-044), rather
+     * than inventing a second receipt DTO. Unlike {@code SaleController.today()}
+     * this isn't limited to today or the caller's own branch - Manager is
+     * still restricted to their own branch (matching every other endpoint in
+     * this controller), Owner may open any sale.
+     */
+    @GetMapping("/sales/{saleId}")
+    public SaleReceiptResponse saleReceipt(@PathVariable UUID saleId, Authentication authentication) {
+        Sale sale = saleRepository.findById(saleId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sale not found"));
+
+        Claims claims = (Claims) authentication.getDetails();
+        String role = jwtService.extractRole(claims);
+        if ("MANAGER".equals(role)
+            && !sale.getBranch().getCode().equals(jwtService.extractBranchCode(claims))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your branch");
+        }
+
+        // Same "ordinal position among that branch's sales that calendar day"
+        // derivation as SaleController.today() (DEC-044) - generalized to the
+        // sale's own day rather than "today", since a report can reach back
+        // up to the selected date range, not just the current day.
+        ZoneId zone = ZoneId.systemDefault();
+        LocalDate saleDay = sale.getSoldAt().atZone(zone).toLocalDate();
+        Instant dayStart = saleDay.atStartOfDay(zone).toInstant();
+        Instant dayEnd = saleDay.plusDays(1).atStartOfDay(zone).toInstant();
+        List<Sale> sameDaySales = saleRepository.findBySoldAtBetweenAndBranchIdOrderBySoldAtDesc(
+            dayStart, dayEnd, sale.getBranch().getId());
+        List<Sale> oldestFirst = new ArrayList<>(sameDaySales);
+        oldestFirst.sort(Comparator.comparing(Sale::getSoldAt));
+        String datePart = saleDay.toString().replace("-", "");
+        String transactionNumber = "";
+        for (int i = 0; i < oldestFirst.size(); i++) {
+            if (oldestFirst.get(i).getId().equals(sale.getId())) {
+                transactionNumber = String.format("TXN-%s-%04d", datePart, i + 1);
+                break;
+            }
+        }
+
+        List<SaleLine> lines = saleLineRepository.findBySaleIdIn(List.of(sale.getId()));
+        return new SaleReceiptResponse(
+            sale.getId(),
+            transactionNumber,
+            sale.getCustomerName(),
+            sale.getBranch().getName(),
+            sale.getEmployee().getFullName(),
+            sale.getSoldAt(),
+            sale.getPaymentMethod().name(),
+            sale.getPaymentReference(),
+            sale.getSubtotal(),
+            sale.getTotal(),
+            lines.stream()
+                .map(line -> new SaleReceiptResponse.ReceiptLine(
+                    line.getProduct().getName(),
+                    line.getProduct().getCategory(),
+                    line.getQuantity(),
+                    line.getUnitPrice(),
+                    line.getLineTotal()))
+                .toList());
     }
 
     private BigDecimal sumTotals(List<Sale> sales) {

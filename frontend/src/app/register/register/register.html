@@ -9,7 +9,7 @@
     <button
       type="button"
       (click)="toggleDrawer()"
-      class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+      class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors transition-transform duration-150 hover:bg-nav-bg active:scale-95 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
     >
       {{ isDrawerOpen() ? '✕ Close' : 'Recent Transactions' }}
     </button>
@@ -104,7 +104,7 @@
           *ngFor="let product of filteredProducts"
           type="button"
           (click)="addToCart(product)"
-          class="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors hover:bg-nav-bg dark:border-slate-700 dark:hover:bg-slate-700"
+          class="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors transition-transform duration-150 hover:bg-nav-bg active:scale-[0.98] dark:border-slate-700 dark:hover:bg-slate-700"
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -153,7 +153,7 @@
             <button
               type="button"
               (click)="adjustQuantity(line.product.id, -1)"
-              class="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 dark:border-slate-600 dark:text-gray-300"
+              class="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-transform duration-150 active:scale-90 dark:border-slate-600 dark:text-gray-300"
             >
               −
             </button>
@@ -163,7 +163,7 @@
             <button
               type="button"
               (click)="adjustQuantity(line.product.id, 1)"
-              class="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 dark:border-slate-600 dark:text-gray-300"
+              class="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-transform duration-150 active:scale-90 dark:border-slate-600 dark:text-gray-300"
             >
               +
             </button>
@@ -171,7 +171,7 @@
               type="button"
               (click)="removeLine(line.product.id)"
               aria-label="Remove"
-              class="pl-1 text-danger"
+              class="pl-1 text-danger transition-transform duration-150 active:scale-90"
             >
               ✕
             </button>
@@ -211,7 +211,7 @@
                 ? 'bg-primary text-white'
                 : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
             "
-            class="flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors"
+            class="flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors transition-transform duration-150 active:scale-95"
           >
             {{ method.label }}
           </button>
@@ -229,7 +229,7 @@
             type="button"
             (click)="clearCart()"
             [disabled]="cart().length === 0"
-            class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-50 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+            class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors transition-transform duration-150 hover:bg-nav-bg active:scale-[0.97] disabled:opacity-50 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
           >
             Clear
           </button>
@@ -241,7 +241,7 @@
               paymentRef.value = ''
             "
             [disabled]="cart().length === 0"
-            class="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+            class="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors transition-transform duration-150 hover:bg-primary-hover active:scale-[0.97] disabled:opacity-50"
           >
             Complete Sale
           </button>
@@ -252,15 +252,23 @@
 
   <div
     *ngIf="successMessage()"
+    [class.animate-toast-in]="!isToastLeaving()"
+    [class.animate-toast-out]="isToastLeaving()"
     class="fixed bottom-4 right-4 z-50 rounded-lg bg-primary-light px-4 py-2 text-sm font-medium text-primary shadow-lg dark:bg-primary/20"
   >
     {{ successMessage() }}
   </div>
 
   <!-- Recent Transactions drawer -->
-  <div *ngIf="isDrawerOpen()" class="fixed inset-0 z-40" (click)="toggleDrawer()">
-    <div class="absolute inset-0 bg-black/30"></div>
+  <div *ngIf="isDrawerMounted()" class="fixed inset-0 z-40" (click)="toggleDrawer()">
     <div
+      class="absolute inset-0 bg-black/30"
+      [class.animate-fade-in]="isDrawerOpen()"
+      [class.animate-fade-out]="!isDrawerOpen()"
+    ></div>
+    <div
+      [class.animate-slide-in-right]="isDrawerOpen()"
+      [class.animate-slide-out-right]="!isDrawerOpen()"
       class="absolute right-0 top-0 flex h-full w-full max-w-sm flex-col bg-surface shadow-xl dark:bg-slate-800"
       (click)="$event.stopPropagation()"
     >
@@ -273,7 +281,7 @@
             type="button"
             (click)="toggleDrawer()"
             aria-label="Close"
-            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            class="text-gray-400 transition-transform duration-150 hover:text-gray-600 active:scale-90 dark:hover:text-gray-200"
           >
             ✕
           </button>
@@ -308,7 +316,7 @@
             type="button"
             (click)="transactionSearchTerm.set(''); transactionSearchBox.value = ''"
             aria-label="Clear search"
-            class="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-300/50 hover:text-gray-700 dark:hover:bg-slate-600 dark:hover:text-gray-200"
+            class="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-transform duration-150 hover:bg-gray-300/50 hover:text-gray-700 active:scale-90 dark:hover:bg-slate-600 dark:hover:text-gray-200"
           >
             ✕
           </button>
@@ -328,7 +336,7 @@
             *ngFor="let sale of filteredTransactions"
             type="button"
             (click)="reprint(sale)"
-            class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors hover:bg-nav-bg dark:border-slate-700 dark:hover:bg-slate-700"
+            class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors transition-transform duration-150 hover:bg-nav-bg active:scale-[0.98] dark:border-slate-700 dark:hover:bg-slate-700"
           >
             <div class="flex items-center justify-between gap-2">
               <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -379,9 +387,15 @@
   <!-- Printable receipt modal -->
   <div
     *ngIf="activeReceipt() as receipt"
+    [class.animate-fade-in]="!isReceiptClosing()"
+    [class.animate-fade-out]="isReceiptClosing()"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
   >
-    <div class="w-full max-w-sm rounded-2xl bg-surface shadow-xl dark:bg-slate-800">
+    <div
+      [class.animate-pop-in]="!isReceiptClosing()"
+      [class.animate-pop-out]="isReceiptClosing()"
+      class="w-full max-w-sm rounded-2xl bg-surface shadow-xl dark:bg-slate-800"
+    >
       <div class="print-area p-6 text-gray-900 dark:text-gray-100">
         <div class="text-center">
           <p class="text-sm font-bold">ChardWorkz</p>
@@ -453,14 +467,14 @@
         <button
           type="button"
           (click)="closeReceipt()"
-          class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+          class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors transition-transform duration-150 hover:bg-nav-bg active:scale-[0.97] dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
         >
           Close
         </button>
         <button
           type="button"
           (click)="printReceipt()"
-          class="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+          class="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors transition-transform duration-150 hover:bg-primary-hover active:scale-[0.97]"
         >
           Print
         </button>

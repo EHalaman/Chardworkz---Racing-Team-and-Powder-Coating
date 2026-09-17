@@ -1,0 +1,11 @@
+/*
+ * Anchors the preview card above-center of its pin. A plain translate (not
+ * left/top math) keeps it independent of the parent's rendered size, same
+ * reasoning as the percentage-based pin placement in the host template.
+ * Known limitation: pins within ~96px of the image's top or side edges can
+ * push the card outside the frame - fine for a scaffold, worth revisiting
+ * with real schematic images before this ships on a real page.
+ */
+.hotspot-card {
+  transform: translate(-50%, calc(-100% - 16px));
+}

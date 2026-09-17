@@ -98,6 +98,22 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [ ] The receipt's `transactionNumber` is a display-only approximation (derived from the Shift Summary count at the moment of sale, not an atomic server sequence) — a sale completed on one register while another register's sale is mid-sync could in principle get the same number on its instant receipt. Not a real business key (`sale.id` still is), and not worth solving with a real atomic counter unless this actually causes real confusion in practice.
 - [ ] No real "labor cost" field exists for services — a SERVICES line's receipt amount is just its `unit_price`, same as any physical part. If a future need arises to separate "parts cost" from "labor cost" within one service line, that's a new schema concept, not present today.
 
+## Motion & micro-interaction pass (DEC-046, 2026-09-17)
+
+- [ ] Roll the Register-session's motion pattern (delayed-unmount + slide/pop-in/out, `active:scale-*` tap feedback) out to Layout's header dropdowns, Products, Inventory, Activity Log, and Roles — prioritized list in `docs/motion-microinteraction-audit.md` §3. Not done this session to avoid an unconfirmed sweep across ~6 more files.
+- [ ] Roles' permission toggle switches are the one genuinely new-component candidate (a real animated on/off thumb, not just a utility-class reuse) — see audit §3, P3.
+- [ ] Decide the Blueprint Viewer's data model and rollout, if wanted for real: `shared/blueprint-hotspot/` (new component, this session) has no route/nav/backend behind it. Needs a decision on how part images + hotspot `(x, y)` coordinates get authored, and Owner/Manager/Employee visibility for what would likely be a public-facing showcase page. See audit §4.
+- [x] Live-verify DEC-046 in an actual browser — done via `claude-in-chrome` against the `local` H2 profile with a fresh Employee test account; toast/receipt/drawer all animate correctly and clean up with no stuck overlays.
+
+## Zero-stock catalog fix (DEC-048, 2026-09-17)
+
+- [ ] Several old test products (`test55`, `tot`, `te`, `test up`, and similar) that were previously hidden in Archived under the old zero-stock rule are now back in the main catalog with "Out of stock" badges. These are the user's own test data from earlier sessions, not touched this session - worth a pass to delete/deactivate the ones that aren't real products before this catalog is used for anything real.
+
+## Bug fixes & new features (DEC-047, 2026-09-17)
+
+- [ ] **Dev-environment bug, not a real app bug**: on the `local` H2 profile, H2 `2.4.240`'s PostgreSQL-compat mode throws spurious CHECK-constraint violations (SQLState 23514) on `account` and `sale` INSERTs with entirely valid data (e.g. a valid `role` value, a valid `payment_method`) — surfaces to the client as a misleading 409 "Username already taken" or a 500 `UnexpectedRollbackException`. Backend `pom.xml` doesn't pin an H2 version, so it resolves whatever the Spring Boot BOM currently has; pin it back to `2.3.232` (the version Flyway's own startup warning says it's verified against) to fix the `local` profile, or just always use real Postgres for anything that writes accounts/sales during local dev until it's pinned.
+- [ ] Roll the same tactile/animation treatment applied to Inventory's Receive Stock combobox and pagination controls to the rest of the app per DEC-046's still-open backlog item above, now that Inventory itself has picked up more interactive surface area (combobox, sort dropdown, clearable filter badge) this session.
+
 ## Project housekeeping
 
 - [ ] Confirm the `owner` field set in `PROJECT-CONTEXT.md`/`memory.md`/`handoff.md` ("Eleomar Halaman") is the correct business-side point of contact for ChardWorkz, not just the session user.
