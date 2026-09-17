@@ -1,4 +1,4 @@
-<div class="flex h-screen flex-col bg-nav-bg dark:bg-slate-900">
+<div class="flex h-dvh flex-col bg-nav-bg dark:bg-slate-900">
   <header
     class="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-surface px-6 dark:border-slate-700 dark:bg-slate-800"
   >
@@ -14,7 +14,7 @@
         >
       </div>
 
-      <div class="flex min-w-0 items-center gap-1 overflow-x-auto">
+      <div class="flex min-w-0 items-center gap-1 overflow-x-auto [touch-action:pan-x]">
         <a
           *ngFor="let tab of openTabs"
           [routerLink]="tab.path"

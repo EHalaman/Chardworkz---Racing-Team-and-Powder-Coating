@@ -50,7 +50,13 @@
         </div>
       </div>
       <div class="h-64">
-        <canvas baseChart [data]="barChartData" [options]="barChartOptions" [type]="'bar'"></canvas>
+        <canvas
+          baseChart
+          #barChart="base-chart"
+          [data]="barChartData"
+          [options]="barChartOptions"
+          [type]="'bar'"
+        ></canvas>
       </div>
     </div>
 
@@ -61,6 +67,7 @@
       <div class="relative h-44 w-44">
         <canvas
           baseChart
+          #doughnutChart="base-chart"
           [data]="doughnutChartData"
           [options]="doughnutChartOptions"
           [type]="'doughnut'"

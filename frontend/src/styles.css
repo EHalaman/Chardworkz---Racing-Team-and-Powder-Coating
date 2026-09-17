@@ -27,12 +27,37 @@ textarea {
   touch-action: manipulation;
 }
 
+/* Buttons/links are controls, not content - a long press shouldn't select
+   their label or pop iOS's copy/share callout. Excludes inputs/textareas,
+   whose text is content the user may need to select and edit. */
+button,
+a,
+[role='button'] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
 @media (max-width: 767px) {
   input,
   select,
   textarea {
     font-size: 16px;
   }
+}
+
+html {
+  /* No font inflation when the phone rotates to landscape. */
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  /* This app has its own scrollable containers (Register's cart/product list,
+     the Recent Transactions drawer, every dashboard-card list) - without this,
+     scrolling past one of their ends can hand off to the page and trigger
+     Android's pull-to-refresh or iOS's whole-page rubber-band. */
+  overscroll-behavior: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

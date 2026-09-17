@@ -94,9 +94,11 @@ module.exports = {
     // Guards `hover:` against touch devices so a tap doesn't leave a button
     // stuck in its hover state until the user taps elsewhere (Emil Kowalski
     // "sticky hover" fix) - applies to every existing hover: utility in the
-    // app with no template changes required.
+    // app with no template changes required. Also requires pointer: fine,
+    // not just hover: hover, since some Android touch devices report hover
+    // support without actually having a precise pointer.
     plugin(({ addVariant }) => {
-      addVariant('hover', '@media (hover: hover) { &:hover }');
+      addVariant('hover', '@media (hover: hover) and (pointer: fine) { &:hover }');
     }),
   ],
 };

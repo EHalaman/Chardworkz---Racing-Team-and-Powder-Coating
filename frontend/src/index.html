@@ -4,7 +4,13 @@
     <meta charset="utf-8" />
     <title>Frontend</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <!-- Content kept in sync with the app's own dark-mode toggle by ThemeService, not the OS's prefers-color-scheme - this app's theme is a manual class-based switch, so a media-query-gated tag would drift from what's actually on screen. -->
+    <meta name="theme-color" content="#F5F5F5" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

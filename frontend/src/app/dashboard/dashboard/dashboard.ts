@@ -1,5 +1,6 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, signal } from '@angular/core';
 import { ChartConfiguration } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
 import { forkJoin, catchError, of } from 'rxjs';
 import {
   DashboardActivity,
@@ -40,6 +41,17 @@ const EMPTY_SUMMARY: DashboardSummary = {
 export class Dashboard implements OnInit {
   readonly summary = signal<DashboardSummary>(EMPTY_SUMMARY);
   readonly loadError = signal<string | null>(null);
+
+  /**
+   * `BaseChartDirective` only redraws on `ngOnChanges`, which needs a new
+   * `data` object reference - mutating `barChartData.labels`/`.datasets` in
+   * place (below) is invisible to it. Without this, whether the chart ever
+   * shows real data purely depended on whether the summary HTTP response
+   * resolved before or after the directive's first paint - a race a slow
+   * phone loses far more often than a warm desktop dev session.
+   */
+  @ViewChild('barChart') private barChart?: BaseChartDirective;
+  @ViewChild('doughnutChart') private doughnutChart?: BaseChartDirective;
 
   readonly recentActivities = signal<FeedItem[]>([]);
   readonly alertItems = signal<FeedItem[]>([]);
@@ -106,6 +118,9 @@ export class Dashboard implements OnInit {
 
     const achieved = Math.max(0, Math.min(100, summary.salesGoalPercent));
     this.doughnutChartData.datasets[0].data = [achieved, 100 - achieved];
+
+    this.barChart?.update();
+    this.doughnutChart?.update();
   }
 
   private toAlertFeedItem(alert: DashboardAlert): FeedItem {
