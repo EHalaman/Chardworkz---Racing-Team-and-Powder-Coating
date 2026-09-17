@@ -155,11 +155,12 @@ export class Layout implements OnInit, OnDestroy {
     this.isAlertsOpen.update((open) => !open);
   }
 
-  /** Alerts carry no per-item entity id, so this deep-links by alert type rather than to one specific product. */
+  /** Deep-links straight into Inventory's restock flow for this specific product, pre-filling the suggested reorder quantity. */
   routeToAlert(alert: DashboardAlert): void {
     this.isAlertsOpen.set(false);
-    const filterValue = alert.type === 'OUT_OF_STOCK' ? 'out-of-stock' : 'low-stock';
-    this.router.navigate(['/inventory'], { queryParams: { filter: filterValue } });
+    this.router.navigate(['/inventory'], {
+      queryParams: { restock: alert.productId, qty: alert.suggestedReorderQty },
+    });
   }
 
   /** Title-cases the JWT's uppercase role claim (e.g. "OWNER") for display. */

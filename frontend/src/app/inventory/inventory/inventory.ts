@@ -40,6 +40,7 @@ export class Inventory implements OnInit, OnDestroy {
   readonly searchTerm = signal('');
   readonly stockFilter = signal<StockFilter>('ALL');
   readonly restockProductId = signal('');
+  readonly restockQty = signal('');
   readonly sortBy = signal<StockSortOption>('DEFAULT');
   readonly currentPage = signal(1);
 
@@ -204,6 +205,7 @@ export class Inventory implements OnInit, OnDestroy {
     this.queryParamsSub = this.route.queryParamMap.subscribe((params) => {
       this.stockFilter.set((params.get('filter') as StockFilter | null) ?? 'ALL');
       this.restockProductId.set(params.get('restock') ?? '');
+      this.restockQty.set(params.get('qty') ?? '');
       this.currentPage.set(1);
       this.applyRestockSelection();
     });

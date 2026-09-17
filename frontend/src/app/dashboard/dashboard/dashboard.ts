@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild, signal } from '@angular/core';
 import { ChartConfiguration } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import { forkJoin, catchError, of } from 'rxjs';
+import { AuthService } from '../../core/auth';
 import {
   DashboardActivity,
   DashboardAlert,
@@ -11,8 +12,8 @@ import {
 } from '../dashboard';
 
 interface FeedItem {
-  icon: 'sale' | 'receipt' | 'alert' | 'warning';
-  color: 'primary' | 'secondary' | 'danger';
+  icon: 'sale' | 'receipt';
+  color: 'primary' | 'secondary';
   title: string;
   subtitle: string;
 }
@@ -20,12 +21,23 @@ interface FeedItem {
 const EMPTY_SUMMARY: DashboardSummary = {
   totalProducts: 0,
   totalStockValue: 0,
+  totalStockValueAtCost: 0,
   lowStockCount: 0,
   monthSalesCount: 0,
   monthSalesTotal: 0,
   monthSalesGoal: 0,
   salesGoalPercent: 0,
-  topProducts: [],
+  averageOrderValue: 0,
+  partsRevenue: 0,
+  laborRevenue: 0,
+  estimatedCostTotal: 0,
+  estimatedMarginTotal: 0,
+  estimatedMarginPercent: null,
+  lineCountWithKnownCost: 0,
+  lineCountTotal: 0,
+  paymentMethodBreakdown: [],
+  topMarginParts: [],
+  topWorkshopServices: [],
   stockFlow: [],
 };
 
@@ -41,6 +53,15 @@ const EMPTY_SUMMARY: DashboardSummary = {
 export class Dashboard implements OnInit {
   readonly summary = signal<DashboardSummary>(EMPTY_SUMMARY);
   readonly loadError = signal<string | null>(null);
+  readonly alerts = signal<DashboardAlert[]>([]);
+  readonly topProductsTab = signal<'PARTS' | 'SERVICES'>('PARTS');
+
+  readonly selectedBranch = signal<string | null>(null);
+  readonly branchOptions = [
+    { value: null, label: 'Both branches' },
+    { value: 'MAIN', label: 'Main Branch' },
+    { value: 'MASINAG', label: 'Masinag Branch' },
+  ];
 
   /**
    * `BaseChartDirective` only redraws on `ngOnChanges`, which needs a new
@@ -54,7 +75,6 @@ export class Dashboard implements OnInit {
   @ViewChild('doughnutChart') private doughnutChart?: BaseChartDirective;
 
   readonly recentActivities = signal<FeedItem[]>([]);
-  readonly alertItems = signal<FeedItem[]>([]);
 
   readonly barChartData: ChartConfiguration<'bar'>['data'] = { labels: [], datasets: [] };
   readonly barChartOptions: ChartConfiguration<'bar'>['options'] = {
@@ -78,25 +98,54 @@ export class Dashboard implements OnInit {
     plugins: { legend: { display: false }, tooltip: { enabled: false } },
   };
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    readonly auth: AuthService,
+  ) {}
+
+  get isOwner(): boolean {
+    return this.auth.currentUser()?.role === 'OWNER';
+  }
+
+  get topProducts(): TopProduct[] {
+    return this.topProductsTab() === 'PARTS'
+      ? this.summary().topMarginParts
+      : this.summary().topWorkshopServices;
+  }
 
   ngOnInit(): void {
-    forkJoin({
-      summary: this.dashboardService.summary().pipe(catchError(() => of(EMPTY_SUMMARY))),
-      alerts: this.dashboardService.alerts().pipe(catchError(() => of<DashboardAlert[]>([]))),
-      activity: this.dashboardService
-        .activity(5)
-        .pipe(catchError(() => of<DashboardActivity[]>([]))),
-    }).subscribe(({ summary, alerts, activity }) => {
-      this.summary.set(summary);
-      this.applySummaryToCharts(summary);
-      this.alertItems.set(alerts.map((alert) => this.toAlertFeedItem(alert)));
-      this.recentActivities.set(activity.map((item) => this.toActivityFeedItem(item)));
-    });
+    this.loadDashboard();
+  }
+
+  selectBranch(branchCode: string | null): void {
+    this.selectedBranch.set(branchCode);
+    this.loadDashboard();
   }
 
   topProductInitial(product: TopProduct): string {
     return product.productName.charAt(0);
+  }
+
+  reorderQueryParams(alert: DashboardAlert): Record<string, string | number> {
+    return { restock: alert.productId, qty: alert.suggestedReorderQty };
+  }
+
+  private loadDashboard(): void {
+    const branchCode = this.selectedBranch();
+    forkJoin({
+      summary: this.dashboardService.summary(branchCode).pipe(catchError(() => of(EMPTY_SUMMARY))),
+      alerts: this.dashboardService
+        .alerts(branchCode)
+        .pipe(catchError(() => of<DashboardAlert[]>([]))),
+      activity: this.dashboardService
+        .activity(5, branchCode)
+        .pipe(catchError(() => of<DashboardActivity[]>([]))),
+    }).subscribe(({ summary, alerts, activity }) => {
+      this.summary.set(summary);
+      this.applySummaryToCharts(summary);
+      this.alerts.set(alerts);
+      this.recentActivities.set(activity.map((item) => this.toActivityFeedItem(item)));
+    });
   }
 
   private applySummaryToCharts(summary: DashboardSummary): void {
@@ -121,15 +170,6 @@ export class Dashboard implements OnInit {
 
     this.barChart?.update();
     this.doughnutChart?.update();
-  }
-
-  private toAlertFeedItem(alert: DashboardAlert): FeedItem {
-    return {
-      icon: alert.type === 'OUT_OF_STOCK' ? 'alert' : 'warning',
-      color: alert.type === 'OUT_OF_STOCK' ? 'danger' : 'secondary',
-      title: alert.title,
-      subtitle: alert.message,
-    };
   }
 
   private toActivityFeedItem(activity: DashboardActivity): FeedItem {

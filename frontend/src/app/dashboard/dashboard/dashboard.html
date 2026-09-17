@@ -1,9 +1,26 @@
 <div class="space-y-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome back</h1>
-    <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
-      Here's what's happening across your branches today.
-    </p>
+  <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome back</h1>
+      <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+        Here's what's happening across your branches today.
+      </p>
+    </div>
+    <div *ngIf="isOwner" class="flex flex-wrap gap-2">
+      <button
+        *ngFor="let option of branchOptions"
+        type="button"
+        (click)="selectBranch(option.value)"
+        [ngClass]="
+          selectedBranch() === option.value
+            ? 'bg-primary text-white'
+            : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+        "
+        class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+      >
+        {{ option.label }}
+      </button>
+    </div>
   </div>
 
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -20,7 +37,7 @@
         ₱{{ summary().totalStockValue | number: '1.2-2' }}
       </p>
       <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">
-        At selling price, current stock
+        At selling price · ₱{{ summary().totalStockValueAtCost | number: '1.2-2' }} at cost
       </p>
     </div>
     <div class="dashboard-card">
@@ -30,6 +47,50 @@
       </p>
       <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">
         At or below reorder threshold
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div class="dashboard-card">
+      <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Avg Order Value</p>
+      <p class="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+        ₱{{ summary().averageOrderValue | number: '1.2-2' }}
+      </p>
+      <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">This month</p>
+    </div>
+    <div class="dashboard-card">
+      <p
+        class="text-sm font-normal text-gray-500 dark:text-gray-400"
+        title="Parts revenue minus estimated cost. Labor has no cost data tracked, so it's excluded from this figure entirely, not estimated at zero."
+      >
+        Gross Margin (Parts)
+      </p>
+      <p class="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+        <ng-container *ngIf="summary().estimatedMarginPercent !== null; else noMargin">
+          {{ summary().estimatedMarginPercent | number: '1.0-1' }}%
+        </ng-container>
+        <ng-template #noMargin>—</ng-template>
+      </p>
+      <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+        Based on {{ summary().lineCountWithKnownCost }}/{{ summary().lineCountTotal }} part lines
+        with known cost
+      </p>
+    </div>
+    <div class="dashboard-card">
+      <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Parts Revenue</p>
+      <p class="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+        ₱{{ summary().partsRevenue | number: '1.2-2' }}
+      </p>
+      <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">This month</p>
+    </div>
+    <div class="dashboard-card">
+      <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Labor Revenue</p>
+      <p class="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+        ₱{{ summary().laborRevenue | number: '1.2-2' }}
+      </p>
+      <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+        Workshop services, this month
       </p>
     </div>
   </div>
@@ -99,6 +160,23 @@
       >
         No sales goal set yet - add one in Settings.
       </p>
+
+      <div
+        *ngIf="summary().paymentMethodBreakdown.length > 0"
+        class="mt-4 w-full space-y-1.5 border-t border-gray-100 pt-3 dark:border-slate-700"
+      >
+        <div
+          *ngFor="let method of summary().paymentMethodBreakdown"
+          class="flex items-center justify-between text-xs"
+        >
+          <span class="font-medium text-gray-600 dark:text-gray-300"
+            >{{ method.paymentMethod }} ({{ method.count }})</span
+          >
+          <span class="font-semibold text-gray-900 dark:text-gray-100"
+            >₱{{ method.revenue | number: '1.2-2' }}</span
+          >
+        </div>
+      </div>
     </div>
   </div>
 
@@ -121,8 +199,6 @@
             [class.text-primary]="item.color === 'primary'"
             [class.bg-secondary-light]="item.color === 'secondary'"
             [class.text-secondary]="item.color === 'secondary'"
-            [class.bg-danger-light]="item.color === 'danger'"
-            [class.text-danger]="item.color === 'danger'"
           >
             <svg
               class="h-4 w-4"
@@ -167,44 +243,52 @@
       </h2>
       <div class="space-y-2">
         <div
-          *ngFor="let item of alertItems()"
-          class="flex items-center gap-3 rounded-xl bg-nav-bg p-3 dark:bg-slate-700/50"
+          *ngFor="let alert of alerts()"
+          class="flex flex-col gap-2 rounded-xl bg-nav-bg p-3 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-700/50"
         >
-          <div
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-            [class.bg-primary-light]="item.color === 'primary'"
-            [class.text-primary]="item.color === 'primary'"
-            [class.bg-secondary-light]="item.color === 'secondary'"
-            [class.text-secondary]="item.color === 'secondary'"
-            [class.bg-danger-light]="item.color === 'danger'"
-            [class.text-danger]="item.color === 'danger'"
-          >
-            <svg
-              class="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+          <div class="flex items-center gap-3">
+            <div
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+              [class.bg-danger-light]="alert.type === 'OUT_OF_STOCK'"
+              [class.text-danger]="alert.type === 'OUT_OF_STOCK'"
+              [class.bg-secondary-light]="alert.type === 'LOW_STOCK'"
+              [class.text-secondary]="alert.type === 'LOW_STOCK'"
             >
-              <path
-                d="M12 9v4m0 4h.01M10.3 3.9 2.5 17a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"
-              />
-            </svg>
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M12 9v4m0 4h.01M10.3 3.9 2.5 17a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"
+                />
+              </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                {{ alert.productName }}
+              </p>
+              <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                {{ alert.quantity }} in stock at {{ alert.branchCode }} · reorder at
+                {{ alert.reorderThreshold }}
+              </p>
+            </div>
           </div>
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-              {{ item.title }}
-            </p>
-            <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
-              {{ item.subtitle }}
-            </p>
-          </div>
+          <a
+            [routerLink]="['/inventory']"
+            [queryParams]="reorderQueryParams(alert)"
+            class="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-center text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+          >
+            Reorder {{ alert.suggestedReorderQty }}
+          </a>
         </div>
 
         <p
-          *ngIf="alertItems().length === 0"
+          *ngIf="alerts().length === 0"
           class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
         >
           Nothing needs attention.
@@ -213,12 +297,38 @@
     </div>
 
     <div class="dashboard-card">
-      <h2 class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
-        Top Product Recommendation
-      </h2>
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Top Products</h2>
+        <div class="flex gap-1 rounded-lg bg-nav-bg p-0.5 text-xs dark:bg-slate-700">
+          <button
+            type="button"
+            (click)="topProductsTab.set('PARTS')"
+            [ngClass]="
+              topProductsTab() === 'PARTS'
+                ? 'bg-surface text-primary shadow dark:bg-slate-800'
+                : 'text-gray-500 dark:text-gray-400'
+            "
+            class="rounded-md px-2 py-1 font-medium transition-colors"
+          >
+            Top Margin Parts
+          </button>
+          <button
+            type="button"
+            (click)="topProductsTab.set('SERVICES')"
+            [ngClass]="
+              topProductsTab() === 'SERVICES'
+                ? 'bg-surface text-primary shadow dark:bg-slate-800'
+                : 'text-gray-500 dark:text-gray-400'
+            "
+            class="rounded-md px-2 py-1 font-medium transition-colors"
+          >
+            Top Services
+          </button>
+        </div>
+      </div>
       <div class="space-y-2">
         <div
-          *ngFor="let product of summary().topProducts"
+          *ngFor="let product of topProducts"
           class="flex items-center gap-3 rounded-xl bg-nav-bg p-3 dark:bg-slate-700/50"
         >
           <div
@@ -238,11 +348,17 @@
             <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
               ₱{{ product.revenue | number: '1.2-2' }}
             </p>
+            <p
+              *ngIf="product.estimatedMargin !== null"
+              class="text-xs font-normal text-gray-400 dark:text-gray-500"
+            >
+              ₱{{ product.estimatedMargin | number: '1.2-2' }} margin
+            </p>
           </div>
         </div>
 
         <p
-          *ngIf="summary().topProducts.length === 0"
+          *ngIf="topProducts.length === 0"
           class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
         >
           No sales yet this month.
