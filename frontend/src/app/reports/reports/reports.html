@@ -136,13 +136,67 @@
 
     <div class="dashboard-card">
       <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Recent sales</h2>
-      <input
-        #searchBox
-        type="text"
-        placeholder="Search by transaction ID, cashier, or payment reference…"
-        (input)="searchTerm.set(searchBox.value)"
-        class="mt-3 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-      />
+
+      <div class="mt-3 flex flex-wrap gap-3">
+        <input
+          #searchBox
+          type="text"
+          placeholder="Search transaction ID, customer (try Customer: Maria), or payment reference…"
+          [value]="searchTerm()"
+          (input)="onSearchInput(searchBox.value)"
+          class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+
+        <div #cashierCombobox class="relative w-full sm:w-56">
+          <input
+            #cashierSearchBox
+            type="text"
+            role="combobox"
+            aria-haspopup="listbox"
+            [attr.aria-expanded]="isCashierDropdownOpen()"
+            placeholder="Filter by cashier…"
+            [value]="cashierSearchTerm()"
+            (input)="onCashierSearchInput(cashierSearchBox.value)"
+            (focus)="openCashierDropdown()"
+            (keydown)="onCashierSearchKeydown($event)"
+            class="w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+          />
+          <button
+            *ngIf="selectedCashierId() !== null"
+            type="button"
+            (click)="clearCashierFilter()"
+            aria-label="Clear cashier filter"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            ✕
+          </button>
+
+          <ul
+            *ngIf="isCashierDropdownOpen() && cashierSearchResults.length > 0"
+            role="listbox"
+            class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-surface py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
+          >
+            <li
+              *ngFor="let cashier of cashierSearchResults; let i = index"
+              role="option"
+              (click)="selectCashier(cashier)"
+              [class.bg-nav-bg]="i === highlightedCashierIndex()"
+              [class.dark:bg-slate-700]="i === highlightedCashierIndex()"
+              class="cursor-pointer px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+            >
+              {{ cashier.fullName }}
+            </li>
+          </ul>
+
+          <p
+            *ngIf="isCashierDropdownOpen() && cashierSearchResults.length === 0"
+            class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm text-gray-500 shadow-lg dark:border-slate-600 dark:bg-slate-800 dark:text-gray-400"
+          >
+            No matching staff.
+          </p>
+        </div>
+      </div>
+
       <div
         *ngIf="receiptError()"
         class="mt-3 rounded-lg bg-danger-light px-3 py-2 text-xs font-medium text-danger dark:bg-danger/20"
@@ -165,7 +219,8 @@
               >
             </p>
             <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
-              {{ sale.branchCode }} · {{ sale.employeeName }} · {{ sale.id.slice(0, 8) }}
+              {{ sale.branchCode }} · {{ sale.employeeName }} · {{ sale.transactionNumber }}
+              <span *ngIf="sale.customerName"> · {{ sale.customerName }}</span>
               <span *ngIf="sale.paymentReference"> · Ref {{ sale.paymentReference }}</span>
             </p>
           </div>
@@ -175,7 +230,7 @@
         </button>
 
         <p
-          *ngIf="filteredRecentSales.length === 0"
+          *ngIf="!searching() && filteredRecentSales.length === 0"
           class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
         >
           No sales in this range.

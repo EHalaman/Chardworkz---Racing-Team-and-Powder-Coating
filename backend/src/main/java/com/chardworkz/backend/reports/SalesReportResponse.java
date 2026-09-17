@@ -24,9 +24,12 @@ public record SalesReportResponse(
 
     public record RecentSale(
         UUID id,
+        String transactionNumber,
         Instant soldAt,
         String branchCode,
+        Long employeeId,
         String employeeName,
+        String customerName,
         String paymentMethod,
         String paymentReference,
         BigDecimal total) {}

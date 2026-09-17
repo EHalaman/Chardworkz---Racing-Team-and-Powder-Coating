@@ -1,5 +1,7 @@
 package com.chardworkz.backend.reports;
 
+import com.chardworkz.backend.account.Account;
+import com.chardworkz.backend.account.AccountRepository;
 import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.branch.BranchRepository;
 import com.chardworkz.backend.reports.SalesReportResponse.BranchBreakdown;
@@ -19,10 +21,13 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -50,9 +55,13 @@ public class ReportsController {
     private static final int RECENT_SALES_LIMIT = 20;
     private static final int TOP_PRODUCTS_LIMIT = 5;
 
+    /** Matches a "Customer: <name>" search term, scoping the match to customer name only (DEC-049). */
+    private static final Pattern CUSTOMER_PREFIX = Pattern.compile("^\\s*customer\\s*:\\s*(.+)$", Pattern.CASE_INSENSITIVE);
+
     private final SaleRepository saleRepository;
     private final SaleLineRepository saleLineRepository;
     private final BranchRepository branchRepository;
+    private final AccountRepository accountRepository;
     private final JwtService jwtService;
 
     @GetMapping("/sales")
@@ -99,21 +108,77 @@ public class ReportsController {
             .limit(TOP_PRODUCTS_LIMIT)
             .toList();
 
+        Map<UUID, String> transactionNumbers = computeTransactionNumbers(sales);
         List<RecentSale> recentSales = sales.stream()
             .limit(RECENT_SALES_LIMIT)
-            .map(sale -> new RecentSale(
-                sale.getId(),
-                sale.getSoldAt(),
-                sale.getBranch().getCode(),
-                sale.getEmployee().getFullName(),
-                sale.getPaymentMethod().name(),
-                sale.getPaymentReference(),
-                sale.getTotal()))
+            .map(sale -> toRecentSale(sale, transactionNumbers))
             .toList();
 
         return new SalesReportResponse(
             resolvedFrom, resolvedTo, sales.size(), totalRevenue, byPaymentMethod, byBranch, topProducts, recentSales);
     }
+
+    /**
+     * Unified Recent Sales search (DEC-049) - a separate endpoint from
+     * {@link #salesReport}, not extra params bolted onto it, since search only
+     * ever affects the recent-sales list, never the aggregate cards, and this
+     * keeps a search keystroke from re-fetching/re-rendering those. Matches
+     * customerName, cashier name, and payment reference at the database via
+     * an equality/optional-predicate filter over the same date+branch-bounded
+     * query {@link #salesReport} already uses; transaction number match is
+     * done in-memory after the fact because it isn't a stored column - it's
+     * derived per (branch, day) ordinal, same as {@link #saleReceipt}.
+     */
+    @GetMapping("/sales/search")
+    public List<RecentSale> searchSales(
+        @RequestParam(required = false) LocalDate from,
+        @RequestParam(required = false) LocalDate to,
+        @RequestParam(required = false) String branchCode,
+        @RequestParam(required = false) String searchQuery,
+        @RequestParam(required = false) Long cashierId,
+        Authentication authentication) {
+        Claims claims = (Claims) authentication.getDetails();
+        String role = jwtService.extractRole(claims);
+        String effectiveBranchCode = "MANAGER".equals(role) ? jwtService.extractBranchCode(claims) : branchCode;
+
+        LocalDate resolvedTo = to != null ? to : LocalDate.now();
+        LocalDate resolvedFrom = from != null ? from : resolvedTo.minusDays(29);
+        ZoneId zone = ZoneId.systemDefault();
+        Instant fromInstant = resolvedFrom.atStartOfDay(zone).toInstant();
+        Instant toInstant = resolvedTo.plusDays(1).atStartOfDay(zone).toInstant();
+
+        List<Sale> sales = effectiveBranchCode != null
+            ? saleRepository.findBySoldAtBetweenAndBranchIdOrderBySoldAtDesc(
+                fromInstant, toInstant, resolveBranch(effectiveBranchCode).getId())
+            : saleRepository.findBySoldAtBetweenOrderBySoldAtDesc(fromInstant, toInstant);
+
+        Map<UUID, String> transactionNumbers = computeTransactionNumbers(sales);
+        return sales.stream()
+            .filter(sale -> cashierId == null || sale.getEmployee().getId().equals(cashierId))
+            .filter(sale -> matchesSearch(sale, transactionNumbers.get(sale.getId()), searchQuery))
+            .limit(RECENT_SALES_LIMIT)
+            .map(sale -> toRecentSale(sale, transactionNumbers))
+            .toList();
+    }
+
+    /**
+     * Staff list for the Recent Sales cashier filter - not the Owner-only
+     * {@code /api/accounts} (Manager can't reach that), and includes inactive
+     * accounts since this is about filtering historical sales, not who can
+     * currently log in.
+     */
+    @GetMapping("/cashiers")
+    public List<CashierSummary> cashiers(Authentication authentication) {
+        Claims claims = (Claims) authentication.getDetails();
+        String role = jwtService.extractRole(claims);
+        List<Account> accounts = "MANAGER".equals(role)
+            ? accountRepository.findByBranchIdOrderByFullName(
+                resolveBranch(jwtService.extractBranchCode(claims)).getId())
+            : accountRepository.findAllByOrderByFullName();
+        return accounts.stream().map(a -> new CashierSummary(a.getId(), a.getFullName())).toList();
+    }
+
+    public record CashierSummary(Long id, String fullName) {}
 
     /**
      * Itemized receipt for one sale from this page's own recent-sales list -
@@ -147,16 +212,7 @@ public class ReportsController {
         Instant dayEnd = saleDay.plusDays(1).atStartOfDay(zone).toInstant();
         List<Sale> sameDaySales = saleRepository.findBySoldAtBetweenAndBranchIdOrderBySoldAtDesc(
             dayStart, dayEnd, sale.getBranch().getId());
-        List<Sale> oldestFirst = new ArrayList<>(sameDaySales);
-        oldestFirst.sort(Comparator.comparing(Sale::getSoldAt));
-        String datePart = saleDay.toString().replace("-", "");
-        String transactionNumber = "";
-        for (int i = 0; i < oldestFirst.size(); i++) {
-            if (oldestFirst.get(i).getId().equals(sale.getId())) {
-                transactionNumber = String.format("TXN-%s-%04d", datePart, i + 1);
-                break;
-            }
-        }
+        String transactionNumber = computeTransactionNumbers(sameDaySales).get(sale.getId());
 
         List<SaleLine> lines = saleLineRepository.findBySaleIdIn(List.of(sale.getId()));
         return new SaleReceiptResponse(
@@ -195,5 +251,74 @@ public class ReportsController {
     private Branch resolveBranch(String code) {
         return branchRepository.findByCode(code)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown branch"));
+    }
+
+    /**
+     * Derives each sale's "TXN-YYYYMMDD-####" number from its ordinal position
+     * among its own branch's sales that calendar day (DEC-044). {@code sales}
+     * must already contain every sale for each (branch, day) pair it covers -
+     * both callers pass a date-range query that spans whole days, so this
+     * holds without needing a narrower per-day re-fetch.
+     */
+    private Map<UUID, String> computeTransactionNumbers(List<Sale> sales) {
+        ZoneId zone = ZoneId.systemDefault();
+        Map<Long, Map<LocalDate, List<Sale>>> byBranchAndDay = new LinkedHashMap<>();
+        for (Sale sale : sales) {
+            LocalDate day = sale.getSoldAt().atZone(zone).toLocalDate();
+            byBranchAndDay
+                .computeIfAbsent(sale.getBranch().getId(), b -> new LinkedHashMap<>())
+                .computeIfAbsent(day, d -> new ArrayList<>())
+                .add(sale);
+        }
+
+        Map<UUID, String> numbers = new HashMap<>();
+        for (Map<LocalDate, List<Sale>> byDay : byBranchAndDay.values()) {
+            for (Map.Entry<LocalDate, List<Sale>> entry : byDay.entrySet()) {
+                String datePart = entry.getKey().toString().replace("-", "");
+                List<Sale> oldestFirst = new ArrayList<>(entry.getValue());
+                oldestFirst.sort(Comparator.comparing(Sale::getSoldAt));
+                for (int i = 0; i < oldestFirst.size(); i++) {
+                    numbers.put(oldestFirst.get(i).getId(), String.format("TXN-%s-%04d", datePart, i + 1));
+                }
+            }
+        }
+        return numbers;
+    }
+
+    private RecentSale toRecentSale(Sale sale, Map<UUID, String> transactionNumbers) {
+        return new RecentSale(
+            sale.getId(),
+            transactionNumbers.get(sale.getId()),
+            sale.getSoldAt(),
+            sale.getBranch().getCode(),
+            sale.getEmployee().getId(),
+            sale.getEmployee().getFullName(),
+            sale.getCustomerName(),
+            sale.getPaymentMethod().name(),
+            sale.getPaymentReference(),
+            sale.getTotal());
+    }
+
+    /**
+     * "Customer: <name>" scopes the match to customer name only; anything
+     * else matches broadly across customer name, cashier name, payment
+     * reference, and the derived transaction number - the same fields the
+     * frontend's own in-memory search already covered, now backed by the full
+     * date range instead of just the top 20 recent sales.
+     */
+    private boolean matchesSearch(Sale sale, String transactionNumber, String searchQuery) {
+        if (searchQuery == null || searchQuery.isBlank()) {
+            return true;
+        }
+        Matcher customerMatch = CUSTOMER_PREFIX.matcher(searchQuery);
+        if (customerMatch.matches()) {
+            String term = customerMatch.group(1).trim().toLowerCase();
+            return sale.getCustomerName() != null && sale.getCustomerName().toLowerCase().contains(term);
+        }
+        String term = searchQuery.trim().toLowerCase();
+        return (sale.getCustomerName() != null && sale.getCustomerName().toLowerCase().contains(term))
+            || sale.getEmployee().getFullName().toLowerCase().contains(term)
+            || (sale.getPaymentReference() != null && sale.getPaymentReference().toLowerCase().contains(term))
+            || transactionNumber.toLowerCase().contains(term);
     }
 }
