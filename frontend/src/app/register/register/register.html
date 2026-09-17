@@ -261,60 +261,117 @@
   <div *ngIf="isDrawerOpen()" class="fixed inset-0 z-40" (click)="toggleDrawer()">
     <div class="absolute inset-0 bg-black/30"></div>
     <div
-      class="absolute right-0 top-0 h-full w-full max-w-sm overflow-y-auto bg-surface p-4 shadow-xl dark:bg-slate-800"
+      class="absolute right-0 top-0 flex h-full w-full max-w-sm flex-col bg-surface shadow-xl dark:bg-slate-800"
       (click)="$event.stopPropagation()"
     >
-      <div class="flex items-center justify-between">
-        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">
-          Recent Transactions
-        </h2>
-        <button
-          type="button"
-          (click)="toggleDrawer()"
-          aria-label="Close"
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-        >
-          ✕
-        </button>
-      </div>
-      <p class="mt-1 text-xs font-normal text-gray-500 dark:text-gray-400">
-        Today's completed sales at this branch.
-      </p>
+      <div class="sticky top-0 z-10 shrink-0 space-y-3 bg-surface p-4 dark:bg-slate-800">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">
+            Recent Transactions
+          </h2>
+          <button
+            type="button"
+            (click)="toggleDrawer()"
+            aria-label="Close"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            ✕
+          </button>
+        </div>
+        <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+          Today's completed sales at this branch.
+        </p>
 
-      <div
-        *ngIf="recentTransactionsError()"
-        class="mt-3 rounded-lg bg-danger-light px-3 py-2 text-xs font-medium text-danger dark:bg-danger/20"
-      >
-        {{ recentTransactionsError() }}
+        <div class="relative">
+          <svg
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            #transactionSearchBox
+            type="text"
+            placeholder="Search customer, transaction ID, or cashier…"
+            (input)="transactionSearchTerm.set(transactionSearchBox.value)"
+            [value]="transactionSearchTerm()"
+            class="w-full rounded-lg border border-gray-300 bg-nav-bg py-2 pl-9 pr-8 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-700 dark:text-gray-100"
+          />
+          <button
+            *ngIf="transactionSearchTerm()"
+            type="button"
+            (click)="transactionSearchTerm.set(''); transactionSearchBox.value = ''"
+            aria-label="Clear search"
+            class="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-300/50 hover:text-gray-700 dark:hover:bg-slate-600 dark:hover:text-gray-200"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div
+          *ngIf="recentTransactionsError()"
+          class="rounded-lg bg-danger-light px-3 py-2 text-xs font-medium text-danger dark:bg-danger/20"
+        >
+          {{ recentTransactionsError() }}
+        </div>
       </div>
 
-      <div class="mt-3 space-y-2">
-        <button
-          *ngFor="let sale of recentTransactions()"
-          type="button"
-          (click)="reprint(sale)"
-          class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors hover:bg-nav-bg dark:border-slate-700 dark:hover:bg-slate-700"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {{ sale.customerName || 'Walk-in Customer' }}
+      <div class="flex-1 overflow-y-auto p-4 pt-0">
+        <div class="space-y-2">
+          <button
+            *ngFor="let sale of filteredTransactions"
+            type="button"
+            (click)="reprint(sale)"
+            class="block w-full rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors hover:bg-nav-bg dark:border-slate-700 dark:hover:bg-slate-700"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {{ sale.customerName || 'Walk-in Customer' }}
+              </p>
+              <p class="shrink-0 text-sm font-medium text-gray-900 dark:text-gray-100">
+                ₱{{ sale.total | number: '1.2-2' }}
+              </p>
+            </div>
+            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+              {{ sale.transactionNumber }} · {{ sale.soldAt | date: 'shortTime' }} ·
+              {{ sale.employeeName }}
             </p>
-            <p class="shrink-0 text-sm font-medium text-gray-900 dark:text-gray-100">
-              ₱{{ sale.total | number: '1.2-2' }}
+          </button>
+
+          <p
+            *ngIf="recentTransactions().length === 0"
+            class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
+          >
+            No transactions yet today.
+          </p>
+
+          <div
+            *ngIf="recentTransactions().length > 0 && filteredTransactions.length === 0"
+            class="py-10 text-center"
+          >
+            <svg
+              class="mx-auto h-8 w-8 text-gray-300 dark:text-slate-600"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <p class="mt-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+              No transactions found matching "{{ transactionSearchTerm() }}".
             </p>
           </div>
-          <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
-            {{ sale.transactionNumber }} · {{ sale.soldAt | date: 'shortTime' }} ·
-            {{ sale.employeeName }}
-          </p>
-        </button>
-
-        <p
-          *ngIf="recentTransactions().length === 0"
-          class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
-        >
-          No transactions yet today.
-        </p>
+        </div>
       </div>
     </div>
   </div>

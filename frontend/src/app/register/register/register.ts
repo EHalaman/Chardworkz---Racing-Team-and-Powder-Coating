@@ -38,6 +38,7 @@ export class Register implements OnInit {
   readonly isDrawerOpen = signal(false);
   readonly recentTransactions = signal<SaleReceipt[]>([]);
   readonly recentTransactionsError = signal<string | null>(null);
+  readonly transactionSearchTerm = signal('');
 
   readonly paymentMethods: { value: PaymentMethod; label: string }[] = [
     { value: 'CASH', label: 'Cash' },
@@ -88,6 +89,19 @@ export class Register implements OnInit {
 
   toggleDrawer(): void {
     this.isDrawerOpen.update((open) => !open);
+  }
+
+  get filteredTransactions(): SaleReceipt[] {
+    const term = this.transactionSearchTerm().trim().toLowerCase();
+    if (!term) {
+      return this.recentTransactions();
+    }
+    return this.recentTransactions().filter(
+      (sale) =>
+        (sale.customerName ?? 'walk-in customer').toLowerCase().includes(term) ||
+        sale.transactionNumber.toLowerCase().includes(term) ||
+        sale.employeeName.toLowerCase().includes(term),
+    );
   }
 
   reprint(sale: SaleReceipt): void {
