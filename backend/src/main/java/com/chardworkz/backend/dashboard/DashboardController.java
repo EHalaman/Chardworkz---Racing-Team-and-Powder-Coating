@@ -26,9 +26,11 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -73,6 +75,7 @@ public class DashboardController {
     private static final int RUN_RATE_MONTHS = 3;
     private static final int ALERT_LIMIT = 10;
     private static final int DEAD_STOCK_WINDOW_DAYS = 60;
+    private static final DateTimeFormatter HOUR_LABEL_FORMAT = DateTimeFormatter.ofPattern("h a", Locale.ENGLISH);
 
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
@@ -226,7 +229,8 @@ public class DashboardController {
         Instant now = Instant.now();
         LocalDate today = LocalDate.now(zone);
 
-        Instant from = analyticsRangeStart(timeRange, today, zone);
+        OperatingHours operatingHours = resolveOperatingHours(branches);
+        Instant from = analyticsRangeStart(timeRange, today, zone, operatingHours);
         List<Sale> sales = salesBetween(branchId, from, now);
         List<SaleLine> lines = sales.isEmpty()
             ? List.of()
@@ -280,7 +284,8 @@ public class DashboardController {
             ? BigDecimal.ZERO
             : grossRevenue.divide(BigDecimal.valueOf(sales.size()), 2, RoundingMode.HALF_UP);
 
-        List<ChartPoint> chartSeries = buildChartSeries(timeRange, today, zone, sales, revenueBySaleId, cogsBySaleId);
+        List<ChartPoint> chartSeries =
+            buildChartSeries(timeRange, today, zone, operatingHours, sales, revenueBySaleId, cogsBySaleId);
         DeadStock deadStock = computeDeadStock(branches);
 
         return new DashboardAnalyticsResponse(
@@ -420,14 +425,23 @@ public class DashboardController {
         return totals;
     }
 
-    private Instant analyticsRangeStart(DashboardTimeRange timeRange, LocalDate today, ZoneId zone) {
-        LocalDate start = switch (timeRange) {
-            case TODAY -> today;
-            case WEEK -> today.minusDays(6);
-            case MONTH -> today.withDayOfMonth(1);
-            case YTD -> today.withDayOfYear(1);
+    private record OperatingHours(LocalTime opening, LocalTime closing) {}
+
+    /** Widest hours across the branches in scope (earliest opening, latest closing) - so viewing "Both branches" never clips either branch's real sales. */
+    private OperatingHours resolveOperatingHours(List<Branch> branches) {
+        LocalTime opening = branches.stream().map(Branch::getOpeningTime).min(LocalTime::compareTo).orElse(LocalTime.of(8, 0));
+        LocalTime closing = branches.stream().map(Branch::getClosingTime).max(LocalTime::compareTo).orElse(LocalTime.of(19, 0));
+        return new OperatingHours(opening, closing);
+    }
+
+    private Instant analyticsRangeStart(
+        DashboardTimeRange timeRange, LocalDate today, ZoneId zone, OperatingHours operatingHours) {
+        return switch (timeRange) {
+            case TODAY -> today.atTime(operatingHours.opening()).atZone(zone).toInstant();
+            case WEEK -> today.minusDays(6).atStartOfDay(zone).toInstant();
+            case MONTH -> today.withDayOfMonth(1).atStartOfDay(zone).toInstant();
+            case YTD -> today.withDayOfYear(1).atStartOfDay(zone).toInstant();
         };
-        return start.atStartOfDay(zone).toInstant();
     }
 
     private MarginStatus marginStatus(Double marginPercent) {
@@ -443,13 +457,19 @@ public class DashboardController {
 
     /** Bucket granularity follows the selected range: hourly (TODAY), daily (WEEK/MONTH), or monthly (YTD) - each pre-populated with zero so gaps show up as empty bars, not missing ones. */
     private List<ChartPoint> buildChartSeries(
-        DashboardTimeRange timeRange, LocalDate today, ZoneId zone, List<Sale> sales,
+        DashboardTimeRange timeRange, LocalDate today, ZoneId zone, OperatingHours operatingHours, List<Sale> sales,
         Map<UUID, BigDecimal> revenueBySaleId, Map<UUID, BigDecimal> cogsBySaleId) {
         LinkedHashMap<String, String> bucketLabels = new LinkedHashMap<>();
         switch (timeRange) {
             case TODAY -> {
-                for (int hour = 0; hour < 24; hour++) {
-                    bucketLabels.put(String.valueOf(hour), String.format("%02d:00", hour));
+                int startHour = operatingHours.opening().getHour();
+                int endHour = operatingHours.closing().getMinute() == 0
+                    ? operatingHours.closing().getHour() - 1
+                    : operatingHours.closing().getHour();
+                endHour = Math.min(23, Math.max(startHour, endHour));
+                for (int hour = startHour; hour <= endHour; hour++) {
+                    bucketLabels.put(
+                        String.valueOf(hour), LocalTime.of(hour, 0).format(HOUR_LABEL_FORMAT));
                 }
             }
             case WEEK -> {

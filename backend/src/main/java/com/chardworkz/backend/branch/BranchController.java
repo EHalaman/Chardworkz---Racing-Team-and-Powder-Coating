@@ -34,10 +34,16 @@ public class BranchController {
     @PatchMapping("/{id}")
     public BranchResponse update(
         @PathVariable Long id, @Valid @RequestBody UpdateBranchRequest request, Authentication authentication) {
+        if (!request.openingTime().isBefore(request.closingTime())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Opening time must be before closing time");
+        }
+
         Branch branch = branchRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
         branch.setName(request.name());
         branch.setMonthlySalesGoal(request.monthlySalesGoal());
+        branch.setOpeningTime(request.openingTime());
+        branch.setClosingTime(request.closingTime());
         branch = branchRepository.save(branch);
 
         activityLogService.record(authentication, ActionType.UPDATE, "BRANCH", String.valueOf(branch.getId()),

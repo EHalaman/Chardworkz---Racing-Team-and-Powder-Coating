@@ -131,14 +131,24 @@ export class Settings implements OnInit {
     this.editingBranchId.set(null);
   }
 
-  saveBranch(branch: Branch, name: string, monthlySalesGoal: string): void {
+  saveBranch(
+    branch: Branch,
+    name: string,
+    monthlySalesGoal: string,
+    openingTime: string,
+    closingTime: string,
+  ): void {
     const goal = Number(monthlySalesGoal);
     if (!name.trim() || !Number.isFinite(goal) || goal < 0) {
       this.branchError.set('Enter a name and a valid monthly sales goal.');
       return;
     }
+    if (!openingTime || !closingTime || openingTime >= closingTime) {
+      this.branchError.set('Opening time must be before closing time.');
+      return;
+    }
     this.branchError.set(null);
-    this.branchesService.update(branch.id, name.trim(), goal).subscribe({
+    this.branchesService.update(branch.id, name.trim(), goal, openingTime, closingTime).subscribe({
       next: (updated) => {
         this.branches.update((branches) =>
           branches.map((b) => (b.id === updated.id ? updated : b)),
@@ -147,5 +157,9 @@ export class Settings implements OnInit {
       },
       error: () => this.branchError.set('Could not update that branch.'),
     });
+  }
+
+  timeInputValue(time: string): string {
+    return time.slice(0, 5);
   }
 }

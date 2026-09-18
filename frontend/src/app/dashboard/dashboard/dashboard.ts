@@ -130,19 +130,59 @@ export class Dashboard implements OnInit {
   };
 
   /**
-   * Stacked Revenue/COGS bars plus a Gross Profit trend line - a mixed
+   * COGS + Gross Profit stack to the same total (they sum to Gross Revenue
+   * by definition); Gross Revenue is drawn as an unstacked overlay line so
+   * its cap visually lines up with the top of each stacked bar. A mixed
    * chart type, so this is loosely typed rather than `ChartConfiguration<'bar'>`
    * (whose dataset type doesn't allow a per-dataset `type: 'line'` override).
    */
   readonly analyticsChartData: { labels: string[]; datasets: any[] } = { labels: [], datasets: [] };
+  readonly analyticsLegendItems = signal<{ label: string; color: string; hidden: boolean }[]>([]);
+  readonly analyticsTooltip = signal<{
+    x: number;
+    y: number;
+    label: string;
+    revenue: number;
+    cogs: number;
+    grossProfit: number;
+    marginPercent: number | null;
+  } | null>(null);
+
   readonly analyticsChartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF' } } },
+    animation: { duration: 400 },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      // Custom HTML legend/tooltip below replace both of these.
+      legend: { display: false },
+      tooltip: {
+        enabled: false,
+        external: (context) => this.handleAnalyticsTooltip(context),
+      },
+    },
     scales: {
-      x: { stacked: true, grid: { display: false }, ticks: { color: '#9CA3AF' } },
+      x: {
+        stacked: true,
+        grid: { display: false },
+        ticks: {
+          color: '#9CA3AF',
+          maxRotation: 0,
+          minRotation: 0,
+          autoSkip: false,
+          // Thin TODAY's hourly labels to every 2 hours so they don't
+          // crowd - the underlying data stays hourly, only the label
+          // is skipped, so hovering a "skipped" bar still shows exact
+          // figures via the custom tooltip.
+          callback: (_value, index) =>
+            this.selectedTimeRange() === 'TODAY' && index % 2 !== 0
+              ? ''
+              : (this.analyticsChartData.labels?.[index] ?? ''),
+        },
+      },
       y: {
         stacked: true,
+        beginAtZero: true,
         grid: { color: 'rgba(148, 163, 184, 0.15)' },
         ticks: { color: '#9CA3AF' },
       },
@@ -271,29 +311,72 @@ export class Dashboard implements OnInit {
     this.analyticsChartData.datasets = [
       {
         type: 'bar',
-        data: analytics.chartSeries.map((p) => p.revenue),
-        label: 'Gross Revenue',
-        backgroundColor: '#3FA485',
-        stack: 'financials',
-      },
-      {
-        type: 'bar',
         data: analytics.chartSeries.map((p) => p.cogs),
         label: 'COGS',
         backgroundColor: '#E2B24A',
         stack: 'financials',
+        borderRadius: 4,
+      },
+      {
+        type: 'bar',
+        data: analytics.chartSeries.map((p) => p.grossProfit),
+        label: 'Gross Profit',
+        backgroundColor: '#3FA485',
+        stack: 'financials',
+        borderRadius: 4,
       },
       {
         type: 'line',
-        data: analytics.chartSeries.map((p) => p.grossProfit),
-        label: 'Gross Profit',
+        data: analytics.chartSeries.map((p) => p.revenue),
+        label: 'Gross Revenue',
         borderColor: '#2563EB',
         backgroundColor: '#2563EB',
+        pointRadius: 3,
+        pointHoverRadius: 5,
         tension: 0.3,
-        yAxisID: 'y',
       },
     ];
+    this.analyticsLegendItems.set([
+      { label: 'COGS', color: '#E2B24A', hidden: false },
+      { label: 'Gross Profit', color: '#3FA485', hidden: false },
+      { label: 'Gross Revenue', color: '#2563EB', hidden: false },
+    ]);
+    this.analyticsTooltip.set(null);
     this.analyticsChart?.update();
+  }
+
+  toggleAnalyticsLegendItem(index: number): void {
+    const chart = this.analyticsChart?.chart;
+    if (!chart) return;
+    const nowVisible = !chart.isDatasetVisible(index);
+    chart.setDatasetVisibility(index, nowVisible);
+    chart.update();
+    this.analyticsLegendItems.update((items) =>
+      items.map((item, i) => (i === index ? { ...item, hidden: !nowVisible } : item)),
+    );
+  }
+
+  private handleAnalyticsTooltip(context: { chart: any; tooltip: any }): void {
+    const { tooltip } = context;
+    if (tooltip.opacity === 0) {
+      this.analyticsTooltip.set(null);
+      return;
+    }
+    const index: number | undefined = tooltip.dataPoints?.[0]?.dataIndex;
+    const point = index !== undefined ? this.analytics().chartSeries[index] : undefined;
+    if (!point) {
+      this.analyticsTooltip.set(null);
+      return;
+    }
+    this.analyticsTooltip.set({
+      x: tooltip.caretX,
+      y: tooltip.caretY,
+      label: point.label,
+      revenue: point.revenue,
+      cogs: point.cogs,
+      grossProfit: point.grossProfit,
+      marginPercent: point.revenue > 0 ? (point.grossProfit / point.revenue) * 100 : null,
+    });
   }
 
   private toActivityFeedItem(activity: DashboardActivity): FeedItem {

@@ -195,12 +195,25 @@
     </div>
 
     <div class="dashboard-card lg:col-span-2">
-      <div class="mb-4 flex items-center justify-between">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">
           Revenue, COGS & Gross Profit
         </h2>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            *ngFor="let item of analyticsLegendItems(); let i = index"
+            type="button"
+            (click)="toggleAnalyticsLegendItem(i)"
+            [class.opacity-40]="item.hidden"
+            [class.scale-95]="item.hidden"
+            class="flex items-center gap-1.5 text-xs font-medium text-gray-600 transition-all dark:text-gray-300"
+          >
+            <span class="h-2.5 w-2.5 rounded-full" [style.background-color]="item.color"></span>
+            {{ item.label }}
+          </button>
+        </div>
       </div>
-      <div class="h-72">
+      <div class="relative h-72">
         <canvas
           baseChart
           #analyticsChart="base-chart"
@@ -208,6 +221,46 @@
           [options]="analyticsChartOptions"
           [type]="'bar'"
         ></canvas>
+
+        <div
+          *ngIf="analyticsTooltip() as tip"
+          class="pointer-events-none absolute z-10 w-52 -translate-x-1/2 -translate-y-full rounded-xl border border-white/40 bg-white/70 p-3 text-xs shadow-lg backdrop-blur-md dark:border-slate-600/40 dark:bg-slate-800/70"
+          [style.left.px]="tip.x"
+          [style.top.px]="tip.y - 12"
+        >
+          <p class="mb-1.5 font-semibold text-gray-900 dark:text-gray-100">{{ tip.label }}</p>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500 dark:text-gray-400">Gross Revenue</span>
+              <span class="font-medium text-gray-900 dark:text-gray-100"
+                >₱{{ tip.revenue | number: '1.2-2' }}</span
+              >
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500 dark:text-gray-400">COGS</span>
+              <span class="font-medium text-gray-900 dark:text-gray-100"
+                >₱{{ tip.cogs | number: '1.2-2' }}</span
+              >
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500 dark:text-gray-400">Gross Profit</span>
+              <span class="font-medium text-gray-900 dark:text-gray-100"
+                >₱{{ tip.grossProfit | number: '1.2-2' }}</span
+              >
+            </div>
+            <div
+              class="flex items-center justify-between border-t border-gray-300/50 pt-1 dark:border-slate-600/50"
+            >
+              <span class="text-gray-500 dark:text-gray-400">Profit Margin</span>
+              <span class="font-semibold text-gray-900 dark:text-gray-100">
+                <ng-container *ngIf="tip.marginPercent !== null; else noTipMargin">
+                  {{ tip.marginPercent | number: '1.0-1' }}%
+                </ng-container>
+                <ng-template #noTipMargin>—</ng-template>
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

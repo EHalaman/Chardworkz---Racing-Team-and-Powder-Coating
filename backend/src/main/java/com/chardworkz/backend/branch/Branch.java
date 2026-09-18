@@ -3,6 +3,7 @@ package com.chardworkz.backend.branch;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalTime;
 import lombok.*;
 
 @Entity
@@ -26,6 +27,12 @@ public class Branch {
 
     @Column(name = "monthly_sales_goal", nullable = false, precision = 12, scale = 2)
     private BigDecimal monthlySalesGoal;
+
+    @Column(name = "opening_time", nullable = false)
+    private LocalTime openingTime;
+
+    @Column(name = "closing_time", nullable = false)
+    private LocalTime closingTime;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

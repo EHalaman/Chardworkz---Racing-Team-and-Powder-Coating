@@ -243,10 +243,40 @@
                   class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
                 />
               </div>
+              <div class="w-28">
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300"
+                  >Opening time</label
+                >
+                <input
+                  #branchOpeningTime
+                  type="time"
+                  [value]="timeInputValue(branch.openingTime)"
+                  class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                />
+              </div>
+              <div class="w-28">
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300"
+                  >Closing time</label
+                >
+                <input
+                  #branchClosingTime
+                  type="time"
+                  [value]="timeInputValue(branch.closingTime)"
+                  class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                />
+              </div>
             </div>
             <button
               type="button"
-              (click)="saveBranch(branch, branchName.value, branchGoal.value)"
+              (click)="
+                saveBranch(
+                  branch,
+                  branchName.value,
+                  branchGoal.value,
+                  branchOpeningTime.value,
+                  branchClosingTime.value
+                )
+              "
               class="shrink-0 rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
             >
               Save
@@ -265,7 +295,8 @@
                 {{ branch.name }}
               </p>
               <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
-                {{ branch.code }} · Goal: ₱{{ branch.monthlySalesGoal | number: '1.2-2' }}/mo
+                {{ branch.code }} · Goal: ₱{{ branch.monthlySalesGoal | number: '1.2-2' }}/mo ·
+                {{ timeInputValue(branch.openingTime) }}–{{ timeInputValue(branch.closingTime) }}
               </p>
             </div>
             <button
