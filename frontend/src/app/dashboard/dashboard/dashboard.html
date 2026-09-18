@@ -95,6 +95,123 @@
     </div>
   </div>
 
+  <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Store Health & Profitability</h2>
+    <div class="flex flex-wrap gap-2">
+      <button
+        *ngFor="let option of timeRangeOptions"
+        type="button"
+        (click)="selectTimeRange(option.value)"
+        [ngClass]="
+          selectedTimeRange() === option.value
+            ? 'bg-primary text-white'
+            : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+        "
+        class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div class="dashboard-card space-y-4">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Gross Profit Margin</p>
+        <span
+          [ngClass]="marginBadgeClass(analytics().marginStatus)"
+          class="rounded-full px-2 py-0.5 text-xs font-medium"
+        >
+          {{ marginBadgeLabel(analytics().marginStatus) }}
+        </span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <ng-container *ngIf="analytics().grossProfitMarginPercent !== null; else noAnalyticsMargin">
+          {{ analytics().grossProfitMarginPercent | number: '1.0-1' }}%
+        </ng-container>
+        <ng-template #noAnalyticsMargin>—</ng-template>
+      </p>
+      <p
+        class="text-xs font-normal text-gray-400 dark:text-gray-500"
+        title="Labor (SERVICES) revenue has no cost tracked, so it's excluded from COGS entirely - a labor-heavy period will show a higher margin, which is expected, not a bug."
+      >
+        Based on {{ analytics().lineCountWithKnownCost }}/{{ analytics().lineCountTotal }} part
+        lines with known cost
+      </p>
+
+      <dl class="grid grid-cols-2 gap-3 border-t border-gray-200 pt-4 dark:border-slate-700">
+        <div>
+          <dt class="text-xs font-normal text-gray-500 dark:text-gray-400">Gross Revenue</dt>
+          <dd class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            ₱{{ analytics().grossRevenue | number: '1.2-2' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-normal text-gray-500 dark:text-gray-400">COGS</dt>
+          <dd class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            ₱{{ analytics().cogs | number: '1.2-2' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-normal text-gray-500 dark:text-gray-400">Gross Profit</dt>
+          <dd class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            ₱{{ analytics().grossProfit | number: '1.2-2' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-normal text-gray-500 dark:text-gray-400">Avg Order Value</dt>
+          <dd class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            ₱{{ analytics().averageOrderValue | number: '1.2-2' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-normal text-gray-500 dark:text-gray-400">Parts Revenue</dt>
+          <dd class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            ₱{{ analytics().partsRevenue | number: '1.2-2' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-normal text-gray-500 dark:text-gray-400">Labor Revenue</dt>
+          <dd class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            ₱{{ analytics().laborRevenue | number: '1.2-2' }}
+          </dd>
+        </div>
+      </dl>
+
+      <div
+        class="border-t border-gray-200 pt-4 dark:border-slate-700"
+        title="Active, non-service products older than 60 days with zero sales at a branch in the last 60 days, valued at cost."
+      >
+        <dt class="text-xs font-normal text-gray-500 dark:text-gray-400">Dead Stock Value</dt>
+        <dd class="text-sm font-semibold text-danger">
+          ₱{{ analytics().deadStockValue | number: '1.2-2' }}
+          <span class="font-normal text-gray-400 dark:text-gray-500"
+            >({{ analytics().deadStockCount }} item{{
+              analytics().deadStockCount === 1 ? '' : 's'
+            }})</span
+          >
+        </dd>
+      </div>
+    </div>
+
+    <div class="dashboard-card lg:col-span-2">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">
+          Revenue, COGS & Gross Profit
+        </h2>
+      </div>
+      <div class="h-72">
+        <canvas
+          baseChart
+          #analyticsChart="base-chart"
+          [data]="analyticsChartData"
+          [options]="analyticsChartOptions"
+          [type]="'bar'"
+        ></canvas>
+      </div>
+    </div>
+  </div>
+
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
     <div class="dashboard-card lg:col-span-2">
       <div class="mb-4 flex items-center justify-between">

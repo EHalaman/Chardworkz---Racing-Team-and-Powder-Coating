@@ -6,8 +6,11 @@ import { AuthService } from '../../core/auth';
 import {
   DashboardActivity,
   DashboardAlert,
+  DashboardAnalytics,
   DashboardService,
   DashboardSummary,
+  DashboardTimeRange,
+  MarginStatus,
   TopProduct,
 } from '../dashboard';
 
@@ -41,6 +44,24 @@ const EMPTY_SUMMARY: DashboardSummary = {
   stockFlow: [],
 };
 
+const EMPTY_ANALYTICS: DashboardAnalytics = {
+  timeRange: 'MONTH',
+  grossRevenue: 0,
+  cogs: 0,
+  grossProfit: 0,
+  grossProfitMarginPercent: null,
+  marginStatus: 'UNKNOWN',
+  completedSalesCount: 0,
+  averageOrderValue: 0,
+  partsRevenue: 0,
+  laborRevenue: 0,
+  lineCountWithKnownCost: 0,
+  lineCountTotal: 0,
+  deadStockValue: 0,
+  deadStockCount: 0,
+  chartSeries: [],
+};
+
 /** Real data throughout, wired to /api/dashboard/*. Each stream falls back
  * to an empty/zeroed value on error rather than failing the whole page -
  * one flaky endpoint shouldn't blank the entire Dashboard. */
@@ -63,6 +84,15 @@ export class Dashboard implements OnInit {
     { value: 'MASINAG', label: 'Masinag Branch' },
   ];
 
+  readonly analytics = signal<DashboardAnalytics>(EMPTY_ANALYTICS);
+  readonly selectedTimeRange = signal<DashboardTimeRange>('MONTH');
+  readonly timeRangeOptions: { value: DashboardTimeRange; label: string }[] = [
+    { value: 'TODAY', label: 'Today' },
+    { value: 'WEEK', label: 'Week' },
+    { value: 'MONTH', label: 'Month' },
+    { value: 'YTD', label: 'YTD' },
+  ];
+
   /**
    * `BaseChartDirective` only redraws on `ngOnChanges`, which needs a new
    * `data` object reference - mutating `barChartData.labels`/`.datasets` in
@@ -73,6 +103,7 @@ export class Dashboard implements OnInit {
    */
   @ViewChild('barChart') private barChart?: BaseChartDirective;
   @ViewChild('doughnutChart') private doughnutChart?: BaseChartDirective;
+  @ViewChild('analyticsChart') private analyticsChart?: BaseChartDirective;
 
   readonly recentActivities = signal<FeedItem[]>([]);
 
@@ -98,6 +129,26 @@ export class Dashboard implements OnInit {
     plugins: { legend: { display: false }, tooltip: { enabled: false } },
   };
 
+  /**
+   * Stacked Revenue/COGS bars plus a Gross Profit trend line - a mixed
+   * chart type, so this is loosely typed rather than `ChartConfiguration<'bar'>`
+   * (whose dataset type doesn't allow a per-dataset `type: 'line'` override).
+   */
+  readonly analyticsChartData: { labels: string[]; datasets: any[] } = { labels: [], datasets: [] };
+  readonly analyticsChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF' } } },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { color: '#9CA3AF' } },
+      y: {
+        stacked: true,
+        grid: { color: 'rgba(148, 163, 184, 0.15)' },
+        ticks: { color: '#9CA3AF' },
+      },
+    },
+  };
+
   constructor(
     private dashboardService: DashboardService,
     readonly auth: AuthService,
@@ -115,11 +166,44 @@ export class Dashboard implements OnInit {
 
   ngOnInit(): void {
     this.loadDashboard();
+    this.loadAnalytics();
   }
 
   selectBranch(branchCode: string | null): void {
     this.selectedBranch.set(branchCode);
     this.loadDashboard();
+    this.loadAnalytics();
+  }
+
+  selectTimeRange(timeRange: DashboardTimeRange): void {
+    this.selectedTimeRange.set(timeRange);
+    this.loadAnalytics();
+  }
+
+  marginBadgeClass(status: MarginStatus): string {
+    switch (status) {
+      case 'HEALTHY':
+        return 'bg-secondary-light text-secondary dark:bg-secondary/20';
+      case 'WARNING':
+        return 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400';
+      case 'AT_RISK':
+        return 'bg-danger-light text-danger dark:bg-danger/20';
+      default:
+        return 'bg-nav-bg text-gray-500 dark:bg-slate-700 dark:text-gray-400';
+    }
+  }
+
+  marginBadgeLabel(status: MarginStatus): string {
+    switch (status) {
+      case 'HEALTHY':
+        return 'Healthy';
+      case 'WARNING':
+        return 'Warning';
+      case 'AT_RISK':
+        return 'At Risk';
+      default:
+        return 'N/M';
+    }
   }
 
   topProductInitial(product: TopProduct): string {
@@ -170,6 +254,46 @@ export class Dashboard implements OnInit {
 
     this.barChart?.update();
     this.doughnutChart?.update();
+  }
+
+  private loadAnalytics(): void {
+    this.dashboardService
+      .analytics(this.selectedTimeRange(), this.selectedBranch())
+      .pipe(catchError(() => of(EMPTY_ANALYTICS)))
+      .subscribe((analytics) => {
+        this.analytics.set(analytics);
+        this.applyAnalyticsToChart(analytics);
+      });
+  }
+
+  private applyAnalyticsToChart(analytics: DashboardAnalytics): void {
+    this.analyticsChartData.labels = analytics.chartSeries.map((p) => p.label);
+    this.analyticsChartData.datasets = [
+      {
+        type: 'bar',
+        data: analytics.chartSeries.map((p) => p.revenue),
+        label: 'Gross Revenue',
+        backgroundColor: '#3FA485',
+        stack: 'financials',
+      },
+      {
+        type: 'bar',
+        data: analytics.chartSeries.map((p) => p.cogs),
+        label: 'COGS',
+        backgroundColor: '#E2B24A',
+        stack: 'financials',
+      },
+      {
+        type: 'line',
+        data: analytics.chartSeries.map((p) => p.grossProfit),
+        label: 'Gross Profit',
+        borderColor: '#2563EB',
+        backgroundColor: '#2563EB',
+        tension: 0.3,
+        yAxisID: 'y',
+      },
+    ];
+    this.analyticsChart?.update();
   }
 
   private toActivityFeedItem(activity: DashboardActivity): FeedItem {

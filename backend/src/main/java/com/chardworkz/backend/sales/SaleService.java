@@ -4,13 +4,16 @@ import com.chardworkz.backend.account.Account;
 import com.chardworkz.backend.account.AccountRepository;
 import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.branch.BranchRepository;
+import com.chardworkz.backend.catalog.Category;
 import com.chardworkz.backend.catalog.Product;
+import com.chardworkz.backend.catalog.ProductCostService;
 import com.chardworkz.backend.catalog.ProductRepository;
 import com.chardworkz.backend.inventory.StockLevelRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -34,6 +37,7 @@ public class SaleService {
     private final AccountRepository accountRepository;
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
+    private final ProductCostService productCostService;
 
     @Transactional
     public SaleAckResponse recordSale(CreateSaleRequest request, String branchCode, Long employeeId) {
@@ -64,6 +68,9 @@ public class SaleService {
             .total(BigDecimal.ZERO)
             .build();
 
+        Map<Long, BigDecimal> costsByProductId = productCostService.latestKnownCosts(
+            request.lines().stream().map(CreateSaleLineRequest::productId).distinct().toList());
+
         BigDecimal subtotal = BigDecimal.ZERO;
         List<SaleLine> lines = new ArrayList<>();
         for (CreateSaleLineRequest lineRequest : request.lines()) {
@@ -73,12 +80,21 @@ public class SaleService {
             BigDecimal lineTotal = lineRequest.unitPrice().multiply(BigDecimal.valueOf(lineRequest.quantity()));
             subtotal = subtotal.add(lineTotal);
 
+            // Snapshotted at sale time so this line's historical COGS never
+            // drifts when a later stock-in receipt changes the price. No cost
+            // concept exists for labor (SERVICES), so those lines stay null,
+            // same as every other cost/margin computation in this app.
+            BigDecimal unitCost = product.getCategory() == Category.SERVICES
+                ? null
+                : costsByProductId.get(product.getId());
+
             lines.add(SaleLine.builder()
                 .sale(sale)
                 .product(product)
                 .quantity(lineRequest.quantity())
                 .unitPrice(lineRequest.unitPrice())
                 .lineTotal(lineTotal)
+                .unitCost(unitCost)
                 .build());
         }
         // No discount/tax concept exists yet (reserved for later, like the

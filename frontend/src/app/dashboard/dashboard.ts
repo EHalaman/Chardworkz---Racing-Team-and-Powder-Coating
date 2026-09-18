@@ -62,6 +62,35 @@ export interface DashboardActivity {
   occurredAt: string;
 }
 
+export type DashboardTimeRange = 'TODAY' | 'WEEK' | 'MONTH' | 'YTD';
+
+export type MarginStatus = 'HEALTHY' | 'WARNING' | 'AT_RISK' | 'UNKNOWN';
+
+export interface ChartPoint {
+  label: string;
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+}
+
+export interface DashboardAnalytics {
+  timeRange: DashboardTimeRange;
+  grossRevenue: number;
+  cogs: number;
+  grossProfit: number;
+  grossProfitMarginPercent: number | null;
+  marginStatus: MarginStatus;
+  completedSalesCount: number;
+  averageOrderValue: number;
+  partsRevenue: number;
+  laborRevenue: number;
+  lineCountWithKnownCost: number;
+  lineCountTotal: number;
+  deadStockValue: number;
+  deadStockCount: number;
+  chartSeries: ChartPoint[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   constructor(private http: HttpClient) {}
@@ -87,6 +116,17 @@ export class DashboardService {
     if (limit) params = params.set('limit', limit);
     if (branchCode) params = params.set('branchCode', branchCode);
     return this.http.get<DashboardActivity[]>(`${environment.apiBaseUrl}/api/dashboard/activity`, {
+      params,
+    });
+  }
+
+  analytics(
+    timeRange: DashboardTimeRange,
+    branchCode?: string | null,
+  ): Observable<DashboardAnalytics> {
+    let params = new HttpParams().set('timeRange', timeRange);
+    if (branchCode) params = params.set('branchCode', branchCode);
+    return this.http.get<DashboardAnalytics>(`${environment.apiBaseUrl}/api/dashboard/analytics`, {
       params,
     });
   }

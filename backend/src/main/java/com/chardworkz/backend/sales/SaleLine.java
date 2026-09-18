@@ -34,4 +34,15 @@ public class SaleLine {
 
     @Column(name = "line_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal lineTotal;
+
+    /**
+     * Snapshotted from {@link com.chardworkz.backend.catalog.ProductCostService}
+     * at the moment of sale (migration V10) - null for sales recorded before
+     * this column existed, and always null for SERVICES-category lines (no
+     * cost concept exists for labor). Prefer this over a fresh cost lookup
+     * when computing historical COGS; fall back to the current approximation
+     * only when this is null.
+     */
+    @Column(name = "unit_cost", precision = 12, scale = 2)
+    private BigDecimal unitCost;
 }

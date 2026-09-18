@@ -3,13 +3,11 @@ package com.chardworkz.backend.inventory;
 import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.catalog.Category;
 import com.chardworkz.backend.catalog.Product;
-import com.chardworkz.backend.supplier.StockInLine;
-import com.chardworkz.backend.supplier.StockInLineRepository;
+import com.chardworkz.backend.catalog.ProductCostService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.poi.ss.usermodel.Cell;
@@ -34,14 +32,15 @@ public class InventoryExportService {
         "Unit Cost", "Selling Price (SRP)", "Reorder Level",
     };
 
-    private final StockInLineRepository stockInLineRepository;
+    private final ProductCostService productCostService;
 
-    public InventoryExportService(StockInLineRepository stockInLineRepository) {
-        this.stockInLineRepository = stockInLineRepository;
+    public InventoryExportService(ProductCostService productCostService) {
+        this.productCostService = productCostService;
     }
 
     public byte[] toXlsx(List<Product> products, Map<Long, StockLevel> stockLevelsByProductId, Branch branch) {
-        Map<Long, BigDecimal> latestCosts = latestKnownCosts(products.stream().map(Product::getId).toList());
+        Map<Long, BigDecimal> latestCosts =
+            productCostService.latestKnownCosts(products.stream().map(Product::getId).toList());
 
         try (SXSSFWorkbook workbook = new SXSSFWorkbook(100)) {
             SXSSFSheet sheet = workbook.createSheet(WorkbookUtil.createSafeSheetName("Inventory"));
@@ -84,22 +83,6 @@ public class InventoryExportService {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to build inventory export", e);
         }
-    }
-
-    /** Same "most recent receipt cost, across all branches" approximation as ShiftSummary/Dashboard - no FIFO/weighted-average costing exists, and cost isn't scoped per-branch anywhere else either. */
-    private Map<Long, BigDecimal> latestKnownCosts(List<Long> productIds) {
-        if (productIds.isEmpty()) {
-            return Map.of();
-        }
-        Map<Long, StockInLine> latestByProductId = new HashMap<>();
-        for (StockInLine line : stockInLineRepository.findByProduct_IdIn(productIds)) {
-            latestByProductId.merge(
-                line.getProduct().getId(), line,
-                (a, b) -> a.getStockIn().getReceivedAt().isAfter(b.getStockIn().getReceivedAt()) ? a : b);
-        }
-        Map<Long, BigDecimal> costs = new HashMap<>();
-        latestByProductId.forEach((productId, line) -> costs.put(productId, line.getUnitCost()));
-        return costs;
     }
 
     private CellStyle headerStyle(SXSSFWorkbook workbook) {

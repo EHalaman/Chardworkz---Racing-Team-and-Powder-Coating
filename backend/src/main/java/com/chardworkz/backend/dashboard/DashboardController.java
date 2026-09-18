@@ -4,7 +4,10 @@ import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.branch.BranchRepository;
 import com.chardworkz.backend.catalog.Category;
 import com.chardworkz.backend.catalog.Product;
+import com.chardworkz.backend.catalog.ProductCostService;
 import com.chardworkz.backend.catalog.ProductRepository;
+import com.chardworkz.backend.dashboard.DashboardAnalyticsResponse.ChartPoint;
+import com.chardworkz.backend.dashboard.DashboardAnalyticsResponse.MarginStatus;
 import com.chardworkz.backend.dashboard.DashboardSummaryResponse.MonthlyStockFlow;
 import com.chardworkz.backend.dashboard.DashboardSummaryResponse.PaymentMethodBreakdown;
 import com.chardworkz.backend.dashboard.DashboardSummaryResponse.TopProduct;
@@ -20,10 +23,12 @@ import com.chardworkz.backend.supplier.StockInLineRepository;
 import io.jsonwebtoken.Claims;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,6 +37,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -65,6 +72,7 @@ public class DashboardController {
     private static final int ACTIVITY_DEFAULT_LIMIT = 5;
     private static final int RUN_RATE_MONTHS = 3;
     private static final int ALERT_LIMIT = 10;
+    private static final int DEAD_STOCK_WINDOW_DAYS = 60;
 
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
@@ -73,6 +81,7 @@ public class DashboardController {
     private final SaleLineRepository saleLineRepository;
     private final StockInLineRepository stockInLineRepository;
     private final JwtService jwtService;
+    private final ProductCostService productCostService;
 
     @GetMapping("/summary")
     public DashboardSummaryResponse summary(
@@ -80,7 +89,8 @@ public class DashboardController {
         List<Branch> branches = resolveBranches(authentication, branchCode);
         Long branchId = resolveBranchId(branches);
         List<Product> stockedProducts = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
-        Map<Long, BigDecimal> latestCosts = latestKnownCosts(stockedProducts.stream().map(Product::getId).toList());
+        Map<Long, BigDecimal> latestCosts =
+            productCostService.latestKnownCosts(stockedProducts.stream().map(Product::getId).toList());
 
         BigDecimal totalStockValue = BigDecimal.ZERO;
         BigDecimal totalStockValueAtCost = BigDecimal.ZERO;
@@ -145,7 +155,7 @@ public class DashboardController {
             }
         }
 
-        Map<Long, BigDecimal> partCosts = latestKnownCosts(
+        Map<Long, BigDecimal> partCosts = productCostService.latestKnownCosts(
             partLines.stream().map(line -> line.getProduct().getId()).distinct().toList());
 
         BigDecimal estimatedCostTotal = BigDecimal.ZERO;
@@ -196,6 +206,87 @@ public class DashboardController {
             partsRevenue, laborRevenue, estimatedCostTotal, estimatedMarginTotal, estimatedMarginPercent,
             lineCountWithKnownCost, (long) partLines.size(), paymentMethodBreakdown,
             topMarginParts, topWorkshopServices, stockFlow);
+    }
+
+    /**
+     * Store Health panel + trend chart for a caller-selected time range -
+     * separate from {@link #summary}, which is always the current month and
+     * feeds the existing KPI cards. Reuses this class's own aggregation-over-
+     * fetched-rows approach (same as {@link #summary}/{@link #alerts}) rather
+     * than JPQL DTO projections, consistent with DEC-033 at this app's volume.
+     */
+    @GetMapping("/analytics")
+    public DashboardAnalyticsResponse analytics(
+        @RequestParam(defaultValue = "MONTH") DashboardTimeRange timeRange,
+        @RequestParam(required = false) String branchCode,
+        Authentication authentication) {
+        List<Branch> branches = resolveBranches(authentication, branchCode);
+        Long branchId = resolveBranchId(branches);
+        ZoneId zone = ZoneId.systemDefault();
+        Instant now = Instant.now();
+        LocalDate today = LocalDate.now(zone);
+
+        Instant from = analyticsRangeStart(timeRange, today, zone);
+        List<Sale> sales = salesBetween(branchId, from, now);
+        List<SaleLine> lines = sales.isEmpty()
+            ? List.of()
+            : saleLineRepository.findBySaleIdIn(sales.stream().map(Sale::getId).toList());
+
+        // Fall back to the current cost approximation only for lines sold
+        // before migration V10 added a per-line snapshot.
+        List<Long> productIdsNeedingFallbackCost = lines.stream()
+            .filter(line -> line.getUnitCost() == null && line.getProduct().getCategory() != Category.SERVICES)
+            .map(line -> line.getProduct().getId())
+            .distinct()
+            .toList();
+        Map<Long, BigDecimal> fallbackCosts = productCostService.latestKnownCosts(productIdsNeedingFallbackCost);
+
+        BigDecimal grossRevenue = BigDecimal.ZERO;
+        BigDecimal cogs = BigDecimal.ZERO;
+        BigDecimal partsRevenue = BigDecimal.ZERO;
+        BigDecimal laborRevenue = BigDecimal.ZERO;
+        long lineCountWithKnownCost = 0;
+        long lineCountTotal = 0;
+        Map<UUID, BigDecimal> revenueBySaleId = new HashMap<>();
+        Map<UUID, BigDecimal> cogsBySaleId = new HashMap<>();
+
+        for (SaleLine line : lines) {
+            grossRevenue = grossRevenue.add(line.getLineTotal());
+            revenueBySaleId.merge(line.getSale().getId(), line.getLineTotal(), BigDecimal::add);
+
+            if (line.getProduct().getCategory() == Category.SERVICES) {
+                laborRevenue = laborRevenue.add(line.getLineTotal());
+                continue;
+            }
+            partsRevenue = partsRevenue.add(line.getLineTotal());
+            lineCountTotal++;
+
+            BigDecimal unitCost =
+                line.getUnitCost() != null ? line.getUnitCost() : fallbackCosts.get(line.getProduct().getId());
+            if (unitCost != null) {
+                BigDecimal lineCost = unitCost.multiply(BigDecimal.valueOf(line.getQuantity()));
+                cogs = cogs.add(lineCost);
+                cogsBySaleId.merge(line.getSale().getId(), lineCost, BigDecimal::add);
+                lineCountWithKnownCost++;
+            }
+        }
+
+        BigDecimal grossProfit = grossRevenue.subtract(cogs);
+        Double marginPercent = grossRevenue.compareTo(BigDecimal.ZERO) > 0
+            ? grossProfit.divide(grossRevenue, 4, RoundingMode.HALF_UP).doubleValue() * 100
+            : null;
+
+        BigDecimal averageOrderValue = sales.isEmpty()
+            ? BigDecimal.ZERO
+            : grossRevenue.divide(BigDecimal.valueOf(sales.size()), 2, RoundingMode.HALF_UP);
+
+        List<ChartPoint> chartSeries = buildChartSeries(timeRange, today, zone, sales, revenueBySaleId, cogsBySaleId);
+        DeadStock deadStock = computeDeadStock(branches);
+
+        return new DashboardAnalyticsResponse(
+            timeRange, grossRevenue, cogs, grossProfit, marginPercent, marginStatus(marginPercent), sales.size(),
+            averageOrderValue, partsRevenue, laborRevenue, lineCountWithKnownCost, lineCountTotal,
+            deadStock.value(), deadStock.count(), chartSeries);
     }
 
     @GetMapping("/alerts")
@@ -329,20 +420,116 @@ public class DashboardController {
         return totals;
     }
 
-    /** Most recent receipt cost per product (approximation - no FIFO/weighted-average costing exists, mirrors ShiftSummaryResponse's approach). */
-    private Map<Long, BigDecimal> latestKnownCosts(List<Long> productIds) {
-        if (productIds.isEmpty()) {
-            return Map.of();
+    private Instant analyticsRangeStart(DashboardTimeRange timeRange, LocalDate today, ZoneId zone) {
+        LocalDate start = switch (timeRange) {
+            case TODAY -> today;
+            case WEEK -> today.minusDays(6);
+            case MONTH -> today.withDayOfMonth(1);
+            case YTD -> today.withDayOfYear(1);
+        };
+        return start.atStartOfDay(zone).toInstant();
+    }
+
+    private MarginStatus marginStatus(Double marginPercent) {
+        if (marginPercent == null) {
+            return MarginStatus.UNKNOWN;
+        } else if (marginPercent > 30) {
+            return MarginStatus.HEALTHY;
+        } else if (marginPercent >= 15) {
+            return MarginStatus.WARNING;
         }
-        Map<Long, StockInLine> latestByProductId = new HashMap<>();
-        for (StockInLine line : stockInLineRepository.findByProduct_IdIn(productIds)) {
-            latestByProductId.merge(
-                line.getProduct().getId(), line,
-                (a, b) -> a.getStockIn().getReceivedAt().isAfter(b.getStockIn().getReceivedAt()) ? a : b);
+        return MarginStatus.AT_RISK;
+    }
+
+    /** Bucket granularity follows the selected range: hourly (TODAY), daily (WEEK/MONTH), or monthly (YTD) - each pre-populated with zero so gaps show up as empty bars, not missing ones. */
+    private List<ChartPoint> buildChartSeries(
+        DashboardTimeRange timeRange, LocalDate today, ZoneId zone, List<Sale> sales,
+        Map<UUID, BigDecimal> revenueBySaleId, Map<UUID, BigDecimal> cogsBySaleId) {
+        LinkedHashMap<String, String> bucketLabels = new LinkedHashMap<>();
+        switch (timeRange) {
+            case TODAY -> {
+                for (int hour = 0; hour < 24; hour++) {
+                    bucketLabels.put(String.valueOf(hour), String.format("%02d:00", hour));
+                }
+            }
+            case WEEK -> {
+                for (int i = 6; i >= 0; i--) {
+                    LocalDate day = today.minusDays(i);
+                    bucketLabels.put(
+                        day.toString(), day.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
+                }
+            }
+            case MONTH -> {
+                LocalDate monthStart = today.withDayOfMonth(1);
+                for (LocalDate day = monthStart; !day.isAfter(today); day = day.plusDays(1)) {
+                    bucketLabels.put(day.toString(), String.valueOf(day.getDayOfMonth()));
+                }
+            }
+            case YTD -> {
+                YearMonth start = YearMonth.from(today.withDayOfYear(1));
+                YearMonth end = YearMonth.from(today);
+                for (YearMonth ym = start; !ym.isAfter(end); ym = ym.plusMonths(1)) {
+                    bucketLabels.put(ym.toString(), ym.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
+                }
+            }
         }
-        Map<Long, BigDecimal> costs = new HashMap<>();
-        latestByProductId.forEach((productId, line) -> costs.put(productId, line.getUnitCost()));
-        return costs;
+
+        Map<String, BigDecimal> revenueByBucket = new HashMap<>();
+        Map<String, BigDecimal> cogsByBucket = new HashMap<>();
+        for (Sale sale : sales) {
+            String key = bucketKey(timeRange, sale.getSoldAt(), zone);
+            revenueByBucket.merge(key, revenueBySaleId.getOrDefault(sale.getId(), BigDecimal.ZERO), BigDecimal::add);
+            cogsByBucket.merge(key, cogsBySaleId.getOrDefault(sale.getId(), BigDecimal.ZERO), BigDecimal::add);
+        }
+
+        List<ChartPoint> series = new ArrayList<>();
+        for (Map.Entry<String, String> entry : bucketLabels.entrySet()) {
+            BigDecimal revenue = revenueByBucket.getOrDefault(entry.getKey(), BigDecimal.ZERO);
+            BigDecimal bucketCogs = cogsByBucket.getOrDefault(entry.getKey(), BigDecimal.ZERO);
+            series.add(new ChartPoint(entry.getValue(), revenue, bucketCogs, revenue.subtract(bucketCogs)));
+        }
+        return series;
+    }
+
+    private String bucketKey(DashboardTimeRange timeRange, Instant soldAt, ZoneId zone) {
+        ZonedDateTime zoned = soldAt.atZone(zone);
+        return switch (timeRange) {
+            case TODAY -> String.valueOf(zoned.getHour());
+            case WEEK, MONTH -> zoned.toLocalDate().toString();
+            case YTD -> YearMonth.from(zoned.toLocalDate()).toString();
+        };
+    }
+
+    private record DeadStock(BigDecimal value, int count) {}
+
+    /** Active, non-SERVICES products older than {@link #DEAD_STOCK_WINDOW_DAYS} days with zero sales at a branch in that same window - valued at cost (working capital tied up), per branch since stock is per-branch. */
+    private DeadStock computeDeadStock(List<Branch> branches) {
+        Instant cutoff = Instant.now().minus(Duration.ofDays(DEAD_STOCK_WINDOW_DAYS));
+        List<Product> stockedProducts = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
+        Map<Long, BigDecimal> costs =
+            productCostService.latestKnownCosts(stockedProducts.stream().map(Product::getId).toList());
+
+        BigDecimal totalValue = BigDecimal.ZERO;
+        int count = 0;
+        for (Branch branch : branches) {
+            Set<Long> soldRecently = saleLineRepository.findDistinctProductIdsSoldSince(branch.getId(), cutoff);
+            for (Product product : stockedProducts) {
+                if (product.getCreatedAt().isAfter(cutoff) || soldRecently.contains(product.getId())) {
+                    continue;
+                }
+                StockLevel stockLevel = findStockLevel(product, branch);
+                int quantity = stockLevel != null ? stockLevel.getQuantity() : 0;
+                if (quantity == 0) {
+                    continue;
+                }
+                BigDecimal cost = costs.get(product.getId());
+                if (cost != null) {
+                    totalValue = totalValue.add(cost.multiply(BigDecimal.valueOf(quantity)));
+                }
+                count++;
+            }
+        }
+        return new DeadStock(totalValue, count);
     }
 
     private List<Sale> salesBetween(Long branchId, Instant from, Instant to) {
