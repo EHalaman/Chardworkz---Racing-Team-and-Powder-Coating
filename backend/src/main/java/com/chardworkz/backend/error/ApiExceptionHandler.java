@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -30,5 +31,16 @@ public class ApiExceptionHandler {
         body.put("error", status.getReasonPhrase());
         body.put("message", ex.getReason());
         return ResponseEntity.status(status).body(body);
+    }
+
+    /** Without this, exceeding {@code spring.servlet.multipart.max-file-size} surfaces as a raw 500 instead of a clean, actionable rejection. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", Instant.now().toString());
+        body.put("status", HttpStatus.PAYLOAD_TOO_LARGE.value());
+        body.put("error", HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase());
+        body.put("message", "The uploaded file is too large. Split it into smaller files and try again.");
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
     }
 }

@@ -57,20 +57,17 @@ public class SaleExportService {
                 Row row = sheet.createRow(rowNum++);
                 row.createCell(0).setCellValue(transactionNumbers.get(sale.getId()));
                 row.createCell(1).setCellValue(DATE_TIME_FORMAT.format(sale.getSoldAt().atZone(zone)));
-                row.createCell(2).setCellValue(sale.getBranch().getName());
-                row.createCell(3).setCellValue(sale.getEmployee().getFullName());
-                row.createCell(4).setCellValue(sale.getCustomerName() != null ? sale.getCustomerName() : "");
-                row.createCell(5).setCellValue(sale.getCustomerPhone() != null ? sale.getCustomerPhone() : "");
-                row.createCell(6).setCellValue(sale.getCustomerEmail() != null ? sale.getCustomerEmail() : "");
-                row.createCell(7).setCellValue(itemsPurchased(linesBySaleId.get(sale.getId())));
+                row.createCell(2).setCellValue(sanitizeForCell(sale.getBranch().getName()));
+                row.createCell(3).setCellValue(sanitizeForCell(sale.getEmployee().getFullName()));
+                row.createCell(4).setCellValue(sanitizeForCell(sale.getCustomerName()));
+                row.createCell(5).setCellValue(sanitizeForCell(sale.getCustomerPhone()));
+                row.createCell(6).setCellValue(sanitizeForCell(sale.getCustomerEmail()));
+                row.createCell(7).setCellValue(sanitizeForCell(itemsPurchased(linesBySaleId.get(sale.getId()))));
                 row.createCell(8).setCellValue(sale.getPaymentMethod().name());
                 row.createCell(9).setCellValue(sale.getTotal().doubleValue());
             }
 
-            for (int col = 0; col < HEADERS.length; col++) {
-                sheet.trackColumnForAutoSizing(col);
-                sheet.autoSizeColumn(col);
-            }
+            safeAutoSizeColumns(sheet, HEADERS.length);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
@@ -97,5 +94,39 @@ public class SaleExportService {
         CellStyle style = workbook.createCellStyle();
         style.setFont(boldFont);
         return style;
+    }
+
+    /**
+     * Prefixes a leading formula-trigger character ({@code = + - @} or a tab/CR)
+     * with a single quote so spreadsheet apps (Excel/Sheets/LibreOffice) render
+     * the value as literal text instead of evaluating it as a formula. Applied to
+     * every free-text cell here, not just customer-supplied ones - defense in
+     * depth against a compromised staff account or a malformed name/product feed.
+     */
+    static String sanitizeForCell(String input) {
+        if (input == null || input.isBlank()) {
+            return "";
+        }
+        String trimmed = input.trim();
+        return trimmed.matches("^[=+\\-@\\t\\r].*") ? "'" + trimmed : trimmed;
+    }
+
+    /**
+     * {@link org.apache.poi.ss.usermodel.Sheet#autoSizeColumn} needs AWT font
+     * metrics, which can throw on headless/fontless production JVMs (this app's
+     * Railway target). Falls back to a fixed width rather than letting the whole
+     * export fail if that happens.
+     */
+    static void safeAutoSizeColumns(SXSSFSheet sheet, int columnCount) {
+        try {
+            for (int col = 0; col < columnCount; col++) {
+                sheet.trackColumnForAutoSizing(col);
+                sheet.autoSizeColumn(col);
+            }
+        } catch (RuntimeException e) {
+            for (int col = 0; col < columnCount; col++) {
+                sheet.setColumnWidth(col, 4000);
+            }
+        }
     }
 }

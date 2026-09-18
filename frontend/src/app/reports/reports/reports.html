@@ -275,6 +275,12 @@
             <span class="font-medium">Customer:</span>
             {{ receipt.customerName || 'Walk-in Customer' }}
           </p>
+          <p *ngIf="receipt.customerPhone">
+            <span class="font-medium">Phone:</span> {{ receipt.customerPhone }}
+          </p>
+          <p *ngIf="receipt.customerEmail">
+            <span class="font-medium">Email:</span> {{ receipt.customerEmail }}
+          </p>
         </div>
 
         <div

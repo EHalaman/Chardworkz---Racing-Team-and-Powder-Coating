@@ -1,5 +1,6 @@
 package com.chardworkz.backend.catalog;
 
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -13,4 +14,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     /** Inventory Excel import's Product Name fallback match (no unique constraint on name, so this can legitimately return 2+ matches). */
     List<Product> findByActiveTrueAndNameIgnoreCase(String name);
+
+    /** Batched form of {@link #findByActiveTrueAndNameIgnoreCase} - one query for every name-matched row in an import instead of one per row. */
+    List<Product> findByActiveTrueAndNameIgnoreCaseIn(Collection<String> names);
 }

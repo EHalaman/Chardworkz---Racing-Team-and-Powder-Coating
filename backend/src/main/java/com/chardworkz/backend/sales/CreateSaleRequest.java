@@ -3,6 +3,7 @@ package com.chardworkz.backend.sales;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -12,13 +13,21 @@ import java.util.UUID;
  * queue at the moment of sale (Q12) - the same id resubmitted on a retried
  * sync must be a no-op, not a duplicate sale. Branch and employee are never
  * taken from the request; they're derived server-side from the JWT.
+ *
+ * <p>{@code @Size} bounds match {@code sale}'s column widths (migration V8) so
+ * an over-length value 400s cleanly via bean validation instead of reaching
+ * the DB and throwing an unhandled length-constraint exception. Deliberately
+ * no {@code @Email} format check: phone validation on this same checkout is
+ * explicitly a non-blocking warning that never disables Complete Sale
+ * (DEC-057/DEC-020/DEC-044) - a hard-blocking email format constraint here
+ * would contradict that established rule for optional counter-line fields.
  */
 public record CreateSaleRequest(
     @NotNull UUID id,
     @NotNull PaymentMethod paymentMethod,
     String paymentReference,
-    String customerName,
-    String customerPhone,
-    String customerEmail,
+    @Size(max = 150) String customerName,
+    @Size(max = 20) String customerPhone,
+    @Size(max = 100) String customerEmail,
     @NotNull Instant soldAt,
     @NotEmpty List<@Valid CreateSaleLineRequest> lines) {}

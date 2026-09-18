@@ -61,9 +61,9 @@ public class InventoryExportService {
 
                 Row row = sheet.createRow(rowNum++);
                 row.createCell(0).setCellValue(product.getId());
-                row.createCell(1).setCellValue(product.getName());
+                row.createCell(1).setCellValue(sanitizeForCell(product.getName()));
                 row.createCell(2).setCellValue(product.getCategory().name());
-                row.createCell(3).setCellValue(branch.getName());
+                row.createCell(3).setCellValue(sanitizeForCell(branch.getName()));
                 row.createCell(4).setCellValue(stockLevel != null ? stockLevel.getQuantity() : 0);
                 Cell costCell = row.createCell(5);
                 if (cost != null) {
@@ -75,10 +75,7 @@ public class InventoryExportService {
                 row.createCell(7).setCellValue(stockLevel != null ? stockLevel.getReorderThreshold() : 0);
             }
 
-            for (int col = 0; col < HEADERS.length; col++) {
-                sheet.trackColumnForAutoSizing(col);
-                sheet.autoSizeColumn(col);
-            }
+            safeAutoSizeColumns(sheet, HEADERS.length);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
@@ -111,5 +108,38 @@ public class InventoryExportService {
         CellStyle style = workbook.createCellStyle();
         style.setFont(boldFont);
         return style;
+    }
+
+    /**
+     * Prefixes a leading formula-trigger character ({@code = + - @} or a tab/CR)
+     * with a single quote so spreadsheet apps render the value as literal text
+     * instead of a formula. Product names are staff-entered (lower risk than
+     * customer-supplied text) but sanitized anyway for defense in depth.
+     */
+    static String sanitizeForCell(String input) {
+        if (input == null || input.isBlank()) {
+            return "";
+        }
+        String trimmed = input.trim();
+        return trimmed.matches("^[=+\\-@\\t\\r].*") ? "'" + trimmed : trimmed;
+    }
+
+    /**
+     * {@link org.apache.poi.ss.usermodel.Sheet#autoSizeColumn} needs AWT font
+     * metrics, which can throw on headless/fontless production JVMs (this app's
+     * Railway target). Falls back to a fixed width rather than letting the whole
+     * export fail if that happens.
+     */
+    static void safeAutoSizeColumns(SXSSFSheet sheet, int columnCount) {
+        try {
+            for (int col = 0; col < columnCount; col++) {
+                sheet.trackColumnForAutoSizing(col);
+                sheet.autoSizeColumn(col);
+            }
+        } catch (RuntimeException e) {
+            for (int col = 0; col < columnCount; col++) {
+                sheet.setColumnWidth(col, 4000);
+            }
+        }
     }
 }

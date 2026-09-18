@@ -268,7 +268,11 @@ export class Inventory implements OnInit, OnDestroy {
   }
 
   onImportFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    // Reset so picking the exact same file again still fires a 'change' event
+    // (the browser otherwise treats an unchanged input value as a no-op).
+    input.value = '';
     this.selectedImportFile.set(file);
     this.importPreview.set(null);
     this.importError.set(null);

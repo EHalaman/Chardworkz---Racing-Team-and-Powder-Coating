@@ -17,9 +17,9 @@ import com.chardworkz.backend.supplier.SupplierRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -76,13 +76,8 @@ public class InventoryController {
         @RequestParam(required = false) String branchCode, Authentication authentication) {
         Branch branch = resolveBranch(authentication, branchCode);
         List<Product> products = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
-        Map<Long, StockLevel> stockLevelsByProductId = new HashMap<>();
-        for (Product product : products) {
-            StockLevel stockLevel = findStockLevel(product, branch);
-            if (stockLevel != null) {
-                stockLevelsByProductId.put(product.getId(), stockLevel);
-            }
-        }
+        Map<Long, StockLevel> stockLevelsByProductId = stockLevelRepository.findByBranchId(branch.getId()).stream()
+            .collect(Collectors.toMap(sl -> sl.getProduct().getId(), sl -> sl));
         byte[] xlsx = inventoryExportService.toXlsx(products, stockLevelsByProductId, branch);
 
         return ResponseEntity.ok()

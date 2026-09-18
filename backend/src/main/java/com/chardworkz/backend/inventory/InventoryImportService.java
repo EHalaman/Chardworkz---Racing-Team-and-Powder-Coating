@@ -11,8 +11,12 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -97,10 +101,37 @@ public class InventoryImportService {
         List<List<String>> allRows = isCsv(file) ? readCsvRows(file) : readXlsxRows(file);
         List<RawRow> rawRows = toRawRows(allRows);
 
+        // Batch every row's product/stock-level lookup into a handful of queries
+        // instead of resolveRow() hitting the DB per row - see DEC-058's own
+        // review follow-up.
+        Set<Long> ids = new HashSet<>();
+        Set<String> names = new HashSet<>();
+        for (RawRow raw : rawRows) {
+            if (!raw.productId().isBlank()) {
+                try {
+                    ids.add(Long.parseLong(raw.productId()));
+                } catch (NumberFormatException e) {
+                    // resolveRow() reports the "not a valid number" reason for this row itself.
+                }
+            } else if (!raw.productName().isBlank()) {
+                names.add(raw.productName());
+            }
+        }
+
+        Map<Long, Product> productsById =
+            productRepository.findAllById(ids).stream().collect(Collectors.toMap(Product::getId, p -> p));
+        Map<String, List<Product>> productsByNameLower = names.isEmpty()
+            ? Map.of()
+            : productRepository.findByActiveTrueAndNameIgnoreCaseIn(names).stream()
+                .collect(Collectors.groupingBy(p -> p.getName().toLowerCase(Locale.ROOT)));
+        Map<Long, StockLevel> stockLevelsByProductId = stockLevelRepository.findByBranchId(branch.getId()).stream()
+            .collect(Collectors.toMap(sl -> sl.getProduct().getId(), sl -> sl));
+
         List<ResolvedRow> resolved = new ArrayList<>();
         int rowNumber = 1;
         for (RawRow raw : rawRows) {
-            resolved.add(resolveRow(rowNumber++, raw, branch));
+            resolved.add(resolveRow(
+                rowNumber++, raw, branch, productsById, productsByNameLower, stockLevelsByProductId));
         }
         return resolved;
     }
@@ -196,14 +227,16 @@ public class InventoryImportService {
         return -1;
     }
 
-    private ResolvedRow resolveRow(int rowNumber, RawRow raw, Branch branch) {
+    private ResolvedRow resolveRow(
+        int rowNumber, RawRow raw, Branch branch, Map<Long, Product> productsById,
+        Map<String, List<Product>> productsByNameLower, Map<Long, StockLevel> stockLevelsByProductId) {
         Product product = null;
         String reason = null;
 
         if (!raw.productId().isBlank()) {
             try {
                 Long id = Long.parseLong(raw.productId());
-                product = productRepository.findById(id).orElse(null);
+                product = productsById.get(id);
                 if (product == null) {
                     reason = "No product found with Product ID " + raw.productId();
                 }
@@ -211,7 +244,8 @@ public class InventoryImportService {
                 reason = "Product ID \"" + raw.productId() + "\" is not a valid number";
             }
         } else if (!raw.productName().isBlank()) {
-            List<Product> matches = productRepository.findByActiveTrueAndNameIgnoreCase(raw.productName());
+            List<Product> matches =
+                productsByNameLower.getOrDefault(raw.productName().toLowerCase(Locale.ROOT), List.of());
             if (matches.isEmpty()) {
                 reason = "No active product named \"" + raw.productName() + "\"";
             } else if (matches.size() > 1) {
@@ -254,11 +288,12 @@ public class InventoryImportService {
                 null);
         }
 
-        Product resolvedProduct = product;
-        StockLevel stockLevel = stockLevelRepository.findByProductIdAndBranchId(product.getId(), branch.getId())
-            .orElseGet(() -> StockLevel.builder()
-                .product(resolvedProduct).branch(branch).quantity(0).reorderThreshold(0)
-                .updatedAt(Instant.now()).build());
+        StockLevel existing = stockLevelsByProductId.get(product.getId());
+        StockLevel stockLevel = existing != null
+            ? existing
+            : StockLevel.builder()
+                .product(product).branch(branch).quantity(0).reorderThreshold(0)
+                .updatedAt(Instant.now()).build();
 
         InventoryImportRowResult result = new InventoryImportRowResult(
             rowNumber, product.getId(), product.getName(), stockLevel.getQuantity(), newQuantity,
@@ -272,7 +307,7 @@ public class InventoryImportService {
         }
         try {
             double value = Double.parseDouble(raw);
-            if (value < 0 || value != Math.floor(value)) {
+            if (value < 0 || value != Math.floor(value) || value > Integer.MAX_VALUE) {
                 return null;
             }
             return (int) value;
