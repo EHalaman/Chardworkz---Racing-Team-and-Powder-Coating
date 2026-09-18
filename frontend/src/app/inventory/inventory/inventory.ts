@@ -10,6 +10,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { downloadBlob } from '../../core/utils/download.util';
 import {
   BranchInventorySummary,
   InventoryImportPreview,
@@ -246,12 +247,7 @@ export class Inventory implements OnInit, OnDestroy {
     this.inventoryService.exportInventory(this.selectedBranch()).subscribe({
       next: (blob) => {
         this.exporting.set(false);
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `chardworkz-inventory-${this.selectedBranch()}.xlsx`;
-        anchor.click();
-        URL.revokeObjectURL(url);
+        downloadBlob(blob, `chardworkz-inventory-${this.selectedBranch()}.xlsx`);
       },
       error: () => {
         this.exporting.set(false);

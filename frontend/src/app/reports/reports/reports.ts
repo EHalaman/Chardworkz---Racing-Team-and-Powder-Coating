@@ -1,5 +1,6 @@
 import { Component, ElementRef, HostListener, OnInit, ViewChild, signal } from '@angular/core';
 import { AuthService } from '../../core/auth';
+import { downloadBlob } from '../../core/utils/download.util';
 import { SaleReceipt, SalesService } from '../../register/sales';
 import { CashierSummary, ReportsService, RecentSale, SalesReport } from '../reports';
 
@@ -190,12 +191,7 @@ export class Reports implements OnInit {
       .subscribe({
         next: (blob) => {
           this.exporting.set(false);
-          const url = URL.createObjectURL(blob);
-          const anchor = document.createElement('a');
-          anchor.href = url;
-          anchor.download = 'chardworkz-sales-report.xlsx';
-          anchor.click();
-          URL.revokeObjectURL(url);
+          downloadBlob(blob, 'chardworkz-sales-report.xlsx');
         },
         error: () => {
           this.exporting.set(false);
