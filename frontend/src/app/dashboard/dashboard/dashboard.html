@@ -219,12 +219,20 @@
           #analyticsChart="base-chart"
           [data]="analyticsChartData"
           [options]="analyticsChartOptions"
-          [type]="'bar'"
+          [type]="'line'"
         ></canvas>
 
         <div
           *ngIf="analyticsTooltip() as tip"
-          class="pointer-events-none absolute z-10 w-52 -translate-x-1/2 -translate-y-full rounded-xl border border-white/40 bg-white/70 p-3 text-xs shadow-lg backdrop-blur-md dark:border-slate-600/40 dark:bg-slate-800/70"
+          class="pointer-events-none absolute z-[5] w-px bg-gray-400/40 transition-[left] duration-150 ease-spring dark:bg-gray-500/40"
+          [style.left.px]="tip.x"
+          [style.top.px]="tip.areaTop"
+          [style.height.px]="tip.areaBottom - tip.areaTop"
+        ></div>
+
+        <div
+          *ngIf="analyticsTooltip() as tip"
+          class="pointer-events-none absolute z-10 w-52 -translate-x-1/2 -translate-y-full rounded-xl border border-white/40 bg-white/70 p-3 text-xs shadow-lg backdrop-blur-md transition-[left,top] duration-150 ease-spring animate-fade-in dark:border-slate-600/40 dark:bg-slate-800/70"
           [style.left.px]="tip.x"
           [style.top.px]="tip.y - 12"
         >

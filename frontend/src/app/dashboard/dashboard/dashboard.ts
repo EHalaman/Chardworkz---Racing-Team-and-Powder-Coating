@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild, signal } from '@angular/core';
-import { ChartConfiguration } from 'chart.js';
+import { ChartConfiguration, ScriptableContext } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import { forkJoin, catchError, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
@@ -130,17 +130,22 @@ export class Dashboard implements OnInit {
   };
 
   /**
-   * COGS + Gross Profit stack to the same total (they sum to Gross Revenue
-   * by definition); Gross Revenue is drawn as an unstacked overlay line so
-   * its cap visually lines up with the top of each stacked bar. A mixed
-   * chart type, so this is loosely typed rather than `ChartConfiguration<'bar'>`
-   * (whose dataset type doesn't allow a per-dataset `type: 'line'` override).
+   * Pure multi-line view (DEC-063 superseded DEC-062's stacked-bar+line
+   * mix): Gross Revenue/COGS/Gross Profit each drawn as their own cubic
+   * spline, no stacking relationship between them in the chart itself
+   * (the Store Health card above is now the only place the "COGS + Profit
+   * = Revenue" identity is asserted numerically).
    */
-  readonly analyticsChartData: { labels: string[]; datasets: any[] } = { labels: [], datasets: [] };
+  readonly analyticsChartData: ChartConfiguration<'line', number[], string>['data'] = {
+    labels: [],
+    datasets: [],
+  };
   readonly analyticsLegendItems = signal<{ label: string; color: string; hidden: boolean }[]>([]);
   readonly analyticsTooltip = signal<{
     x: number;
     y: number;
+    areaTop: number;
+    areaBottom: number;
     label: string;
     revenue: number;
     cogs: number;
@@ -148,10 +153,22 @@ export class Dashboard implements OnInit {
     marginPercent: number | null;
   } | null>(null);
 
-  readonly analyticsChartOptions: ChartConfiguration<'bar'>['options'] = {
+  readonly analyticsChartOptions: ChartConfiguration<'line'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 400 },
+    // Exponential ease-out over 700ms on load and on every date-range
+    // switch (full dataset replacement re-triggers this). Chart.js has no
+    // raw cubic-bezier easing option, only named curves - 'easeOutExpo' is
+    // its built-in expo-out, functionally the same shape as the app's own
+    // `out-expo` Tailwind token (cubic-bezier(0.16, 1, 0.3, 1)).
+    animation: { duration: 700, easing: 'easeOutExpo' },
+    // Native Chart.js hide()/show() (see toggleAnalyticsLegendItem) animate
+    // each dataset's stroke/fill color to/from transparent using this timing
+    // instead of popping the line on/off instantly.
+    transitions: {
+      show: { animation: { duration: 450, easing: 'easeOutExpo' } },
+      hide: { animation: { duration: 450, easing: 'easeOutExpo' } },
+    },
     interaction: { mode: 'index', intersect: false },
     plugins: {
       // Custom HTML legend/tooltip below replace both of these.
@@ -163,7 +180,6 @@ export class Dashboard implements OnInit {
     },
     scales: {
       x: {
-        stacked: true,
         grid: { display: false },
         ticks: {
           color: '#9CA3AF',
@@ -172,7 +188,7 @@ export class Dashboard implements OnInit {
           autoSkip: false,
           // Thin TODAY's hourly labels to every 2 hours so they don't
           // crowd - the underlying data stays hourly, only the label
-          // is skipped, so hovering a "skipped" bar still shows exact
+          // is skipped, so hovering a "skipped" point still shows exact
           // figures via the custom tooltip.
           callback: (_value, index) =>
             this.selectedTimeRange() === 'TODAY' && index % 2 !== 0
@@ -181,7 +197,6 @@ export class Dashboard implements OnInit {
         },
       },
       y: {
-        stacked: true,
         beginAtZero: true,
         grid: { color: 'rgba(148, 163, 184, 0.15)' },
         ticks: { color: '#9CA3AF' },
@@ -306,40 +321,65 @@ export class Dashboard implements OnInit {
       });
   }
 
+  /** Vertical gradient fill under the Gross Revenue line only - Chart.js
+   * scriptable color, rebuilt from the live canvas each draw since the
+   * chart area isn't known until after first layout. */
+  private static revenueGradient(context: ScriptableContext<'line'>): CanvasGradient | string {
+    const { ctx, chartArea } = context.chart;
+    if (!chartArea) return 'rgba(63, 164, 133, 0.2)';
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradient.addColorStop(0, 'rgba(63, 164, 133, 0.28)');
+    gradient.addColorStop(1, 'rgba(63, 164, 133, 0)');
+    return gradient;
+  }
+
   private applyAnalyticsToChart(analytics: DashboardAnalytics): void {
     this.analyticsChartData.labels = analytics.chartSeries.map((p) => p.label);
     this.analyticsChartData.datasets = [
       {
-        type: 'bar',
-        data: analytics.chartSeries.map((p) => p.cogs),
-        label: 'COGS',
-        backgroundColor: '#E2B24A',
-        stack: 'financials',
-        borderRadius: 4,
-      },
-      {
-        type: 'bar',
-        data: analytics.chartSeries.map((p) => p.grossProfit),
-        label: 'Gross Profit',
-        backgroundColor: '#3FA485',
-        stack: 'financials',
-        borderRadius: 4,
-      },
-      {
-        type: 'line',
         data: analytics.chartSeries.map((p) => p.revenue),
         label: 'Gross Revenue',
+        borderColor: '#3FA485',
+        backgroundColor: (context) => Dashboard.revenueGradient(context),
+        fill: 'origin',
+        borderWidth: 2.5,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHitRadius: 10,
+        pointBackgroundColor: '#3FA485',
+      },
+      {
+        data: analytics.chartSeries.map((p) => p.cogs),
+        label: 'COGS',
+        borderColor: '#E2B24A',
+        backgroundColor: '#E2B24A',
+        fill: false,
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHitRadius: 10,
+        pointBackgroundColor: '#E2B24A',
+      },
+      {
+        data: analytics.chartSeries.map((p) => p.grossProfit),
+        label: 'Gross Profit',
         borderColor: '#2563EB',
         backgroundColor: '#2563EB',
-        pointRadius: 3,
+        fill: false,
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 0,
         pointHoverRadius: 5,
-        tension: 0.3,
+        pointHitRadius: 10,
+        pointBackgroundColor: '#2563EB',
       },
     ];
     this.analyticsLegendItems.set([
+      { label: 'Gross Revenue', color: '#3FA485', hidden: false },
       { label: 'COGS', color: '#E2B24A', hidden: false },
-      { label: 'Gross Profit', color: '#3FA485', hidden: false },
-      { label: 'Gross Revenue', color: '#2563EB', hidden: false },
+      { label: 'Gross Profit', color: '#2563EB', hidden: false },
     ]);
     this.analyticsTooltip.set(null);
     this.analyticsChart?.update();
@@ -348,16 +388,22 @@ export class Dashboard implements OnInit {
   toggleAnalyticsLegendItem(index: number): void {
     const chart = this.analyticsChart?.chart;
     if (!chart) return;
-    const nowVisible = !chart.isDatasetVisible(index);
-    chart.setDatasetVisibility(index, nowVisible);
-    chart.update();
+    const nowHidden = chart.isDatasetVisible(index);
+    // chart.hide()/show() (not setDatasetVisibility + update) is what
+    // triggers Chart.js's built-in animated color-to-transparent fade via
+    // the `transitions.hide`/`show` config above, instead of an instant pop.
+    if (nowHidden) {
+      chart.hide(index);
+    } else {
+      chart.show(index);
+    }
     this.analyticsLegendItems.update((items) =>
-      items.map((item, i) => (i === index ? { ...item, hidden: !nowVisible } : item)),
+      items.map((item, i) => (i === index ? { ...item, hidden: nowHidden } : item)),
     );
   }
 
   private handleAnalyticsTooltip(context: { chart: any; tooltip: any }): void {
-    const { tooltip } = context;
+    const { chart, tooltip } = context;
     if (tooltip.opacity === 0) {
       this.analyticsTooltip.set(null);
       return;
@@ -371,6 +417,8 @@ export class Dashboard implements OnInit {
     this.analyticsTooltip.set({
       x: tooltip.caretX,
       y: tooltip.caretY,
+      areaTop: chart.chartArea.top,
+      areaBottom: chart.chartArea.bottom,
       label: point.label,
       revenue: point.revenue,
       cogs: point.cogs,
