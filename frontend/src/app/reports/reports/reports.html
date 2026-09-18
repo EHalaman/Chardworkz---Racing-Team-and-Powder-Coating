@@ -40,6 +40,15 @@
       Apply
     </button>
 
+    <button
+      type="button"
+      (click)="exportToExcel()"
+      [disabled]="exporting()"
+      class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-50 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+    >
+      {{ exporting() ? 'Exporting…' : 'Export to Excel' }}
+    </button>
+
     <div *ngIf="isOwner" class="ml-auto flex gap-2">
       <button
         *ngFor="let option of branchOptions"

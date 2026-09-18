@@ -51,6 +51,13 @@ public class Sale {
     @Column(name = "customer_name", length = 150)
     private String customerName;
 
+    /** Optional, same walk-in-friendly pattern as {@link #customerName} - no `customer` table exists. */
+    @Column(name = "customer_phone", length = 20)
+    private String customerPhone;
+
+    @Column(name = "customer_email", length = 100)
+    private String customerEmail;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
 

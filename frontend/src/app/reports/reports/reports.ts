@@ -42,6 +42,8 @@ export class Reports implements OnInit {
   readonly isReceiptClosing = signal(false);
   readonly receiptError = signal<string | null>(null);
 
+  readonly exporting = signal(false);
+
   @ViewChild('cashierCombobox') private cashierComboboxWrapper?: ElementRef<HTMLElement>;
   private searchDebounceHandle?: ReturnType<typeof setTimeout>;
 
@@ -174,6 +176,32 @@ export class Reports implements OnInit {
 
   printReceipt(): void {
     window.print();
+  }
+
+  /** Downloads the full, uncapped date/branch-filtered dataset as .xlsx - a binary blob response, not JSON, so it's triggered via a temporary object-URL anchor rather than routed through the app's normal HttpClient JSON flow. */
+  exportToExcel(): void {
+    this.exporting.set(true);
+    this.reportsService
+      .exportSales({
+        from: this.fromDate() || undefined,
+        to: this.toDate() || undefined,
+        branchCode: this.selectedBranch() ?? undefined,
+      })
+      .subscribe({
+        next: (blob) => {
+          this.exporting.set(false);
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = 'chardworkz-sales-report.xlsx';
+          anchor.click();
+          URL.revokeObjectURL(url);
+        },
+        error: () => {
+          this.exporting.set(false);
+          this.errorMessage.set('Could not export the sales report.');
+        },
+      });
   }
 
   private loadReport(): void {

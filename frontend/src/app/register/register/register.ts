@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { formatPHMobileAsTyped, isValidPHMobileNumber } from '../../core/utils/ph-phone.util';
 import { OfflineSaleQueueService } from '../../offline-sales/offline-sale-queue';
 import { ProductsService, ProductSummary } from '../../products/products';
 import { SaleReceipt, SalesService } from '../sales';
@@ -42,6 +43,9 @@ export class Register implements OnInit {
   readonly recentTransactions = signal<SaleReceipt[]>([]);
   readonly recentTransactionsError = signal<string | null>(null);
   readonly transactionSearchTerm = signal('');
+
+  /** Live-formatted "9XX XXX XXXX" local part - the +63 badge next to the input covers the country code (ph-mobile-number-sanitizing pattern). */
+  readonly customerPhoneDisplay = signal('');
 
   readonly paymentMethods: { value: PaymentMethod; label: string }[] = [
     { value: 'CASH', label: 'Cash' },
@@ -147,6 +151,24 @@ export class Register implements OnInit {
     }
   }
 
+  onCustomerPhoneInput(value: string): void {
+    this.customerPhoneDisplay.set(formatPHMobileAsTyped(value));
+  }
+
+  /**
+   * Non-blocking warning only - a malformed phone never disables Complete
+   * Sale (DEC-020/DEC-044 precedent: optional counter-sale fields shouldn't
+   * slow down the line). Only fires once a full 10-digit attempt exists, so
+   * it doesn't nag mid-keystroke.
+   */
+  get customerPhoneWarning(): string | null {
+    const digits = this.customerPhoneDisplay().replace(/\s/g, '');
+    if (digits.length < 10) {
+      return null;
+    }
+    return isValidPHMobileNumber(digits) ? null : 'Enter a valid PH mobile number (9XXXXXXXXX).';
+  }
+
   get filteredTransactions(): SaleReceipt[] {
     const term = this.transactionSearchTerm().trim().toLowerCase();
     if (!term) {
@@ -230,7 +252,11 @@ export class Register implements OnInit {
     this.cart.set([]);
   }
 
-  async completeSale(customerName: string, paymentReference: string): Promise<void> {
+  async completeSale(
+    customerName: string,
+    customerEmail: string,
+    paymentReference: string,
+  ): Promise<void> {
     const lines = this.cart();
     if (lines.length === 0) {
       return;
@@ -238,12 +264,17 @@ export class Register implements OnInit {
 
     const total = lines.reduce((sum, l) => sum + l.product.unitPrice * l.quantity, 0);
     const trimmedCustomerName = customerName.trim() || null;
+    const trimmedCustomerEmail = customerEmail.trim() || null;
+    const phoneDigits = this.customerPhoneDisplay().replace(/\s/g, '');
+    const customerPhone = phoneDigits ? `+63 ${this.customerPhoneDisplay()}` : null;
     const soldAt = new Date().toISOString();
 
     const saleId = await this.queue.enqueueSale({
       paymentMethod: this.paymentMethod(),
       paymentReference: paymentReference || null,
       customerName: trimmedCustomerName,
+      customerPhone,
+      customerEmail: trimmedCustomerEmail,
       lines: lines.map((l) => ({
         productId: l.product.id,
         quantity: l.quantity,
@@ -273,6 +304,8 @@ export class Register implements OnInit {
       id: saleId,
       transactionNumber: `TXN-${datePart}-${String(sequence).padStart(4, '0')}`,
       customerName: trimmedCustomerName,
+      customerPhone,
+      customerEmail: trimmedCustomerEmail,
       branchName: BRANCH_NAMES[branchCode] ?? branchCode,
       employeeName: this.auth.currentUser()?.fullName ?? '',
       soldAt,
@@ -313,6 +346,7 @@ export class Register implements OnInit {
     this.successMessage.set(`Sale recorded — ₱${total.toFixed(2)}. Syncing…`);
     this.isToastLeaving.set(false);
     this.clearCart();
+    this.customerPhoneDisplay.set('');
     this.loadShiftSummary();
     this.loadRecentTransactions();
     setTimeout(() => this.isToastLeaving.set(true), 2700);

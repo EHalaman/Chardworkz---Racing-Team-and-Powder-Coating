@@ -91,4 +91,17 @@ export class ReportsService {
   cashiers(): Observable<CashierSummary[]> {
     return this.http.get<CashierSummary[]>(`${environment.apiBaseUrl}/api/reports/cashiers`);
   }
+
+  /** Full, uncapped .xlsx of every sale in the selected range - a separate call from {@link salesReport}'s own capped recentSales list. */
+  exportSales(query: SalesReportQuery): Observable<Blob> {
+    let params = new HttpParams();
+    if (query.from) params = params.set('from', query.from);
+    if (query.to) params = params.set('to', query.to);
+    if (query.branchCode) params = params.set('branchCode', query.branchCode);
+
+    return this.http.get(`${environment.apiBaseUrl}/api/reports/sales/export`, {
+      params,
+      responseType: 'blob',
+    });
+  }
 }

@@ -93,6 +93,13 @@
 			<optional>true</optional>
 		</dependency>
 		<dependency>
+			<!-- Not managed by the Spring Boot BOM - version pinned explicitly.
+			     Sales Report .xlsx export (SaleExportService). -->
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.3.0</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
 			<scope>test</scope>

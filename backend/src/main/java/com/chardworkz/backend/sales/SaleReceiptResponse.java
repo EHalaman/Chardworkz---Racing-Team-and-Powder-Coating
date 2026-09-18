@@ -21,6 +21,8 @@ public record SaleReceiptResponse(
     UUID id,
     String transactionNumber,
     String customerName,
+    String customerPhone,
+    String customerEmail,
     String branchName,
     String employeeName,
     Instant soldAt,

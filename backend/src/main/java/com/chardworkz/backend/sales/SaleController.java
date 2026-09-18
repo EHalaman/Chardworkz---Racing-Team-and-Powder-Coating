@@ -144,6 +144,8 @@ public class SaleController {
                 sale.getId(),
                 transactionNumberById.get(sale.getId()),
                 sale.getCustomerName(),
+                sale.getCustomerPhone(),
+                sale.getCustomerEmail(),
                 branch.getName(),
                 sale.getEmployee().getFullName(),
                 sale.getSoldAt(),

@@ -16,6 +16,8 @@ export interface SaleReceipt {
   id: string;
   transactionNumber: string;
   customerName: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
   branchName: string;
   employeeName: string;
   soldAt: string;

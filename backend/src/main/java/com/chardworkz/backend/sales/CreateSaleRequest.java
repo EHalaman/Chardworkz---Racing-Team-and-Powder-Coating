@@ -18,5 +18,7 @@ public record CreateSaleRequest(
     @NotNull PaymentMethod paymentMethod,
     String paymentReference,
     String customerName,
+    String customerPhone,
+    String customerEmail,
     @NotNull Instant soldAt,
     @NotEmpty List<@Valid CreateSaleLineRequest> lines) {}

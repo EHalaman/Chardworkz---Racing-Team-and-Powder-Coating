@@ -30,6 +30,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,6 +65,7 @@ public class ReportsController {
     private final BranchRepository branchRepository;
     private final AccountRepository accountRepository;
     private final JwtService jwtService;
+    private final SaleExportService saleExportService;
 
     @GetMapping("/sales")
     public SalesReportResponse salesReport(
@@ -116,6 +119,52 @@ public class ReportsController {
 
         return new SalesReportResponse(
             resolvedFrom, resolvedTo, sales.size(), totalRevenue, byPaymentMethod, byBranch, topProducts, recentSales);
+    }
+
+    /**
+     * Full, uncapped export of every sale in the selected date/branch range as
+     * a downloadable .xlsx - deliberately a separate query from {@link
+     * #salesReport}'s own {@code RECENT_SALES_LIMIT}-capped list, since an
+     * export exists specifically to get the complete data out. Same
+     * date-range resolution and Manager-own-branch/Owner-any-branch scoping
+     * as every other endpoint in this controller.
+     */
+    @GetMapping("/sales/export")
+    public ResponseEntity<byte[]> exportSales(
+        @RequestParam(required = false) LocalDate from,
+        @RequestParam(required = false) LocalDate to,
+        @RequestParam(required = false) String branchCode,
+        Authentication authentication) {
+        Claims claims = (Claims) authentication.getDetails();
+        String role = jwtService.extractRole(claims);
+        String effectiveBranchCode = "MANAGER".equals(role) ? jwtService.extractBranchCode(claims) : branchCode;
+
+        LocalDate resolvedTo = to != null ? to : LocalDate.now();
+        LocalDate resolvedFrom = from != null ? from : resolvedTo.minusDays(29);
+        ZoneId zone = ZoneId.systemDefault();
+        Instant fromInstant = resolvedFrom.atStartOfDay(zone).toInstant();
+        Instant toInstant = resolvedTo.plusDays(1).atStartOfDay(zone).toInstant();
+
+        List<Sale> sales = effectiveBranchCode != null
+            ? saleRepository.findBySoldAtBetweenAndBranchIdOrderBySoldAtDesc(
+                fromInstant, toInstant, resolveBranch(effectiveBranchCode).getId())
+            : saleRepository.findBySoldAtBetweenOrderBySoldAtDesc(fromInstant, toInstant);
+
+        Map<UUID, String> transactionNumbers = computeTransactionNumbers(sales);
+        Map<UUID, List<SaleLine>> linesBySaleId = new HashMap<>();
+        if (!sales.isEmpty()) {
+            for (SaleLine line : saleLineRepository.findBySaleIdIn(sales.stream().map(Sale::getId).toList())) {
+                linesBySaleId.computeIfAbsent(line.getSale().getId(), id -> new ArrayList<>()).add(line);
+            }
+        }
+
+        byte[] xlsx = saleExportService.toXlsx(sales, transactionNumbers, linesBySaleId);
+
+        return ResponseEntity.ok()
+            .header("Content-Disposition", "attachment; filename=\"chardworkz-sales-report.xlsx\"")
+            .contentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .body(xlsx);
     }
 
     /**
@@ -219,6 +268,8 @@ public class ReportsController {
             sale.getId(),
             transactionNumber,
             sale.getCustomerName(),
+            sale.getCustomerPhone(),
+            sale.getCustomerEmail(),
             sale.getBranch().getName(),
             sale.getEmployee().getFullName(),
             sale.getSoldAt(),

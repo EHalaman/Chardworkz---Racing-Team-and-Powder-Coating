@@ -201,6 +201,35 @@
           class="w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
         />
 
+        <div>
+          <div class="flex items-stretch gap-2">
+            <span
+              class="flex items-center rounded-lg border border-gray-300 bg-nav-bg px-3 text-sm font-medium text-gray-500 dark:border-slate-600 dark:bg-slate-700 dark:text-gray-400"
+              >+63</span
+            >
+            <input
+              type="tel"
+              inputmode="numeric"
+              maxlength="12"
+              placeholder="Customer phone (optional)"
+              autocomplete="tel"
+              [value]="customerPhoneDisplay()"
+              (input)="onCustomerPhoneInput($any($event.target).value)"
+              class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+            />
+          </div>
+          <p *ngIf="customerPhoneWarning" class="mt-1 text-xs font-medium text-amber-500">
+            {{ customerPhoneWarning }}
+          </p>
+        </div>
+
+        <input
+          #customerEmail
+          type="email"
+          placeholder="Customer email (optional)"
+          class="w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+
         <div class="flex gap-2">
           <button
             *ngFor="let method of paymentMethods"
@@ -236,8 +265,9 @@
           <button
             type="button"
             (click)="
-              completeSale(customerName.value, paymentRef.value);
+              completeSale(customerName.value, customerEmail.value, paymentRef.value);
               customerName.value = '';
+              customerEmail.value = '';
               paymentRef.value = ''
             "
             [disabled]="cart().length === 0"
@@ -412,6 +442,12 @@
           <p>
             <span class="font-medium">Customer:</span>
             {{ receipt.customerName || 'Walk-in Customer' }}
+          </p>
+          <p *ngIf="receipt.customerPhone">
+            <span class="font-medium">Phone:</span> {{ receipt.customerPhone }}
+          </p>
+          <p *ngIf="receipt.customerEmail">
+            <span class="font-medium">Email:</span> {{ receipt.customerEmail }}
           </p>
         </div>
 
