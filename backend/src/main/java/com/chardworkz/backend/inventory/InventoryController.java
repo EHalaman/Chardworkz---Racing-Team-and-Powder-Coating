@@ -17,12 +17,17 @@ import com.chardworkz.backend.supplier.SupplierRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -53,6 +58,8 @@ public class InventoryController {
     private final StockInLineRepository stockInLineRepository;
     private final AccountRepository accountRepository;
     private final JwtService jwtService;
+    private final InventoryExportService inventoryExportService;
+    private final InventoryImportService inventoryImportService;
 
     @GetMapping
     public List<InventorySummaryResponse> list(
@@ -61,6 +68,48 @@ public class InventoryController {
         return productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES).stream()
             .map(product -> toSummary(product, findStockLevel(product, branch)))
             .toList();
+    }
+
+    /** Same single-branch scope as {@link #list} - Inventory has no merged "both branches" view. */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(
+        @RequestParam(required = false) String branchCode, Authentication authentication) {
+        Branch branch = resolveBranch(authentication, branchCode);
+        List<Product> products = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
+        Map<Long, StockLevel> stockLevelsByProductId = new HashMap<>();
+        for (Product product : products) {
+            StockLevel stockLevel = findStockLevel(product, branch);
+            if (stockLevel != null) {
+                stockLevelsByProductId.put(product.getId(), stockLevel);
+            }
+        }
+        byte[] xlsx = inventoryExportService.toXlsx(products, stockLevelsByProductId, branch);
+
+        return ResponseEntity.ok()
+            .header("Content-Disposition", "attachment; filename=\"chardworkz-inventory-" + branch.getCode() + ".xlsx\"")
+            .contentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .body(xlsx);
+    }
+
+    /** Parses the uploaded file and validates every row without writing anything - the frontend shows this as a preview the user must confirm before {@link #importCommit}. */
+    @PostMapping("/import/preview")
+    public InventoryImportPreviewResponse importPreview(
+        @RequestParam("file") MultipartFile file,
+        @RequestParam(required = false) String branchCode,
+        Authentication authentication) {
+        Branch branch = resolveBranch(authentication, branchCode);
+        return inventoryImportService.preview(file, branch);
+    }
+
+    /** Re-parses and re-validates the same file (deterministic, no client-held state to trust) and applies only the rows that pass. */
+    @PostMapping("/import/commit")
+    public InventoryImportCommitResponse importCommit(
+        @RequestParam("file") MultipartFile file,
+        @RequestParam(required = false) String branchCode,
+        Authentication authentication) {
+        Branch branch = resolveBranch(authentication, branchCode);
+        return inventoryImportService.commit(file, branch, authentication);
     }
 
     @PatchMapping("/{productId}/reorder-threshold")

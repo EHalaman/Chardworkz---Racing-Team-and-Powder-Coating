@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import {
   BranchInventorySummary,
+  InventoryImportPreview,
   InventoryItem,
   InventoryService,
   StockReceipt,
@@ -43,6 +44,14 @@ export class Inventory implements OnInit, OnDestroy {
   readonly restockQty = signal('');
   readonly sortBy = signal<StockSortOption>('DEFAULT');
   readonly currentPage = signal(1);
+
+  readonly exporting = signal(false);
+  readonly isImportModalOpen = signal(false);
+  readonly selectedImportFile = signal<File | null>(null);
+  readonly importPreview = signal<InventoryImportPreview | null>(null);
+  readonly isPreviewLoading = signal(false);
+  readonly isCommitting = signal(false);
+  readonly importError = signal<string | null>(null);
 
   readonly sortOptions: { value: StockSortOption; label: string }[] = [
     { value: 'DEFAULT', label: 'Default order' },
@@ -229,6 +238,92 @@ export class Inventory implements OnInit, OnDestroy {
 
   summaryFor(branchCode: string): BranchInventorySummary | undefined {
     return this.branchSummaries().find((summary) => summary.branchCode === branchCode);
+  }
+
+  /** Downloads the current branch's inventory as .xlsx - same blob/anchor pattern as Sales Reports' export. */
+  exportInventory(): void {
+    this.exporting.set(true);
+    this.inventoryService.exportInventory(this.selectedBranch()).subscribe({
+      next: (blob) => {
+        this.exporting.set(false);
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `chardworkz-inventory-${this.selectedBranch()}.xlsx`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.exporting.set(false);
+        this.errorMessage.set('Could not export inventory.');
+      },
+    });
+  }
+
+  openImportModal(): void {
+    this.selectedImportFile.set(null);
+    this.importPreview.set(null);
+    this.importError.set(null);
+    this.isImportModalOpen.set(true);
+  }
+
+  closeImportModal(): void {
+    this.isImportModalOpen.set(false);
+  }
+
+  onImportFileSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    this.selectedImportFile.set(file);
+    this.importPreview.set(null);
+    this.importError.set(null);
+    if (file) {
+      this.previewImportFile(file);
+    }
+  }
+
+  private previewImportFile(file: File): void {
+    this.isPreviewLoading.set(true);
+    this.importError.set(null);
+    this.inventoryService.previewImport(file, this.selectedBranch()).subscribe({
+      next: (preview) => {
+        this.isPreviewLoading.set(false);
+        this.importPreview.set(preview);
+      },
+      error: (err) => {
+        this.isPreviewLoading.set(false);
+        this.importError.set(
+          err?.error?.message ??
+            'Could not read that file. Use the file from "Export Inventory" and edit that.',
+        );
+      },
+    });
+  }
+
+  /** Re-sends the same file to /import/commit - the backend re-validates deterministically and applies only the rows already shown as valid in the preview. */
+  confirmImport(): void {
+    const file = this.selectedImportFile();
+    if (!file) {
+      return;
+    }
+    this.isCommitting.set(true);
+    this.inventoryService.commitImport(file, this.selectedBranch()).subscribe({
+      next: (result) => {
+        this.isCommitting.set(false);
+        this.isImportModalOpen.set(false);
+        this.successMessage.set(
+          `Import complete — ${result.updatedCount} product(s) updated` +
+            (result.skippedCount > 0 ? `, ${result.skippedCount} row(s) skipped.` : '.'),
+        );
+        this.loadInventory();
+        if (this.isOwner) {
+          this.loadBranchSummaries();
+        }
+      },
+      error: (err) => {
+        this.isCommitting.set(false);
+        this.importError.set(err?.error?.message ?? 'Could not commit the import.');
+      },
+    });
   }
 
   startEditThreshold(item: InventoryItem): void {

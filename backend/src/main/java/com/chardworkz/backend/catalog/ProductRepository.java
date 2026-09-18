@@ -10,4 +10,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     /** Excludes SERVICES-category products - they carry no stock_level concept at all. */
     List<Product> findByActiveTrueAndCategoryNot(Category category);
+
+    /** Inventory Excel import's Product Name fallback match (no unique constraint on name, so this can legitimately return 2+ matches). */
+    List<Product> findByActiveTrueAndNameIgnoreCase(String name);
 }

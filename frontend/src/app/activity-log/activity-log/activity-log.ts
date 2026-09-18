@@ -23,6 +23,7 @@ export class ActivityLog implements OnInit {
     { value: 'CREATE', label: 'Create' },
     { value: 'UPDATE', label: 'Update' },
     { value: 'DELETE', label: 'Delete' },
+    { value: 'EXCEL_IMPORT', label: 'Excel import' },
   ];
 
   constructor(private activityLogService: ActivityLogService) {

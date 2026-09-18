@@ -94,10 +94,29 @@
 		</dependency>
 		<dependency>
 			<!-- Not managed by the Spring Boot BOM - version pinned explicitly.
-			     Sales Report .xlsx export (SaleExportService). -->
+			     Sales Report .xlsx export (SaleExportService) and Inventory
+			     .xlsx import/export (InventoryExportService/InventoryImportService). -->
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.3.0</version>
+		</dependency>
+		<dependency>
+			<!-- Not managed by the Spring Boot BOM - version pinned explicitly.
+			     RFC 4180 CSV parsing for Inventory's .csv import path, rather
+			     than a hand-rolled comma-split (Product Name can legitimately
+			     contain commas/quotes). -->
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.12.0</version>
+		</dependency>
+		<dependency>
+			<!-- commons-csv 1.12.0 requires commons-io's UnsynchronizedBufferedReader
+			     (added in 2.17.0), but poi-ooxml only transitively pulls 2.16.1 -
+			     pinned explicitly here so Maven's nearest-wins picks this one,
+			     not POI's older transitive version (NoClassDefFoundError otherwise). -->
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.18.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

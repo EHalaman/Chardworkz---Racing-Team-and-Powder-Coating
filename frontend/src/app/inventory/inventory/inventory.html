@@ -65,6 +65,23 @@
           Filtered: {{ stockFilter() === 'low-stock' ? 'Low stock' : 'Out of stock' }}
           <span aria-hidden="true">✕</span>
         </button>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            (click)="openImportModal()"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+          >
+            Import Inventory
+          </button>
+          <button
+            type="button"
+            (click)="exportInventory()"
+            [disabled]="exporting()"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-50 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+          >
+            {{ exporting() ? 'Exporting…' : 'Export Inventory' }}
+          </button>
+        </div>
       </div>
 
       <div class="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -339,6 +356,106 @@
       >
         No stock received yet.
       </p>
+    </div>
+  </div>
+
+  <div
+    *ngIf="isImportModalOpen()"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+  >
+    <div
+      class="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-surface shadow-xl dark:bg-slate-800"
+    >
+      <div
+        class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-slate-700"
+      >
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">
+          Import Inventory · {{ selectedBranch() }}
+        </h2>
+        <button
+          type="button"
+          (click)="closeImportModal()"
+          class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="flex-1 space-y-3 overflow-y-auto p-4">
+        <p class="text-sm font-normal text-gray-500 dark:text-gray-400">
+          Upload a .xlsx or .csv file — use the file from "Export Inventory" and edit that. Only
+          Current Stock and Reorder Level are updated (an absolute overwrite, not an added
+          delivery); Category, Branch Name, Unit Cost, and Selling Price are reference only.
+        </p>
+
+        <input
+          type="file"
+          accept=".xlsx,.csv"
+          (change)="onImportFileSelected($event)"
+          class="w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 file:mr-3 file:rounded-md file:border-0 file:bg-primary-light file:px-3 file:py-1.5 file:text-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+
+        <div
+          *ngIf="importError()"
+          class="rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+        >
+          {{ importError() }}
+        </div>
+
+        <p *ngIf="isPreviewLoading()" class="text-sm font-normal text-gray-500 dark:text-gray-400">
+          Reading file…
+        </p>
+
+        <div *ngIf="importPreview() as preview" class="space-y-2">
+          <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
+            {{ preview.validCount }} row(s) ready to apply
+            <span *ngIf="preview.invalidCount > 0" class="font-normal text-danger">
+              · {{ preview.invalidCount }} flagged for review</span
+            >
+          </p>
+
+          <div class="max-h-64 space-y-1 overflow-y-auto">
+            <div
+              *ngFor="let row of preview.rows"
+              class="flex flex-col gap-1 rounded-lg border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between"
+              [ngClass]="
+                row.valid
+                  ? 'border-gray-200 dark:border-slate-700'
+                  : 'border-danger bg-danger-light dark:bg-danger/20'
+              "
+            >
+              <div class="min-w-0">
+                <p class="truncate font-medium text-gray-900 dark:text-gray-100">
+                  Row {{ row.rowNumber }} · {{ row.productName || '—' }}
+                </p>
+                <p *ngIf="row.valid" class="text-gray-500 dark:text-gray-400">
+                  Stock {{ row.currentQuantity }} → {{ row.newQuantity }} · Reorder
+                  {{ row.currentReorderThreshold }} → {{ row.newReorderThreshold }}
+                </p>
+                <p *ngIf="!row.valid" class="font-medium text-danger">{{ row.reason }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 border-t border-gray-200 p-4 dark:border-slate-700">
+        <button
+          type="button"
+          (click)="closeImportModal()"
+          class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="confirmImport()"
+          [disabled]="!importPreview() || importPreview()!.validCount === 0 || isCommitting()"
+          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+        >
+          {{ isCommitting() ? 'Applying…' : 'Confirm Import' }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

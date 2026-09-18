@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export type ActionType = 'CREATE' | 'UPDATE' | 'DELETE';
+export type ActionType = 'CREATE' | 'UPDATE' | 'DELETE' | 'EXCEL_IMPORT';
 
 export interface ActivityLogEntry {
   id: number;

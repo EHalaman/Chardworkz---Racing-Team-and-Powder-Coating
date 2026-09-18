@@ -38,6 +38,29 @@ export interface StockReceipt {
   receivedByName: string;
 }
 
+export interface InventoryImportRowResult {
+  rowNumber: number;
+  productId: number | null;
+  productName: string;
+  currentQuantity: number | null;
+  newQuantity: number | null;
+  currentReorderThreshold: number | null;
+  newReorderThreshold: number | null;
+  valid: boolean;
+  reason: string | null;
+}
+
+export interface InventoryImportPreview {
+  rows: InventoryImportRowResult[];
+  validCount: number;
+  invalidCount: number;
+}
+
+export interface InventoryImportCommitResult {
+  updatedCount: number;
+  skippedCount: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
   constructor(private http: HttpClient) {}
@@ -75,6 +98,36 @@ export class InventoryService {
     return this.http.patch<InventoryItem>(
       `${environment.apiBaseUrl}/api/inventory/${productId}/reorder-threshold`,
       { reorderThreshold, branchCode: branchCode ?? null },
+    );
+  }
+
+  /** Same single-branch scope as {@link list} - Inventory has no merged "both branches" view. */
+  exportInventory(branchCode?: string | null): Observable<Blob> {
+    return this.http.get(`${environment.apiBaseUrl}/api/inventory/export`, {
+      params: this.branchParams(branchCode),
+      responseType: 'blob',
+    });
+  }
+
+  /** Validates every row without writing anything - the caller must confirm via {@link commitImport}. */
+  previewImport(file: File, branchCode?: string | null): Observable<InventoryImportPreview> {
+    const formData = new FormData();
+    formData.set('file', file);
+    return this.http.post<InventoryImportPreview>(
+      `${environment.apiBaseUrl}/api/inventory/import/preview`,
+      formData,
+      { params: this.branchParams(branchCode) },
+    );
+  }
+
+  /** Re-sends the same file - the backend re-validates deterministically and applies only rows that pass. */
+  commitImport(file: File, branchCode?: string | null): Observable<InventoryImportCommitResult> {
+    const formData = new FormData();
+    formData.set('file', file);
+    return this.http.post<InventoryImportCommitResult>(
+      `${environment.apiBaseUrl}/api/inventory/import/commit`,
+      formData,
+      { params: this.branchParams(branchCode) },
     );
   }
 
