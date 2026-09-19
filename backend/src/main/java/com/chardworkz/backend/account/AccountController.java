@@ -117,6 +117,47 @@ public class AccountController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
     }
 
+    /**
+     * Role/branch reassignment for a non-Owner account - deliberately scoped
+     * to EMPLOYEE/MANAGER only (never OWNER, either as the target account or
+     * the requested role) since promoting/demoting an Owner is a much bigger
+     * decision than this simple form should make casually, and self-edit is
+     * blocked outright so an Owner can't lock themselves out of their own
+     * role, same self-protection rule as {@link #updateStatus}.
+     */
+    @PatchMapping("/{id}")
+    public AccountSummaryResponse update(
+        @PathVariable Long id, @Valid @RequestBody UpdateAccountRequest request, Authentication authentication) {
+        Claims claims = (Claims) authentication.getDetails();
+        if (id.equals(jwtService.extractAccountId(claims))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot edit your own account");
+        }
+        if (request.role() == Role.OWNER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot assign the Owner role here");
+        }
+
+        Account account = accountRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+        if (account.getRole() == Role.OWNER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot edit an Owner account");
+        }
+
+        Branch branch = branchRepository.findByCode(request.branchCode())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown branch"));
+
+        account.setRole(request.role());
+        account.setBranch(branch);
+        account.setUpdatedAt(Instant.now());
+        account = accountRepository.save(account);
+
+        activityLogService.record(authentication, ActionType.UPDATE, "ACCOUNT", String.valueOf(account.getId()),
+            account.getBranch().getId(),
+            "Changed account \"" + account.getUsername() + "\" to " + account.getRole().name().toLowerCase()
+                + " @ " + account.getBranch().getCode());
+
+        return AccountSummaryResponse.from(account);
+    }
+
     @PatchMapping("/{id}/status")
     public AccountSummaryResponse updateStatus(
         @PathVariable Long id, @Valid @RequestBody UpdateAccountStatusRequest request, Authentication authentication) {

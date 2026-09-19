@@ -1,7 +1,15 @@
 package com.chardworkz.backend.account;
 
+import java.time.Instant;
+
 public record AccountSummaryResponse(
-    Long id, String username, String fullName, Role role, String branchCode, boolean active) {
+    Long id,
+    String username,
+    String fullName,
+    Role role,
+    String branchCode,
+    boolean active,
+    Instant createdAt) {
 
     static AccountSummaryResponse from(Account account) {
         return new AccountSummaryResponse(
@@ -10,6 +18,7 @@ public record AccountSummaryResponse(
             account.getFullName(),
             account.getRole(),
             account.getBranch().getCode(),
-            account.isActive());
+            account.isActive(),
+            account.getCreatedAt());
     }
 }

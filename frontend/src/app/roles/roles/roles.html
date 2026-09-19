@@ -27,53 +27,154 @@
         #searchBox
         type="text"
         placeholder="Search by full name or username…"
-        (input)="searchTerm.set(searchBox.value)"
+        (input)="setSearchTerm(searchBox.value)"
         class="mt-3 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
       />
 
-      <div class="mt-3 space-y-2">
+      <div class="mt-3 min-h-[600px] space-y-2">
         <div
-          *ngFor="let account of filteredAccounts"
-          class="flex flex-col gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+          *ngFor="let account of pagedAccounts"
+          class="rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
         >
-          <div class="min-w-0">
-            <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {{ account.fullName }}
-              <span class="font-normal text-gray-500 dark:text-gray-400"
-                >· {{ account.username }}</span
+          <div
+            *ngIf="editingId() !== account.id"
+            class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {{ account.fullName }}
+                <span class="font-normal text-gray-500 dark:text-gray-400"
+                  >· {{ account.username }}</span
+                >
+              </p>
+              <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                {{ account.role }} · {{ account.branchCode }}
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
+              <span
+                [ngClass]="
+                  account.active ? 'bg-primary-light text-primary' : 'bg-danger-light text-danger'
+                "
+                class="rounded-full px-2 py-1 text-xs font-medium"
               >
-            </p>
-            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
-              {{ account.role }} · {{ account.branchCode }}
-            </p>
+                {{ account.active ? 'Active' : 'Inactive' }}
+              </span>
+              <button
+                *ngIf="canEdit(account)"
+                type="button"
+                (click)="startEdit(account)"
+                class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                (click)="toggleActive(account)"
+                [disabled]="isSelf(account)"
+                [title]="isSelf(account) ? 'Cannot deactivate your own account' : ''"
+                class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+              >
+                {{ account.active ? 'Deactivate' : 'Activate' }}
+              </button>
+            </div>
           </div>
-          <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
-            <span
-              [ngClass]="
-                account.active ? 'bg-primary-light text-primary' : 'bg-danger-light text-danger'
-              "
-              class="rounded-full px-2 py-1 text-xs font-medium"
-            >
-              {{ account.active ? 'Active' : 'Inactive' }}
-            </span>
+
+          <div *ngIf="editingId() === account.id" class="flex flex-wrap items-end gap-2">
+            <div class="min-w-0 flex-1 basis-40">
+              <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {{ account.fullName }}
+              </p>
+              <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                {{ account.username }}
+              </p>
+            </div>
+            <div class="flex gap-1">
+              <button
+                *ngFor="let role of editableRoleOptions"
+                type="button"
+                (click)="editingRole.set(role.value)"
+                [ngClass]="
+                  editingRole() === role.value
+                    ? 'bg-primary text-white'
+                    : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+                "
+                class="rounded-lg px-2 py-1.5 text-xs font-medium transition-colors"
+              >
+                {{ role.label }}
+              </button>
+            </div>
+            <div class="flex gap-1">
+              <button
+                *ngFor="let branch of branchOptions"
+                type="button"
+                (click)="editingBranch.set(branch.value)"
+                [ngClass]="
+                  editingBranch() === branch.value
+                    ? 'bg-primary text-white'
+                    : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+                "
+                class="rounded-lg px-2 py-1.5 text-xs font-medium transition-colors"
+              >
+                {{ branch.label }}
+              </button>
+            </div>
             <button
               type="button"
-              (click)="toggleActive(account)"
-              [disabled]="isSelf(account)"
-              [title]="isSelf(account) ? 'Cannot deactivate your own account' : ''"
-              class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+              [disabled]="editSubmitting()"
+              (click)="saveEdit(account)"
+              class="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
             >
-              {{ account.active ? 'Deactivate' : 'Activate' }}
+              {{ editSubmitting() ? 'Saving…' : 'Save' }}
+            </button>
+            <button
+              type="button"
+              (click)="cancelEdit()"
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+            >
+              Cancel
             </button>
           </div>
         </div>
 
         <p
-          *ngIf="filteredAccounts.length === 0"
+          *ngIf="pagedAccounts.length === 0"
           class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
         >
           No accounts yet.
         </p>
+      </div>
+
+      <div *ngIf="totalPages > 1" class="mt-4 flex flex-wrap items-center justify-center gap-1">
+        <button
+          type="button"
+          [disabled]="currentPage() === 1"
+          (click)="goToPage(currentPage() - 1)"
+          class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Previous
+        </button>
+        <button
+          *ngFor="let page of pageNumbers"
+          type="button"
+          (click)="goToPage(page)"
+          [ngClass]="
+            currentPage() === page
+              ? 'bg-primary text-white'
+              : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+          "
+          class="rounded-lg px-3 py-1 text-xs font-medium transition-colors"
+        >
+          {{ page }}
+        </button>
+        <button
+          type="button"
+          [disabled]="currentPage() === totalPages"
+          (click)="goToPage(currentPage() + 1)"
+          class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Next
+        </button>
       </div>
     </div>
 

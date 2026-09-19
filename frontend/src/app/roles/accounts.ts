@@ -13,12 +13,18 @@ export interface Account {
   role: AccountRole;
   branchCode: string;
   active: boolean;
+  createdAt: string;
 }
 
 export interface CreateAccountRequest {
   username: string;
   password: string;
   fullName: string;
+  role: AccountRole;
+  branchCode: string;
+}
+
+export interface UpdateAccountRequest {
   role: AccountRole;
   branchCode: string;
 }
@@ -39,6 +45,10 @@ export class AccountsService {
     return this.http.patch<Account>(`${environment.apiBaseUrl}/api/accounts/${id}/status`, {
       active,
     });
+  }
+
+  update(id: number, request: UpdateAccountRequest): Observable<Account> {
+    return this.http.patch<Account>(`${environment.apiBaseUrl}/api/accounts/${id}`, request);
   }
 
   updateProfile(fullName: string): Observable<LoginResponse> {

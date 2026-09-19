@@ -3,6 +3,14 @@ import { Component, OnInit, signal } from '@angular/core';
 import { AuthService } from '../../core/auth';
 import { Account, AccountRole, AccountsService } from '../accounts';
 
+const PAGE_SIZE = 10;
+
+/** Edit is scoped to EMPLOYEE/MANAGER only (see AccountController.update) - Owner is never an editable target or an assignable role here. */
+const EDITABLE_ROLE_OPTIONS: { value: AccountRole; label: string }[] = [
+  { value: 'MANAGER', label: 'Manager' },
+  { value: 'EMPLOYEE', label: 'Employee' },
+];
+
 @Component({
   selector: 'app-roles',
   standalone: false,
@@ -18,6 +26,13 @@ export class Roles implements OnInit {
   readonly selectedBranch = signal('MAIN');
   readonly showPassword = signal(false);
   readonly searchTerm = signal('');
+  readonly currentPage = signal(1);
+
+  readonly editingId = signal<number | null>(null);
+  readonly editingRole = signal<AccountRole>('EMPLOYEE');
+  readonly editingBranch = signal('MAIN');
+  readonly editSubmitting = signal(false);
+  readonly editableRoleOptions = EDITABLE_ROLE_OPTIONS;
 
   readonly roleOptions: { value: AccountRole; label: string }[] = [
     { value: 'OWNER', label: 'Owner' },
@@ -88,14 +103,73 @@ export class Roles implements OnInit {
     return account.username === this.auth.currentUser()?.username;
   }
 
+  /** Owner is never an editable target here (see AccountController.update's own restriction). */
+  canEdit(account: Account): boolean {
+    return account.role !== 'OWNER' && !this.isSelf(account);
+  }
+
   get filteredAccounts(): Account[] {
     const term = this.searchTerm().trim().toLowerCase();
-    if (!term) {
-      return this.accounts();
-    }
-    return this.accounts().filter(
-      (a) => a.fullName.toLowerCase().includes(term) || a.username.toLowerCase().includes(term),
-    );
+    const list = !term
+      ? this.accounts()
+      : this.accounts().filter(
+          (a) => a.fullName.toLowerCase().includes(term) || a.username.toLowerCase().includes(term),
+        );
+    return [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredAccounts.length / PAGE_SIZE));
+  }
+
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+  }
+
+  get pagedAccounts(): Account[] {
+    const page = Math.min(this.currentPage(), this.totalPages);
+    const start = (page - 1) * PAGE_SIZE;
+    return this.filteredAccounts.slice(start, start + PAGE_SIZE);
+  }
+
+  goToPage(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  setSearchTerm(term: string): void {
+    this.searchTerm.set(term);
+    this.currentPage.set(1);
+  }
+
+  startEdit(account: Account): void {
+    this.errorMessage.set(null);
+    this.editingRole.set(account.role);
+    this.editingBranch.set(account.branchCode);
+    this.editingId.set(account.id);
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+  }
+
+  saveEdit(account: Account): void {
+    this.errorMessage.set(null);
+    this.editSubmitting.set(true);
+    this.accountsService
+      .update(account.id, { role: this.editingRole(), branchCode: this.editingBranch() })
+      .subscribe({
+        next: (updated) => {
+          this.editSubmitting.set(false);
+          this.accounts.update((accounts) =>
+            accounts.map((a) => (a.id === updated.id ? updated : a)),
+          );
+          this.editingId.set(null);
+        },
+        error: () => {
+          this.editSubmitting.set(false);
+          this.errorMessage.set('Could not update that account.');
+        },
+      });
   }
 
   private loadAccounts(): void {
