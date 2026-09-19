@@ -29,6 +29,9 @@ export class Products implements OnInit {
   readonly sortBy = signal<SortOption>('DATE_NEWEST');
   readonly currentPage = signal(1);
   readonly permissions = signal<PermissionFlag[]>([]);
+  /** Highlights a just-created card for 2s (see createProduct) so it's easy
+   * to spot in a list that's sorted/filtered, not just appended at the end. */
+  readonly justCreatedId = signal<number | null>(null);
 
   readonly categoryOptions: { value: ProductCategory; label: string }[] = [
     { value: 'CARB', label: 'Carb' },
@@ -177,6 +180,8 @@ export class Products implements OnInit {
         this.products.update((products) => [product, ...products]);
         this.successMessage.set(`"${product.name}" added.`);
         setTimeout(() => this.successMessage.set(null), 3000);
+        this.justCreatedId.set(product.id);
+        setTimeout(() => this.justCreatedId.set(null), 2000);
       },
       error: () => {
         this.submitting.set(false);
