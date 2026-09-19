@@ -213,6 +213,14 @@ export class Dashboard implements OnInit {
     return this.auth.currentUser()?.role === 'OWNER';
   }
 
+  /** The logged-in user's own assigned branch (from their account/JWT) - distinct from `selectedBranch`, which is this Dashboard's own Owner-only cross-branch view filter. Short name only ("Main"/"Masinag") - the template appends "Branch" itself. */
+  get userBranchName(): string {
+    const code = this.auth.currentUser()?.branchCode;
+    if (code === 'MAIN') return 'Main';
+    if (code === 'MASINAG') return 'Masinag';
+    return code ?? '';
+  }
+
   get topProducts(): TopProduct[] {
     return this.topProductsTab() === 'PARTS'
       ? this.summary().topMarginParts
