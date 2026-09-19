@@ -19,6 +19,8 @@ export interface ReceiveStockRequest {
   supplierName: string;
   referenceNo: string | null;
   branchCode: string | null;
+  delivererName: string | null;
+  delivererContact: string | null;
 }
 
 export interface BranchInventorySummary {
@@ -32,10 +34,26 @@ export interface StockReceipt {
   productName: string;
   quantity: number;
   unitCost: number;
+  totalCost: number;
   supplierName: string;
   referenceNo: string | null;
   receivedAt: string;
+  receivedById: number;
   receivedByName: string;
+  delivererName: string | null;
+  delivererContact: string | null;
+}
+
+export interface ReceiptFilter {
+  from: string | null;
+  to: string | null;
+  searchQuery: string | null;
+  receiverId: number | null;
+}
+
+export interface ReceiverSummary {
+  id: number;
+  fullName: string;
 }
 
 export interface InventoryImportRowResult {
@@ -77,10 +95,20 @@ export class InventoryService {
     );
   }
 
-  receipts(branchCode?: string | null): Observable<StockReceipt[]> {
+  receipts(branchCode?: string | null, filter?: ReceiptFilter): Observable<StockReceipt[]> {
+    let params = this.branchParams(branchCode);
+    if (filter?.from) params = params.set('from', filter.from);
+    if (filter?.to) params = params.set('to', filter.to);
+    if (filter?.searchQuery) params = params.set('searchQuery', filter.searchQuery);
+    if (filter?.receiverId) params = params.set('receiverId', filter.receiverId);
     return this.http.get<StockReceipt[]>(`${environment.apiBaseUrl}/api/inventory/receipts`, {
-      params: this.branchParams(branchCode),
+      params,
     });
+  }
+
+  /** Owner-view receiver filter dropdown for Recent Receipts. */
+  receivers(): Observable<ReceiverSummary[]> {
+    return this.http.get<ReceiverSummary[]>(`${environment.apiBaseUrl}/api/inventory/receivers`);
   }
 
   receive(request: ReceiveStockRequest): Observable<InventoryItem> {

@@ -17,6 +17,8 @@ import com.chardworkz.backend.supplier.SupplierRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -60,6 +62,12 @@ public class InventoryController {
     private final JwtService jwtService;
     private final InventoryExportService inventoryExportService;
     private final InventoryImportService inventoryImportService;
+
+    /** Raised from the old hard 20-item cap so the frontend's new 10-item
+     * client-side pagination over Recent Receipts has more than one page to
+     * show - same bounded-list-not-true-offset-pagination approach as
+     * {@code ReportsController}'s {@code RECENT_SALES_LIMIT}. */
+    private static final int RECENT_RECEIPTS_LIMIT = 100;
 
     @GetMapping
     public List<InventorySummaryResponse> list(
@@ -148,6 +156,8 @@ public class InventoryController {
             .receivedBy(receivedBy)
             .referenceNo(request.referenceNo())
             .receivedAt(now)
+            .delivererName(request.delivererName())
+            .delivererContact(request.delivererContact())
             .build());
 
         stockInLineRepository.save(StockInLine.builder()
@@ -203,12 +213,55 @@ public class InventoryController {
 
     @GetMapping("/receipts")
     public List<StockReceiptResponse> receipts(
-        @RequestParam(required = false) String branchCode, Authentication authentication) {
+        @RequestParam(required = false) LocalDate from,
+        @RequestParam(required = false) LocalDate to,
+        @RequestParam(required = false) String branchCode,
+        @RequestParam(required = false) String searchQuery,
+        @RequestParam(required = false) Long receiverId,
+        Authentication authentication) {
         Branch branch = resolveBranch(authentication, branchCode);
+        ZoneId zone = ZoneId.systemDefault();
+        Instant fromInstant = from != null ? from.atStartOfDay(zone).toInstant() : null;
+        Instant toInstant = to != null ? to.plusDays(1).atStartOfDay(zone).toInstant() : null;
+
         return stockInLineRepository.findRecentByBranchId(branch.getId()).stream()
+            .filter(line -> fromInstant == null || !line.getStockIn().getReceivedAt().isBefore(fromInstant))
+            .filter(line -> toInstant == null || line.getStockIn().getReceivedAt().isBefore(toInstant))
+            .filter(line -> receiverId == null || receiverId.equals(line.getStockIn().getReceivedBy().getId()))
+            .filter(line -> matchesReceiptSearch(line, searchQuery))
+            .limit(RECENT_RECEIPTS_LIMIT)
             .map(StockReceiptResponse::from)
-            .limit(20)
             .toList();
+    }
+
+    /**
+     * Staff list for the Recent Receipts receiver filter (Owner view only on
+     * the frontend - a Manager's receipts are already scoped to their own
+     * branch by every filter above) - same shape/branch-scoping rule as
+     * {@code ReportsController.cashiers()}.
+     */
+    @GetMapping("/receivers")
+    public List<ReceiverSummary> receivers(Authentication authentication) {
+        Claims claims = claims(authentication);
+        String role = jwtService.extractRole(claims);
+        List<Account> accounts = "MANAGER".equals(role)
+            ? accountRepository.findByBranchIdOrderByFullName(resolveBranch(authentication, null).getId())
+            : accountRepository.findAllByOrderByFullName();
+        return accounts.stream().map(a -> new ReceiverSummary(a.getId(), a.getFullName())).toList();
+    }
+
+    public record ReceiverSummary(Long id, String fullName) {}
+
+    private boolean matchesReceiptSearch(StockInLine line, String searchQuery) {
+        if (searchQuery == null || searchQuery.isBlank()) {
+            return true;
+        }
+        String term = searchQuery.trim().toLowerCase();
+        StockIn stockIn = line.getStockIn();
+        return line.getProduct().getName().toLowerCase().contains(term)
+            || stockIn.getSupplier().getName().toLowerCase().contains(term)
+            || (stockIn.getReferenceNo() != null && stockIn.getReferenceNo().toLowerCase().contains(term))
+            || (stockIn.getDelivererName() != null && stockIn.getDelivererName().toLowerCase().contains(term));
     }
 
     /** Services carry no stock_level concept - reject any attempt to manage stock for one server-side. */

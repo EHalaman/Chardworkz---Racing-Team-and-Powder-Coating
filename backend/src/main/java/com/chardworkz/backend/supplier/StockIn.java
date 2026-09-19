@@ -36,4 +36,10 @@ public class StockIn {
 
     @Column(name = "received_at", nullable = false)
     private Instant receivedAt;
+
+    @Column(name = "deliverer_name", length = 150)
+    private String delivererName;
+
+    @Column(name = "deliverer_contact", length = 50)
+    private String delivererContact;
 }

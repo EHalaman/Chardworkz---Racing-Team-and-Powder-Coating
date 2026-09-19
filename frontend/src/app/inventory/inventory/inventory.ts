@@ -16,6 +16,7 @@ import {
   InventoryImportPreview,
   InventoryItem,
   InventoryService,
+  ReceiverSummary,
   StockReceipt,
 } from '../inventory';
 
@@ -23,6 +24,7 @@ type StockFilter = 'ALL' | 'low-stock' | 'out-of-stock';
 type StockSortOption = 'DEFAULT' | 'QTY_LOW' | 'QTY_HIGH';
 
 const PAGE_SIZE = 10;
+const RECEIPT_SEARCH_DEBOUNCE_MS = 300;
 
 @Component({
   selector: 'app-inventory',
@@ -45,6 +47,15 @@ export class Inventory implements OnInit, OnDestroy {
   readonly restockQty = signal('');
   readonly sortBy = signal<StockSortOption>('DEFAULT');
   readonly currentPage = signal(1);
+
+  readonly receiptSearchTerm = signal('');
+  readonly receiptFrom = signal('');
+  readonly receiptTo = signal('');
+  readonly receiptReceiverId = signal<number | null>(null);
+  readonly receiptCurrentPage = signal(1);
+  readonly receivers = signal<ReceiverSummary[]>([]);
+  readonly selectedReceipt = signal<StockReceipt | null>(null);
+  private receiptSearchDebounceHandle?: ReturnType<typeof setTimeout>;
 
   readonly exporting = signal(false);
   readonly isImportModalOpen = signal(false);
@@ -189,6 +200,54 @@ export class Inventory implements OnInit, OnDestroy {
     this.currentPage.set(page);
   }
 
+  get totalReceiptPages(): number {
+    return Math.max(1, Math.ceil(this.receipts().length / PAGE_SIZE));
+  }
+
+  get receiptPageNumbers(): number[] {
+    return Array.from({ length: this.totalReceiptPages }, (_, i) => i + 1);
+  }
+
+  get pagedReceipts(): StockReceipt[] {
+    const page = Math.min(this.receiptCurrentPage(), this.totalReceiptPages);
+    const start = (page - 1) * PAGE_SIZE;
+    return this.receipts().slice(start, start + PAGE_SIZE);
+  }
+
+  goToReceiptPage(page: number): void {
+    this.receiptCurrentPage.set(page);
+  }
+
+  onReceiptSearchInput(value: string): void {
+    this.receiptSearchTerm.set(value);
+    clearTimeout(this.receiptSearchDebounceHandle);
+    this.receiptSearchDebounceHandle = setTimeout(() => {
+      this.receiptCurrentPage.set(1);
+      this.loadReceipts();
+    }, RECEIPT_SEARCH_DEBOUNCE_MS);
+  }
+
+  applyReceiptDateRange(from: string, to: string): void {
+    this.receiptFrom.set(from);
+    this.receiptTo.set(to);
+    this.receiptCurrentPage.set(1);
+    this.loadReceipts();
+  }
+
+  selectReceiptReceiver(receiverId: string): void {
+    this.receiptReceiverId.set(receiverId ? Number(receiverId) : null);
+    this.receiptCurrentPage.set(1);
+    this.loadReceipts();
+  }
+
+  openReceiptDetail(receipt: StockReceipt): void {
+    this.selectedReceipt.set(receipt);
+  }
+
+  closeReceiptDetail(): void {
+    this.selectedReceipt.set(null);
+  }
+
   setSearchTerm(term: string): void {
     this.searchTerm.set(term);
     this.currentPage.set(1);
@@ -223,6 +282,7 @@ export class Inventory implements OnInit, OnDestroy {
     this.loadReceipts();
     if (this.isOwner) {
       this.loadBranchSummaries();
+      this.loadReceivers();
     }
   }
 
@@ -233,6 +293,7 @@ export class Inventory implements OnInit, OnDestroy {
   selectBranch(branchCode: string): void {
     this.selectedBranch.set(branchCode);
     this.editingThresholdFor.set(null);
+    this.receiptCurrentPage.set(1);
     this.loadInventory();
     this.loadReceipts();
   }
@@ -364,6 +425,8 @@ export class Inventory implements OnInit, OnDestroy {
     unitCost: string,
     supplierName: string,
     referenceNo: string,
+    delivererName: string,
+    delivererContact: string,
   ): void {
     const parsedProductId = Number(this.selectedProductId());
     const parsedQuantity = Number(quantity);
@@ -395,6 +458,8 @@ export class Inventory implements OnInit, OnDestroy {
         supplierName: supplierName.trim(),
         referenceNo: referenceNo.trim() || null,
         branchCode: this.selectedBranch(),
+        delivererName: delivererName.trim() || null,
+        delivererContact: delivererContact.trim() || null,
       })
       .subscribe({
         next: (updated) => {
@@ -449,9 +514,25 @@ export class Inventory implements OnInit, OnDestroy {
   }
 
   private loadReceipts(): void {
-    this.inventoryService.receipts(this.selectedBranch()).subscribe({
-      next: (receipts) => this.receipts.set(receipts),
-      error: () => this.errorMessage.set('Could not load recent receipts.'),
+    this.inventoryService
+      .receipts(this.selectedBranch(), {
+        from: this.receiptFrom() || null,
+        to: this.receiptTo() || null,
+        searchQuery: this.receiptSearchTerm().trim() || null,
+        receiverId: this.receiptReceiverId(),
+      })
+      .subscribe({
+        next: (receipts) => this.receipts.set(receipts),
+        error: () => this.errorMessage.set('Could not load recent receipts.'),
+      });
+  }
+
+  private loadReceivers(): void {
+    this.inventoryService.receivers().subscribe({
+      next: (receivers) => this.receivers.set(receivers),
+      error: () => {
+        /* Non-critical: the receiver filter dropdown just stays empty. */
+      },
     });
   }
 
