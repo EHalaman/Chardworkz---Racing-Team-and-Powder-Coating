@@ -1,6 +1,8 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { ActionType, ActivityLogEntry, ActivityLogService } from '../activity-log';
 
+const PAGE_SIZE = 10;
+
 @Component({
   selector: 'app-activity-log',
   standalone: false,
@@ -14,6 +16,8 @@ export class ActivityLog implements OnInit {
 
   readonly actionTypeFilter = signal<ActionType | 'ALL'>('ALL');
   readonly actorFilter = signal<number | 'ALL'>('ALL');
+  readonly currentPage = signal(1);
+  readonly selectedEntry = signal<ActivityLogEntry | null>(null);
 
   readonly toDate: string;
   readonly fromDate: string;
@@ -57,9 +61,46 @@ export class ActivityLog implements OnInit {
       .filter((e) => this.actorFilter() === 'ALL' || e.actorId === this.actorFilter());
   }
 
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredEntries.length / PAGE_SIZE));
+  }
+
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+  }
+
+  get pagedEntries(): ActivityLogEntry[] {
+    const page = Math.min(this.currentPage(), this.totalPages);
+    const start = (page - 1) * PAGE_SIZE;
+    return this.filteredEntries.slice(start, start + PAGE_SIZE);
+  }
+
+  goToPage(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  setActionTypeFilter(value: ActionType | 'ALL'): void {
+    this.actionTypeFilter.set(value);
+    this.currentPage.set(1);
+  }
+
+  setActorFilter(value: number | 'ALL'): void {
+    this.actorFilter.set(value);
+    this.currentPage.set(1);
+  }
+
+  openEntryDetail(entry: ActivityLogEntry): void {
+    this.selectedEntry.set(entry);
+  }
+
+  closeEntryDetail(): void {
+    this.selectedEntry.set(null);
+  }
+
   load(from: string, to: string): void {
     this.errorMessage.set(null);
     this.loading.set(true);
+    this.currentPage.set(1);
     this.activityLogService.list({ from, to }).subscribe({
       next: (entries) => {
         this.loading.set(false);
