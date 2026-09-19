@@ -86,13 +86,14 @@
         <div class="mt-3 space-y-2">
           <div
             *ngFor="let row of r.byPaymentMethod"
-            class="flex items-center justify-between text-sm"
+            class="grid grid-cols-[1fr_5rem_7rem] items-center gap-2 text-sm"
           >
-            <span class="font-medium text-gray-700 dark:text-gray-300">{{
+            <span class="truncate font-medium text-gray-700 dark:text-gray-300">{{
               row.paymentMethod
             }}</span>
-            <span class="text-gray-500 dark:text-gray-400"
-              >{{ row.count }} · ₱{{ row.revenue | number: '1.2-2' }}</span
+            <span class="text-right text-gray-500 dark:text-gray-400">{{ row.count }} sales</span>
+            <span class="text-right font-medium text-gray-900 dark:text-gray-100"
+              >₱{{ row.revenue | number: '1.2-2' }}</span
             >
           </div>
           <p
@@ -107,10 +108,16 @@
       <div class="dashboard-card">
         <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">By branch</h2>
         <div class="mt-3 space-y-2">
-          <div *ngFor="let row of r.byBranch" class="flex items-center justify-between text-sm">
-            <span class="font-medium text-gray-700 dark:text-gray-300">{{ row.branchCode }}</span>
-            <span class="text-gray-500 dark:text-gray-400"
-              >{{ row.count }} · ₱{{ row.revenue | number: '1.2-2' }}</span
+          <div
+            *ngFor="let row of r.byBranch"
+            class="grid grid-cols-[1fr_5rem_7rem] items-center gap-2 text-sm"
+          >
+            <span class="truncate font-medium text-gray-700 dark:text-gray-300">{{
+              row.branchCode
+            }}</span>
+            <span class="text-right text-gray-500 dark:text-gray-400">{{ row.count }} sales</span>
+            <span class="text-right font-medium text-gray-900 dark:text-gray-100"
+              >₱{{ row.revenue | number: '1.2-2' }}</span
             >
           </div>
           <p
@@ -125,12 +132,18 @@
       <div class="dashboard-card">
         <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Top products</h2>
         <div class="mt-3 space-y-2">
-          <div *ngFor="let row of r.topProducts" class="flex items-center justify-between text-sm">
+          <div
+            *ngFor="let row of r.topProducts"
+            class="grid grid-cols-[1fr_5rem_7rem] items-center gap-2 text-sm"
+          >
             <span class="truncate font-medium text-gray-700 dark:text-gray-300">{{
               row.productName
             }}</span>
-            <span class="shrink-0 text-gray-500 dark:text-gray-400"
-              >{{ row.quantitySold }} · ₱{{ row.revenue | number: '1.2-2' }}</span
+            <span class="text-right text-gray-500 dark:text-gray-400"
+              >{{ row.quantitySold }} sold</span
+            >
+            <span class="text-right font-medium text-gray-900 dark:text-gray-100"
+              >₱{{ row.revenue | number: '1.2-2' }}</span
             >
           </div>
           <p
@@ -204,6 +217,33 @@
             No matching staff.
           </p>
         </div>
+
+        <div class="flex overflow-hidden rounded-lg border border-gray-300 dark:border-slate-600">
+          <button
+            type="button"
+            (click)="setSortOrder('NEWEST')"
+            [ngClass]="
+              sortOrder() === 'NEWEST'
+                ? 'bg-primary text-white'
+                : 'bg-surface text-gray-700 dark:bg-slate-800 dark:text-gray-300'
+            "
+            class="px-3 py-2 text-sm font-medium transition-colors"
+          >
+            Newest
+          </button>
+          <button
+            type="button"
+            (click)="setSortOrder('OLDEST')"
+            [ngClass]="
+              sortOrder() === 'OLDEST'
+                ? 'bg-primary text-white'
+                : 'bg-surface text-gray-700 dark:bg-slate-800 dark:text-gray-300'
+            "
+            class="px-3 py-2 text-sm font-medium transition-colors"
+          >
+            Oldest
+          </button>
+        </div>
       </div>
 
       <div
@@ -213,9 +253,9 @@
         {{ receiptError() }}
       </div>
 
-      <div class="mt-3 space-y-2">
+      <div class="mt-3 min-h-[600px] space-y-2">
         <button
-          *ngFor="let sale of filteredRecentSales"
+          *ngFor="let sale of pagedRecentSales"
           type="button"
           (click)="openReceipt(sale.id)"
           class="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors transition-transform duration-150 hover:bg-nav-bg active:scale-[0.98] dark:border-slate-700 dark:hover:bg-slate-700"
@@ -239,11 +279,46 @@
         </button>
 
         <p
-          *ngIf="!searching() && filteredRecentSales.length === 0"
+          *ngIf="!searching() && pagedRecentSales.length === 0"
           class="py-6 text-center text-sm font-normal text-gray-500 dark:text-gray-400"
         >
           No sales in this range.
         </p>
+      </div>
+
+      <div
+        *ngIf="totalRecentSalesPages > 1"
+        class="mt-4 flex flex-wrap items-center justify-center gap-1"
+      >
+        <button
+          type="button"
+          [disabled]="recentSalesPage() === 1"
+          (click)="goToRecentSalesPage(recentSalesPage() - 1)"
+          class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Previous
+        </button>
+        <button
+          *ngFor="let page of recentSalesPageNumbers"
+          type="button"
+          (click)="goToRecentSalesPage(page)"
+          [ngClass]="
+            recentSalesPage() === page
+              ? 'bg-primary text-white'
+              : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+          "
+          class="rounded-lg px-3 py-1 text-xs font-medium transition-colors"
+        >
+          {{ page }}
+        </button>
+        <button
+          type="button"
+          [disabled]="recentSalesPage() === totalRecentSalesPages"
+          (click)="goToRecentSalesPage(recentSalesPage() + 1)"
+          class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg disabled:opacity-40 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Next
+        </button>
       </div>
     </div>
   </ng-container>

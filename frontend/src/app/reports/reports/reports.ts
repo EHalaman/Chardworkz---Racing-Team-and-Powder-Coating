@@ -5,6 +5,8 @@ import { SaleReceipt, SalesService } from '../../register/sales';
 import { CashierSummary, ReportsService, RecentSale, SalesReport } from '../reports';
 
 const SEARCH_DEBOUNCE_MS = 300;
+const RECENT_SALES_PAGE_SIZE = 10;
+type SortOrder = 'NEWEST' | 'OLDEST';
 
 @Component({
   selector: 'app-reports',
@@ -38,6 +40,8 @@ export class Reports implements OnInit {
   /** Server-searched recent sales, populated once a search term or cashier filter is active; falls back to the report's own top-20 recentSales otherwise so the default view needs no extra round trip. */
   readonly searchResults = signal<RecentSale[] | null>(null);
   readonly searching = signal(false);
+  readonly sortOrder = signal<SortOrder>('NEWEST');
+  readonly recentSalesPage = signal(1);
 
   readonly activeReceipt = signal<SaleReceipt | null>(null);
   readonly isReceiptClosing = signal(false);
@@ -95,12 +99,14 @@ export class Reports implements OnInit {
     this.selectedCashierId.set(cashier.id);
     this.cashierSearchTerm.set(cashier.fullName);
     this.isCashierDropdownOpen.set(false);
+    this.recentSalesPage.set(1);
     this.runSearch();
   }
 
   clearCashierFilter(): void {
     this.selectedCashierId.set(null);
     this.cashierSearchTerm.set('');
+    this.recentSalesPage.set(1);
     this.runSearch();
   }
 
@@ -128,8 +134,38 @@ export class Reports implements OnInit {
     return this.searchResults() ?? this.report()?.recentSales ?? [];
   }
 
+  /** Both sources are already newest-first from the backend - Oldest just reverses rather than re-sorting, since neither RecentSale field is guaranteed parseable client-side beyond the order the API already gives. */
+  get sortedRecentSales(): RecentSale[] {
+    const sales = this.filteredRecentSales;
+    return this.sortOrder() === 'OLDEST' ? [...sales].reverse() : sales;
+  }
+
+  get totalRecentSalesPages(): number {
+    return Math.max(1, Math.ceil(this.sortedRecentSales.length / RECENT_SALES_PAGE_SIZE));
+  }
+
+  get recentSalesPageNumbers(): number[] {
+    return Array.from({ length: this.totalRecentSalesPages }, (_, i) => i + 1);
+  }
+
+  get pagedRecentSales(): RecentSale[] {
+    const page = Math.min(this.recentSalesPage(), this.totalRecentSalesPages);
+    const start = (page - 1) * RECENT_SALES_PAGE_SIZE;
+    return this.sortedRecentSales.slice(start, start + RECENT_SALES_PAGE_SIZE);
+  }
+
+  goToRecentSalesPage(page: number): void {
+    this.recentSalesPage.set(page);
+  }
+
+  setSortOrder(order: SortOrder): void {
+    this.sortOrder.set(order);
+    this.recentSalesPage.set(1);
+  }
+
   onSearchInput(value: string): void {
     this.searchTerm.set(value);
+    this.recentSalesPage.set(1);
     clearTimeout(this.searchDebounceHandle);
     this.searchDebounceHandle = setTimeout(() => this.runSearch(), SEARCH_DEBOUNCE_MS);
   }
@@ -141,6 +177,7 @@ export class Reports implements OnInit {
 
   selectBranch(branchCode: string | null): void {
     this.selectedBranch.set(branchCode);
+    this.recentSalesPage.set(1);
     this.loadReport();
     this.runSearch();
   }
@@ -148,6 +185,7 @@ export class Reports implements OnInit {
   applyDateRange(from: string, to: string): void {
     this.fromDate.set(from);
     this.toDate.set(to);
+    this.recentSalesPage.set(1);
     this.loadReport();
     this.runSearch();
   }
