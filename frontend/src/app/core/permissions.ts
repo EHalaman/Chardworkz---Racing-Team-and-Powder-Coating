@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export type PermissionKey = 'MANAGER_EDIT_PRODUCTS' | 'MANAGER_DELETE_PRODUCTS';
+export type PermissionKey = 'MANAGER_MANAGE_PRODUCTS';
 
 export interface PermissionFlag {
   permissionKey: PermissionKey;

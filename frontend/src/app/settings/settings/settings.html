@@ -321,7 +321,9 @@
     <div class="dashboard-card space-y-3">
       <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Manager permissions</h2>
       <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
-        Edit and Delete on Products are Owner-only by default. Grant Manager access here if needed.
+        When enabled, Managers can view the Products page and have full rights to add, edit, and
+        delete items. When disabled, the Products page is completely hidden and inaccessible to
+        them.
       </p>
 
       <div
@@ -333,46 +335,22 @@
 
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Manager can edit products
+          Manager can access Product Catalog
         </p>
         <button
           type="button"
           role="switch"
-          (click)="togglePermission('MANAGER_EDIT_PRODUCTS')"
-          [attr.aria-checked]="isPermissionEnabled('MANAGER_EDIT_PRODUCTS')"
-          [ngClass]="isPermissionEnabled('MANAGER_EDIT_PRODUCTS') ? 'bg-primary' : 'bg-danger'"
+          (click)="togglePermission('MANAGER_MANAGE_PRODUCTS')"
+          [attr.aria-checked]="isPermissionEnabled('MANAGER_MANAGE_PRODUCTS')"
+          [ngClass]="isPermissionEnabled('MANAGER_MANAGE_PRODUCTS') ? 'bg-primary' : 'bg-danger'"
           class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-300 ease-spring"
         >
           <span class="sr-only">{{
-            isPermissionEnabled('MANAGER_EDIT_PRODUCTS') ? 'Enabled' : 'Disabled'
+            isPermissionEnabled('MANAGER_MANAGE_PRODUCTS') ? 'Enabled' : 'Disabled'
           }}</span>
           <span
             [ngClass]="
-              isPermissionEnabled('MANAGER_EDIT_PRODUCTS') ? 'translate-x-5' : 'translate-x-0.5'
-            "
-            class="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-spring"
-          ></span>
-        </button>
-      </div>
-
-      <div class="flex items-center justify-between gap-3">
-        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Manager can delete products
-        </p>
-        <button
-          type="button"
-          role="switch"
-          (click)="togglePermission('MANAGER_DELETE_PRODUCTS')"
-          [attr.aria-checked]="isPermissionEnabled('MANAGER_DELETE_PRODUCTS')"
-          [ngClass]="isPermissionEnabled('MANAGER_DELETE_PRODUCTS') ? 'bg-primary' : 'bg-danger'"
-          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-300 ease-spring"
-        >
-          <span class="sr-only">{{
-            isPermissionEnabled('MANAGER_DELETE_PRODUCTS') ? 'Enabled' : 'Disabled'
-          }}</span>
-          <span
-            [ngClass]="
-              isPermissionEnabled('MANAGER_DELETE_PRODUCTS') ? 'translate-x-5' : 'translate-x-0.5'
+              isPermissionEnabled('MANAGER_MANAGE_PRODUCTS') ? 'translate-x-5' : 'translate-x-0.5'
             "
             class="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-spring"
           ></span>

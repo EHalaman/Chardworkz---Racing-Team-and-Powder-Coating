@@ -136,7 +136,7 @@
                   Restock
                 </a>
                 <button
-                  *ngIf="canEdit"
+                  *ngIf="canManageProducts"
                   type="button"
                   (click)="startEdit(product)"
                   class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
@@ -144,6 +144,7 @@
                   Edit
                 </button>
                 <button
+                  *ngIf="canManageProducts"
                   type="button"
                   (click)="toggleActive(product)"
                   class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
@@ -151,7 +152,7 @@
                   {{ product.active ? 'Deactivate' : 'Activate' }}
                 </button>
                 <button
-                  *ngIf="canDelete"
+                  *ngIf="canManageProducts"
                   type="button"
                   (click)="deleteProduct(product)"
                   class="rounded-lg border border-danger px-2 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger-light"
@@ -162,6 +163,7 @@
 
               <ng-container *ngIf="archived">
                 <button
+                  *ngIf="canManageProducts"
                   type="button"
                   (click)="reactivate(product)"
                   class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
@@ -279,7 +281,7 @@
       </div>
     </div>
 
-    <div *ngIf="!archived" class="dashboard-card space-y-3">
+    <div *ngIf="!archived && canManageProducts" class="dashboard-card space-y-3">
       <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">New product</h2>
 
       <div>

@@ -72,12 +72,9 @@ export class Products implements OnInit {
     return this.auth.currentUser()?.role === 'OWNER';
   }
 
-  get canEdit(): boolean {
-    return this.isOwner || this.isPermissionEnabled('MANAGER_EDIT_PRODUCTS');
-  }
-
-  get canDelete(): boolean {
-    return this.isOwner || this.isPermissionEnabled('MANAGER_DELETE_PRODUCTS');
+  /** Single master flag (migration V13) covering the whole catalog page for Manager - add, edit, delete, and deactivate/reactivate all gate on this one flag; Owner is always allowed. */
+  get canManageProducts(): boolean {
+    return this.isOwner || this.isPermissionEnabled('MANAGER_MANAGE_PRODUCTS');
   }
 
   private isPermissionEnabled(key: string): boolean {

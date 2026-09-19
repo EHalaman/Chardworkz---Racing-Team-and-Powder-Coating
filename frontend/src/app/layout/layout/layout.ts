@@ -11,6 +11,7 @@ import {
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subscription, catchError, filter, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { PermissionsService } from '../../core/permissions';
 import { ThemeService } from '../../core/theme';
 import { DashboardAlert, DashboardService } from '../../dashboard/dashboard';
 
@@ -83,6 +84,8 @@ export class Layout implements OnInit, OnDestroy {
   readonly isDarkMode: Signal<boolean>;
   readonly isAlertsOpen = signal(false);
   readonly alerts = signal<DashboardAlert[]>([]);
+  /** Fails closed for Manager (Owner never needs this) - same "hidden until proven enabled" default Products/Roles already use for this same flag. */
+  readonly canManageProducts = signal(false);
 
   @ViewChild('alertsWrapper') private alertsWrapper?: ElementRef<HTMLElement>;
   @ViewChild('roleMenuWrapper') private roleMenuWrapper?: ElementRef<HTMLElement>;
@@ -95,6 +98,7 @@ export class Layout implements OnInit, OnDestroy {
     readonly auth: AuthService,
     private theme: ThemeService,
     private dashboardService: DashboardService,
+    private permissionsService: PermissionsService,
   ) {
     this.isDarkMode = this.theme.isDarkMode;
   }
@@ -132,6 +136,20 @@ export class Layout implements OnInit, OnDestroy {
         .pipe(catchError(() => of([])))
         .subscribe((alerts) => this.alerts.set(alerts));
     }
+
+    // Owner never needs this (always allowed) - only fetch for Manager,
+    // whose access to the Products nav tab itself now depends on it.
+    if (this.auth.currentUser()?.role === 'MANAGER') {
+      this.permissionsService
+        .list()
+        .pipe(catchError(() => of([])))
+        .subscribe((permissions) =>
+          this.canManageProducts.set(
+            permissions.find((p) => p.permissionKey === 'MANAGER_MANAGE_PRODUCTS')?.enabled ??
+              false,
+          ),
+        );
+    }
   }
 
   ngOnDestroy(): void {
@@ -140,7 +158,10 @@ export class Layout implements OnInit, OnDestroy {
 
   get navItems(): NavItem[] {
     const role = this.auth.currentUser()?.role.toLowerCase() as Role | undefined;
-    return role ? ALL_NAV_ITEMS.filter((item) => item.roles.includes(role)) : [];
+    if (!role) return [];
+    return ALL_NAV_ITEMS.filter((item) => item.roles.includes(role)).filter(
+      (item) => item.path !== '/products' || role !== 'manager' || this.canManageProducts(),
+    );
   }
 
   get isOwner(): boolean {

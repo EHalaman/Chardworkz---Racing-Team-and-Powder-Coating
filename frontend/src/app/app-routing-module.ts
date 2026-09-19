@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { authGuard } from './core/auth-guard';
+import { productsPermissionGuard } from './core/products-permission-guard';
 import { roleGuard } from './core/role-guard';
 import { Dashboard } from './dashboard/dashboard/dashboard';
 import { Login } from './auth/login/login';
@@ -25,10 +26,16 @@ const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'dashboard', component: Dashboard, data: { title: 'Dashboard' } },
       { path: 'register', component: Register, data: { title: 'Register' } },
-      { path: 'products', component: Products, data: { title: 'Products' } },
+      {
+        path: 'products',
+        component: Products,
+        canActivate: [productsPermissionGuard],
+        data: { title: 'Products' },
+      },
       {
         path: 'products/archived',
         component: Products,
+        canActivate: [productsPermissionGuard],
         data: { title: 'Archived Products', archived: true },
       },
       { path: 'inventory', component: Inventory, data: { title: 'Inventory' } },

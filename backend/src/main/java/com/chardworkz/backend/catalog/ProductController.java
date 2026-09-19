@@ -27,21 +27,23 @@ import org.springframework.web.server.ResponseStatusException;
  * branch (from the JWT, never a client-supplied one), defaulting to 0 for a
  * product that has never been stocked at that branch.
  *
- * <p>{@code GET /api/products} stays open to any authenticated role
- * (Register needs it for Employees) - the catalog-management endpoints below
- * it are Owner/Manager only, per PROJECT-CONTEXT.md's Users section. Edit and
- * Delete specifically are Owner-only by default, with a configurable
- * per-flag opt-in for Manager (see {@code permission} package) - narrower
- * than the rest of this controller, a deliberate, confirmed scope narrowing
- * from Manager's prior blanket edit access.
+ * <p>{@code GET /api/products} stays open to any authenticated role and to
+ * every permission state (Register needs it for Employees and for Managers
+ * ringing up a sale - a Manager without catalog access can still sell, per
+ * an explicit scope confirmation) - every other endpoint below it, including
+ * the {@code /admin}/{@code /archived} catalog-management reads, is
+ * Owner-unconditional or Manager-only-with-{@code MANAGER_MANAGE_PRODUCTS}
+ * enabled (see {@code permission} package). This single master flag
+ * (migration V13) replaced two narrower ones (edit-only, delete-only) that
+ * left Add/Deactivate/the catalog-management view itself unrestricted for
+ * Manager - a real gap the consolidation closes, not just a rename.
  */
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
 
-    private static final String MANAGER_EDIT = "MANAGER_EDIT_PRODUCTS";
-    private static final String MANAGER_DELETE = "MANAGER_DELETE_PRODUCTS";
+    private static final String MANAGER_MANAGE = "MANAGER_MANAGE_PRODUCTS";
 
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
@@ -54,7 +56,7 @@ public class ProductController {
         return merge(productRepository.findByActiveTrue(), authentication);
     }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @GetMapping("/admin")
     public List<ProductSummaryResponse> adminList(Authentication authentication) {
         return merge(productRepository.findAll(), authentication);
@@ -68,7 +70,7 @@ public class ProductController {
      * badge instead (see DEC-047's follow-up fix); Archived is reserved for
      * an explicit Deactivate/Delete action.
      */
-    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @GetMapping("/archived")
     public List<ProductSummaryResponse> archivedList(Authentication authentication) {
         return merge(productRepository.findAll(), authentication).stream()
@@ -76,7 +78,7 @@ public class ProductController {
             .toList();
     }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @PostMapping
     public ResponseEntity<ProductSummaryResponse> create(
         @Valid @RequestBody CreateProductRequest request, Authentication authentication) {
@@ -98,7 +100,7 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(product, authentication));
     }
 
-    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_EDIT + "'))")
+    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @PatchMapping("/{id}")
     public ProductSummaryResponse update(
         @PathVariable Long id, @Valid @RequestBody CreateProductRequest request, Authentication authentication) {
@@ -116,7 +118,7 @@ public class ProductController {
         return toResponse(product, authentication);
     }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @PatchMapping("/{id}/status")
     public ProductSummaryResponse updateStatus(
         @PathVariable Long id, @Valid @RequestBody UpdateProductStatusRequest request, Authentication authentication) {
@@ -143,7 +145,7 @@ public class ProductController {
      * a sold product would either violate the FK or destroy real sales
      * history.
      */
-    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_DELETE + "'))")
+    @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @DeleteMapping("/{id}")
     public ProductSummaryResponse delete(@PathVariable Long id, Authentication authentication) {
         Product product = findOrThrow(id);

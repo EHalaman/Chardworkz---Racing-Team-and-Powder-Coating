@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Settings-screen toggle for the two configurable Manager permission flags
- * (Product edit/delete) - Owner-only, same pattern as BranchController.
+ * Settings-screen toggle for the configurable Manager permission flag(s) -
+ * currently a single `MANAGER_MANAGE_PRODUCTS` master flag (migration V13
+ * consolidated the prior separate edit/delete flags) - Owner-only, same
+ * pattern as BranchController.
  */
 @RestController
 @RequestMapping("/api/permissions")
