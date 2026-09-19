@@ -337,11 +337,21 @@
         </p>
         <button
           type="button"
+          role="switch"
           (click)="togglePermission('MANAGER_EDIT_PRODUCTS')"
-          [attr.aria-pressed]="isPermissionEnabled('MANAGER_EDIT_PRODUCTS')"
-          class="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+          [attr.aria-checked]="isPermissionEnabled('MANAGER_EDIT_PRODUCTS')"
+          [ngClass]="isPermissionEnabled('MANAGER_EDIT_PRODUCTS') ? 'bg-primary' : 'bg-danger'"
+          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-300 ease-spring"
         >
-          {{ isPermissionEnabled('MANAGER_EDIT_PRODUCTS') ? 'Enabled' : 'Disabled' }}
+          <span class="sr-only">{{
+            isPermissionEnabled('MANAGER_EDIT_PRODUCTS') ? 'Enabled' : 'Disabled'
+          }}</span>
+          <span
+            [ngClass]="
+              isPermissionEnabled('MANAGER_EDIT_PRODUCTS') ? 'translate-x-5' : 'translate-x-0.5'
+            "
+            class="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-spring"
+          ></span>
         </button>
       </div>
 
@@ -351,11 +361,21 @@
         </p>
         <button
           type="button"
+          role="switch"
           (click)="togglePermission('MANAGER_DELETE_PRODUCTS')"
-          [attr.aria-pressed]="isPermissionEnabled('MANAGER_DELETE_PRODUCTS')"
-          class="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+          [attr.aria-checked]="isPermissionEnabled('MANAGER_DELETE_PRODUCTS')"
+          [ngClass]="isPermissionEnabled('MANAGER_DELETE_PRODUCTS') ? 'bg-primary' : 'bg-danger'"
+          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-300 ease-spring"
         >
-          {{ isPermissionEnabled('MANAGER_DELETE_PRODUCTS') ? 'Enabled' : 'Disabled' }}
+          <span class="sr-only">{{
+            isPermissionEnabled('MANAGER_DELETE_PRODUCTS') ? 'Enabled' : 'Disabled'
+          }}</span>
+          <span
+            [ngClass]="
+              isPermissionEnabled('MANAGER_DELETE_PRODUCTS') ? 'translate-x-5' : 'translate-x-0.5'
+            "
+            class="inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-spring"
+          ></span>
         </button>
       </div>
     </div>
