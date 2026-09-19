@@ -353,7 +353,6 @@ export class Dashboard implements OnInit {
         data: analytics.chartSeries.map((p) => p.cogs),
         label: 'COGS',
         borderColor: '#E2B24A',
-        backgroundColor: '#E2B24A',
         fill: false,
         borderWidth: 2,
         tension: 0.4,
@@ -366,7 +365,6 @@ export class Dashboard implements OnInit {
         data: analytics.chartSeries.map((p) => p.grossProfit),
         label: 'Gross Profit',
         borderColor: '#2563EB',
-        backgroundColor: '#2563EB',
         fill: false,
         borderWidth: 2,
         tension: 0.4,
@@ -388,17 +386,17 @@ export class Dashboard implements OnInit {
   toggleAnalyticsLegendItem(index: number): void {
     const chart = this.analyticsChart?.chart;
     if (!chart) return;
-    const nowHidden = chart.isDatasetVisible(index);
+    const wasVisible = chart.isDatasetVisible(index);
     // chart.hide()/show() (not setDatasetVisibility + update) is what
     // triggers Chart.js's built-in animated color-to-transparent fade via
     // the `transitions.hide`/`show` config above, instead of an instant pop.
-    if (nowHidden) {
+    if (wasVisible) {
       chart.hide(index);
     } else {
       chart.show(index);
     }
     this.analyticsLegendItems.update((items) =>
-      items.map((item, i) => (i === index ? { ...item, hidden: nowHidden } : item)),
+      items.map((item, i) => (i === index ? { ...item, hidden: wasVisible } : item)),
     );
   }
 
