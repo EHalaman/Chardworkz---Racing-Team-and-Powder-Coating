@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, EventEmitter, OnDestroy, Output, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
+import { normalizedPath } from '../../core/utils/url.util';
 
 interface NavItem {
   label: string;
@@ -44,9 +45,10 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
 
   private observer?: IntersectionObserver;
   private routerSub?: Subscription;
+  private retryTimeoutId?: ReturnType<typeof setTimeout>;
 
   constructor(private readonly router: Router) {
-    this.currentUrl.set(this.normalizedPath(this.router.url));
+    this.currentUrl.set(normalizedPath(this.router.url));
   }
 
   ngAfterViewInit(): void {
@@ -54,7 +56,7 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
     this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe(() => {
-        this.currentUrl.set(this.normalizedPath(this.router.url));
+        this.currentUrl.set(normalizedPath(this.router.url));
         this.setupObserver();
       });
   }
@@ -62,6 +64,7 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.observer?.disconnect();
     this.routerSub?.unsubscribe();
+    this.clearPendingRetry();
   }
 
   goTo(item: NavItem): void {
@@ -79,18 +82,14 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
     return !!item.targetId && this.currentUrl() === '/' && this.activeTargetId() === item.targetId;
   }
 
-  /** Router.url includes query/hash (e.g. a tracking param or a device-preview tool's own
-   *  appended state), which would otherwise break an exact '/' comparison. */
-  private normalizedPath(url: string): string {
-    return url.split('?')[0].split('#')[0];
-  }
-
   /** Re-run on every navigation - hero-section/site-footer only exist on '/', so a direct
    *  load of another route must not leave a stale observer watching detached elements.
    *  Retries briefly on a fresh bootstrap: this component is a template sibling of
    *  <router-outlet>, so there's no guarantee Home's own elements have painted into the
-   *  DOM yet the first time this runs. */
+   *  DOM yet the first time this runs. Cancels any retry chain a prior call left pending,
+   *  so rapid navigation can't leave overlapping chains disconnecting each other's observer. */
   private setupObserver(attempt = 0): void {
+    this.clearPendingRetry();
     this.observer?.disconnect();
 
     const observedIds = ['hero-section', 'site-footer'];
@@ -99,7 +98,7 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
       .filter((el): el is HTMLElement => el !== null);
     if (targets.length === 0) {
       if (attempt < 20) {
-        setTimeout(() => this.setupObserver(attempt + 1), 50);
+        this.retryTimeoutId = setTimeout(() => this.setupObserver(attempt + 1), 50);
       }
       return;
     }
@@ -121,5 +120,12 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
       { threshold: [0, 0.25, 0.5, 0.75, 1] },
     );
     targets.forEach((target) => this.observer?.observe(target));
+  }
+
+  private clearPendingRetry(): void {
+    if (this.retryTimeoutId !== undefined) {
+      clearTimeout(this.retryTimeoutId);
+      this.retryTimeoutId = undefined;
+    }
   }
 }

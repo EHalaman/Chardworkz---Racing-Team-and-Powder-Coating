@@ -1,5 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
+import { normalizedPath } from '../../core/utils/url.util';
+import { scrollToElement } from '../../core/utils/scroll-to-element.util';
 import { NavAction } from '../../shared/floating-nav-rail/floating-nav-rail';
 
 /**
@@ -20,15 +22,11 @@ export class CustomerShell {
       return;
     }
 
-    if (this.router.url === '/') {
-      document.getElementById(action.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (normalizedPath(this.router.url) === '/') {
+      scrollToElement(action.id);
       return;
     }
 
-    this.router.navigate(['/']).then(() => {
-      setTimeout(() => {
-        document.getElementById(action.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
+    this.router.navigate(['/']).then(() => scrollToElement(action.id));
   }
 }
