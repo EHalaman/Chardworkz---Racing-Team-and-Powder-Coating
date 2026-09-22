@@ -17,7 +17,8 @@ import { ReportsModule } from './reports/reports-module';
 import { SettingsModule } from './settings/settings-module';
 import { ActivitiesModule } from './activities/activities-module';
 import { ActivityLogModule } from './activity-log/activity-log-module';
-import { HomeModule } from './home/home-module';
+import { HomeModule } from './customer_home/home/home-module';
+import { ServicesModule } from './customer_home/services/services-module';
 
 @NgModule({
   declarations: [App],
@@ -37,6 +38,7 @@ import { HomeModule } from './home/home-module';
     ActivitiesModule,
     ActivityLogModule,
     HomeModule,
+    ServicesModule,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),

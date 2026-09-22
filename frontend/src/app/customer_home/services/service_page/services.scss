@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  font-family: 'Radio Canada', sans-serif;
+}
+
+.notched-badge {
+  clip-path: polygon(0 0, 100% 0, 100% 85%, 88% 100%, 0 100%);
+}
+
+.stroke-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.85);
+}
+.paragraph-logo {
+  font-family: 'Potta One', Poppins, sans-serif;
+  font-size: 1.2rem;
+}
+
+.footer-section {
+  padding-bottom: 8em;
+}
