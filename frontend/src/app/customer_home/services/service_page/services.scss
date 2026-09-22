@@ -19,3 +19,11 @@
 .footer-section {
   padding-bottom: 8em;
 }
+
+.engine-count-value {
+  transition: opacity 220ms ease-out;
+
+  &.is-morphing {
+    opacity: 0;
+  }
+}
