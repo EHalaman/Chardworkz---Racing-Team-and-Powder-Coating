@@ -164,105 +164,119 @@
   </section>
 
   <!-- Section B: vertical heritage timeline -->
-  <section class="mx-auto max-w-7xl px-6 py-16">
-    <div class="grid grid-cols-1 gap-10 lg:grid-cols-[14rem_1fr]">
-      <nav class="hidden lg:block">
-        <div class="sticky top-8 w-40 rounded-full bg-gray-200/70 py-8">
-          <ul class="space-y-6 text-center text-sm font-semibold text-gray-700">
-            <li>
-              <button type="button" (click)="goTo('home-top')" class="font-bold text-gray-900">
-                HOME
-              </button>
-            </li>
-            <li>
-              <span class="cursor-not-allowed text-gray-400" title="Services page coming soon"
-                >SERVICES</span
-              >
-            </li>
-            <li>
-              <span
-                class="cursor-not-allowed text-gray-400"
-                title="Parts &amp; Catalog page coming soon"
-                >PARTS &amp; CATALOG</span
-              >
-            </li>
-            <li>
-              <button
-                type="button"
-                (click)="goTo('site-footer')"
-                class="font-normal text-gray-600 hover:text-gray-900"
-              >
-                Contact
-              </button>
-            </li>
-          </ul>
-        </div>
-      </nav>
-
-      <div>
-        <p class="text-sm font-bold uppercase tracking-wide text-[#E4372A]">Our History</p>
-        <h2 class="mt-1 text-4xl font-extrabold uppercase leading-none sm:text-5xl">
-          <span class="text-gray-900">Discover</span><br />
+  <section
+    class="box-border w-full max-w-[1440px] mx-auto px-4 py-8 md:px-8 md:py-14 lg:px-8 lg:py-20 xl:px-12 xl:py-24"
+  >
+    <div class="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16">
+      <div class="lg:sticky lg:top-8 lg:col-span-4 lg:self-start">
+        <p class="text-xs font-bold uppercase tracking-widest text-[#E4372A]">Our History</p>
+        <h2
+          class="font-heading mt-2 text-3xl uppercase leading-none text-gray-900 md:text-5xl"
+          style="overflow-wrap: break-word"
+        >
+          Discover<br />
           <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>
         </h2>
+        <p class="mt-4 max-w-sm text-sm leading-relaxed text-gray-600">{{ historySummary }}</p>
 
-        <div class="mt-14">
-          <div
-            *ngFor="let entry of timeline; let last = last"
-            class="grid grid-cols-[2rem_1fr] gap-6 sm:grid-cols-[3rem_1fr]"
-          >
-            <div class="relative flex justify-center">
-              <div
-                *ngIf="!last"
-                class="absolute top-3 w-0.5 bg-[#E4372A]/25"
-                style="height: calc(100% + 2.5rem)"
-              ></div>
-              <div
-                #yearNode
-                [attr.data-year]="entry.year"
-                class="relative z-10 mt-2 h-4 w-4 rounded-full ring-4 ring-[#F8F9FA] transition-colors duration-300"
-                [style.background-color]="activeYear() === entry.year ? '#E4372A' : '#D1D5DB'"
-              ></div>
+        <nav class="mt-10 hidden lg:block">
+          <div class="w-40 rounded-full bg-gray-200/70 py-8">
+            <ul class="space-y-6 text-center text-sm font-semibold text-gray-700">
+              <li>
+                <button type="button" (click)="goTo('home-top')" class="font-bold text-gray-900">
+                  HOME
+                </button>
+              </li>
+              <li>
+                <span class="cursor-not-allowed text-gray-400" title="Services page coming soon"
+                  >SERVICES</span
+                >
+              </li>
+              <li>
+                <span
+                  class="cursor-not-allowed text-gray-400"
+                  title="Parts &amp; Catalog page coming soon"
+                  >PARTS &amp; CATALOG</span
+                >
+              </li>
+              <li>
+                <button
+                  type="button"
+                  (click)="goTo('site-footer')"
+                  class="font-normal text-gray-600 hover:text-gray-900"
+                >
+                  Contact
+                </button>
+              </li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+
+      <div class="lg:col-span-8">
+        <div
+          *ngFor="let entry of timeline; let last = last"
+          class="grid grid-cols-[2rem_1fr] gap-6 sm:grid-cols-[3rem_1fr]"
+        >
+          <div class="relative flex justify-center">
+            <div
+              *ngIf="!last"
+              class="absolute top-3 w-0.5 bg-[#E4372A]/25"
+              style="height: calc(100% + 2.5rem)"
+            ></div>
+            <div
+              #yearNode
+              [attr.data-year]="entry.year"
+              class="relative z-10 mt-2 h-4 w-4 rounded-full ring-4 ring-[#F8F9FA] transition-[background-color,box-shadow] duration-300"
+              [style.background-color]="activeYear() === entry.year ? '#E4372A' : '#D1D5DB'"
+              [class.shadow-[0_0_10px_2px_rgba(228,55,42,0.55)]]="activeYear() === entry.year"
+            ></div>
+          </div>
+
+          <div class="pb-16">
+            <h3 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">{{ entry.year }}</h3>
+            <p
+              *ngIf="entry.subtitle"
+              class="mt-1 text-xs font-bold uppercase tracking-wide text-[#E4372A]"
+            >
+              {{ entry.subtitle }}
+            </p>
+            <h4 *ngIf="entry.heading" class="mt-1 text-lg font-semibold text-gray-800">
+              {{ entry.heading }}
+            </h4>
+
+            <div
+              *ngIf="entry.paragraphs"
+              class="mt-4 max-w-2xl space-y-3 text-sm leading-relaxed text-gray-700"
+              style="overflow-wrap: break-word"
+            >
+              <p *ngFor="let paragraph of entry.paragraphs">
+                <ng-container *ngFor="let run of paragraph">
+                  <strong *ngIf="run.bold" class="font-semibold text-gray-900">{{
+                    run.text
+                  }}</strong>
+                  <ng-container *ngIf="!run.bold">{{ run.text }}</ng-container>
+                </ng-container>
+              </p>
             </div>
 
-            <div class="pb-16">
-              <h3 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">{{ entry.year }}</h3>
-              <h4 *ngIf="entry.heading" class="mt-1 text-lg font-semibold text-gray-800">
-                {{ entry.heading }}
-              </h4>
-
+            <div class="mt-6 space-y-6">
               <div
-                *ngIf="entry.paragraphs"
-                class="mt-4 max-w-2xl space-y-3 text-sm leading-relaxed text-gray-700"
+                *ngFor="let image of entry.images"
+                class="overflow-hidden rounded-lg bg-gray-200 shadow-sm"
               >
-                <p *ngFor="let paragraph of entry.paragraphs">
-                  <ng-container *ngFor="let run of paragraph">
-                    <strong *ngIf="run.bold" class="font-semibold text-gray-900">{{
-                      run.text
-                    }}</strong>
-                    <ng-container *ngIf="!run.bold">{{ run.text }}</ng-container>
-                  </ng-container>
-                </p>
-              </div>
-
-              <div class="mt-6 space-y-6">
+                <img
+                  *ngIf="!image.broken"
+                  [src]="image.src"
+                  [alt]="image.alt"
+                  (error)="onImageError(image, $event)"
+                  class="h-auto w-full max-w-full object-cover"
+                />
                 <div
-                  *ngFor="let image of entry.images"
-                  class="overflow-hidden rounded-2xl bg-gray-200"
+                  *ngIf="image.broken"
+                  class="flex h-56 max-w-full items-center justify-center px-4 text-center text-xs font-medium text-gray-400"
                 >
-                  <img
-                    *ngIf="!image.broken"
-                    [src]="image.src"
-                    [alt]="image.alt"
-                    (error)="onImageError(image, $event)"
-                    class="h-auto w-full max-w-2xl object-cover"
-                  />
-                  <div
-                    *ngIf="image.broken"
-                    class="flex h-56 max-w-2xl items-center justify-center px-4 text-center text-xs font-medium text-gray-400"
-                  >
-                    {{ image.alt }} — photo coming soon
-                  </div>
+                  {{ image.alt }} — photo coming soon
                 </div>
               </div>
             </div>

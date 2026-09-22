@@ -15,6 +15,7 @@ module.exports = {
           'Roboto',
           'sans-serif',
         ],
+        heading: ['"Potta One"', 'Poppins', 'sans-serif'],
       },
       colors: {
         'nav-bg': '#F5F5F5',

@@ -23,6 +23,7 @@ interface TimelineImage {
 
 interface TimelineEntry {
   year: string;
+  subtitle?: string;
   heading?: string;
   paragraphs?: TextRun[][];
   images: TimelineImage[];
@@ -53,9 +54,13 @@ export class Home implements AfterViewInit, OnDestroy {
 
   readonly mobileMenuOpen = signal(false);
 
+  readonly historySummary =
+    'Mula sa isang simpleng garahe sa Pintong Bukawe hanggang sa national circuit podium — dokumentado ang 9 taong ebolusyon namin sa Suzuki Raider DOHC engineering.';
+
   readonly timeline: TimelineEntry[] = [
     {
       year: '2017',
+      subtitle: 'Paano Kami Nagsimula',
       heading: 'The Rebuild in Pintong Bukawe',
       paragraphs: [
         [
@@ -101,8 +106,26 @@ export class Home implements AfterViewInit, OnDestroy {
       ],
     },
     {
-      // The real mockup has no body copy for this year - heading straight into the photo.
       year: '2022',
+      subtitle: 'Mula Drag Strip Hanggang Sirkuit',
+      paragraphs: [
+        [
+          { text: 'Hindi nagkasya ang ' },
+          { text: 'ChardWorkz', bold: true },
+          {
+            text: ' sa kalsada lang. Sinubok ang matinding tibay at bilis sa drag racing, kung saan microseconds ang labanan sa straight line — pinatunayan naming kayang magluwal ng pinakamabilis na Raider 150 sa paitaas at patag na kalsada.',
+          },
+        ],
+        [
+          {
+            text: 'Dito rin nagsimulang mabuo ang tunay na formula: ang ',
+          },
+          { text: 'Suzuki Raider 150 FI', bold: true },
+          {
+            text: ' na dating pang-araw-araw na sakay, unti-unti nang ginagawang track-bred weapon — may tamang timpla ng horsepower, cornering stability, at bulletproof reliability.',
+          },
+        ],
+      ],
       images: [
         {
           src: `${RESOURCES}/2022.jpg`,
@@ -112,6 +135,7 @@ export class Home implements AfterViewInit, OnDestroy {
     },
     {
       year: '2024',
+      subtitle: 'Mga Hari ng Paddock',
       paragraphs: [
         [
           { text: 'Ngunit nang lumabas ang ' },
@@ -124,6 +148,17 @@ export class Home implements AfterViewInit, OnDestroy {
           {
             text: 'Ang straight-line power ay tinalian ng thermal efficiency, cornering stability, at ECU fuel-injection precision. Mula drag strip, nagbago ang rebolusyon patungong mga sikat na race tracks sa bansa.',
           },
+        ],
+        [
+          {
+            text: 'Sa likod ng bawat panalo, may barkada ng mga hari ng paddock — pinamumunuan ni ',
+          },
+          { text: 'Lauren Jay Ewag #52', bold: true },
+          {
+            text: ', kasalukuyang Points Leader ng ChardWorkz Racing Team sa Underbone Limited 155 at Open Categories sa ',
+          },
+          { text: 'MotoIR SEC Motosupply', bold: true },
+          { text: ' circuit.' },
         ],
       ],
       images: [
