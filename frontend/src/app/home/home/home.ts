@@ -48,7 +48,10 @@ const LOGOS = `${RESOURCES}/LOGOS`;
 export class Home implements AfterViewInit, OnDestroy {
   // Already includes the logo, Sir Richard, the trophy backdrop, and the #52
   // bike composited in one banner - only the social icon row is drawn on top.
-  readonly heroBackground = `${RESOURCES}/CHARD_WORKZ_HERO.png`;
+  // Same photo as the old CHARD_WORKZ_HERO.png, re-exported as the "finale" JPG.
+  readonly heroBackground = `${RESOURCES}/HERO_BACKGROUND_FINALE.jpg`;
+
+  readonly mobileMenuOpen = signal(false);
 
   readonly timeline: TimelineEntry[] = [
     {
@@ -191,6 +194,14 @@ export class Home implements AfterViewInit, OnDestroy {
 
   goTo(id: string): void {
     this.scrollTo$.next(id);
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update((open) => !open);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
   }
 
   /** Falls back once to a known-working asset, then gives up and shows a CSS placeholder. */
