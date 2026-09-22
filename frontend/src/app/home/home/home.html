@@ -1,23 +1,25 @@
 <div id="home-top" class="bg-[#F8F9FA] font-sans">
   <!-- Section A: dark executive hero banner -->
   <section
+    id="hero-section"
     class="relative overflow-hidden bg-[#0D0F12] bg-cover bg-top bg-no-repeat"
     [style.background-image]="'url(' + heroBackground + ')'"
   >
     <div class="relative z-20 bg-[#0D0F12] px-6 py-12 text-gray-300">
       <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
-        <p class="text-2xl font-extrabold">
-          <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>
+        <p class="text-5xl font-extrabold">
+          <span class="chardworkz-logo text-[#E4372A]">Chard</span
+          ><span class="text-[#2C5FE0]">Workz</span>
         </p>
         <div class="flex items-center justify-end gap-4">
-          <div class="hidden items-center gap-4 text-white sm:flex">
+          <div class="social-links hidden items-center gap-6 text-white sm:flex">
             <a
               href="#"
               aria-label="Find us on the map"
               class="opacity-80 transition-opacity hover:opacity-100"
             >
               <svg
-                class="h-5 w-5"
+                class="h-7 w-7"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -32,7 +34,7 @@
               aria-label="ChardWorkz on Facebook"
               class="opacity-80 transition-opacity hover:opacity-100"
             >
-              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <svg class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
                 <path
                   d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94Z"
                 />
@@ -44,7 +46,7 @@
               class="opacity-80 transition-opacity hover:opacity-100"
             >
               <svg
-                class="h-5 w-5"
+                class="h-7 w-7"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -60,104 +62,90 @@
               aria-label="ChardWorkz on TikTok"
               class="opacity-80 transition-opacity hover:opacity-100"
             >
-              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <svg class="h-7 w-7" viewBox="5 -2 24 24" fill="currentColor">
                 <path
                   d="M14.5 2h2.6c.2 1.6 1.2 3 2.9 3.4v2.7c-1.1 0-2.1-.3-3-1v6.6c0 3-2.5 5.3-5.4 5.3S6.2 16.7 6.2 13.7c0-2.9 2.3-5.2 5.1-5.3v2.8c-1.3.1-2.3 1.1-2.3 2.5 0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5V2Z"
                 />
               </svg>
             </a>
           </div>
-
-          <button
-            type="button"
-            (click)="toggleMobileMenu()"
-            aria-label="Open menu"
-            class="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-sm transition-transform duration-150 ease-out active:scale-90 sm:hidden"
-          >
-            <svg
-              class="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round" />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
 
-    <div class="relative z-20 mx-auto max-w-7xl px-6 pb-10 pt-24 sm:pt-40 lg:pt-52">
-      <div class="max-w-xl space-y-5 xl:max-w-[956px] lg:ml-auto">
-        <h1
-          class="max-w-lg text-[28px] font-extrabold uppercase leading-tight tracking-tight text-[#FF0033] sm:text-[36px]"
-        >
-          Maximize Suzuki Power to Reach Podium Performance
-        </h1>
-        <p class="max-w-md text-[15px] font-extrabold text-gray-200">
-          Don't just ride the Underbone King. Master it with race-bred calibration and track-tested
-          components from
-          <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>.
-        </p>
-
-        <div class="flex flex-col gap-3 pt-2 md:flex-row">
-          <div
-            class="flex flex-1 items-center justify-between gap-3 rounded-xl border border-white/20 bg-white/[0.15] px-4 py-3 backdrop-blur-md xl:w-[472px] xl:flex-none"
-            aria-disabled="true"
+    <div class="hero-box-top relative z-20 mx-auto max-w-7xl px-6 pb-10 pt-24 sm:pt-40 lg:pt-52">
+      <div class="hero-box-mid max-w-xl space-y-5 xl:max-w-[956px] lg:ml-auto">
+        <div class="hero-context">
+          <h1
+            class="max-w-xxl text-[28px] font-extrabold uppercase leading-tight tracking-tight text-[#FF0033] sm:text-[35px]"
           >
-            <div>
-              <p class="text-sm font-bold uppercase text-white">
-                Services
-                <span class="ml-1 text-[10px] font-medium uppercase tracking-wide text-gray-300"
-                  >Coming soon</span
+            Maximize Suzuki Power to Reach Podium Performance
+          </h1>
+          <p class="max-w-md text-[14px] font-extrabold text-gray-200">
+            Don't just ride the Underbone King. Master it with race-bred calibration and
+            track-tested components from
+            <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>.
+          </p>
+
+          <div class="cards-services-contact flex flex-col gap-3 pt-2 md:flex-row">
+            <div
+              class="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl border border-white/20 bg-white/[0.15] px-4 py-3 backdrop-blur-md xl:flex-[1_1_472px]"
+              aria-disabled="true"
+            >
+              <div>
+                <p class="text-sm font-bold uppercase text-white">
+                  Services
+                  <span class="ml-1 text-[10px] font-medium uppercase tracking-wide text-gray-300"
+                    >Coming soon</span
+                  >
+                </p>
+                <p class="mt-0.5 text-xs text-gray-200">
+                  Unlock the true potential of the Underbone King with race-proven components built
+                  for absolute speed and durability.
+                </p>
+              </div>
+              <span
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#0D0F12]"
+              >
+                <svg
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
                 >
-              </p>
-              <p class="mt-0.5 text-xs text-gray-200">
-                Unlock the true potential of the Underbone King with race-proven components built
-                for absolute speed and durability.
-              </p>
+                  <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
             </div>
-            <span
-              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#0D0F12]"
-            >
-              <svg
-                class="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-              >
-                <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </span>
-          </div>
 
-          <button
-            type="button"
-            (click)="goTo('site-footer')"
-            class="group flex flex-1 items-center justify-between gap-3 rounded-xl border border-white/20 bg-white/[0.15] px-4 py-3 text-left backdrop-blur-md transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white/[0.22] active:scale-[0.98] xl:w-[472px] xl:flex-none"
-          >
-            <div>
-              <p class="text-sm font-bold text-white">Contact Us</p>
-              <p class="mt-0.5 text-xs text-gray-300">
-                Reach us through social media or send an email for more information.
-              </p>
-            </div>
-            <span
-              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#0D0F12] transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110"
+            <button
+              type="button"
+              (click)="goTo('site-footer')"
+              class="group flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl border border-white/20 bg-white/[0.15] px-4 py-3 text-left backdrop-blur-md transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white/[0.22] active:scale-[0.98] xl:flex-[1_1_472px]"
             >
-              <svg
-                class="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
+              <div>
+                <p class="text-sm font-bold text-white">Contact Us</p>
+                <p class="mt-0.5 text-xs text-gray-300">
+                  Reach us through social media or send an email for more information.
+                </p>
+              </div>
+
+              <span
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#0D0F12] transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110"
               >
-                <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </span>
-          </button>
+                <svg
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                >
+                  <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -178,105 +166,93 @@
           <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>
         </h2>
         <p class="mt-4 max-w-sm text-sm leading-relaxed text-gray-600">{{ historySummary }}</p>
-
-        <nav class="mt-10 hidden lg:block">
-          <div class="w-40 rounded-full bg-gray-200/70 py-8">
-            <ul class="space-y-6 text-center text-sm font-semibold text-gray-700">
-              <li>
-                <button type="button" (click)="goTo('home-top')" class="font-bold text-gray-900">
-                  HOME
-                </button>
-              </li>
-              <li>
-                <span class="cursor-not-allowed text-gray-400" title="Services page coming soon"
-                  >SERVICES</span
-                >
-              </li>
-              <li>
-                <span
-                  class="cursor-not-allowed text-gray-400"
-                  title="Parts &amp; Catalog page coming soon"
-                  >PARTS &amp; CATALOG</span
-                >
-              </li>
-              <li>
-                <button
-                  type="button"
-                  (click)="goTo('site-footer')"
-                  class="font-normal text-gray-600 hover:text-gray-900"
-                >
-                  Contact
-                </button>
-              </li>
-            </ul>
-          </div>
-        </nav>
       </div>
 
       <div class="lg:col-span-8">
-        <div
-          *ngFor="let entry of timeline; let last = last"
-          class="grid grid-cols-[2rem_1fr] gap-6 sm:grid-cols-[3rem_1fr]"
-        >
-          <div class="relative flex justify-center">
-            <div
-              *ngIf="!last"
-              class="absolute top-3 w-0.5 bg-[#E4372A]/25"
-              style="height: calc(100% + 2.5rem)"
-            ></div>
-            <div
-              #yearNode
-              [attr.data-year]="entry.year"
-              class="relative z-10 mt-2 h-4 w-4 rounded-full ring-4 ring-[#F8F9FA] transition-[background-color,box-shadow] duration-300"
-              [style.background-color]="activeYear() === entry.year ? '#E4372A' : '#D1D5DB'"
-              [class.shadow-[0_0_10px_2px_rgba(228,55,42,0.55)]]="activeYear() === entry.year"
-            ></div>
-          </div>
+        <div #trackEl class="relative">
+          <!-- Center progress track (mobile + desktop): background line, animated red fill,
+               top/bottom fades. Absolutely positioned rather than a separate flex column,
+               aligned to left-4/sm:left-6 to match the center of every row's own leading
+               circle column (grid-cols-[2rem_1fr] sm:grid-cols-[3rem_1fr] below) - that
+               column's width is identical on every row, so this stays aligned regardless
+               of each row's height. -->
+          <div
+            class="pointer-events-none absolute inset-y-0 left-4 w-0.5 -translate-x-1/2 bg-gray-200 sm:left-6"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="pointer-events-none absolute left-4 top-0 w-0.5 -translate-x-1/2 bg-[#E4372A] transition-all duration-300 ease-out-expo sm:left-6"
+            [style.height.%]="progressPercent()"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="pointer-events-none absolute left-4 top-0 z-10 h-16 w-8 -translate-x-1/2 bg-gradient-to-b from-[#F8F9FA] to-transparent sm:left-6"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="pointer-events-none absolute bottom-0 left-4 z-10 h-16 w-8 -translate-x-1/2 bg-gradient-to-t from-[#F8F9FA] to-transparent sm:left-6"
+            aria-hidden="true"
+          ></div>
 
-          <div class="pb-16">
-            <h3 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">{{ entry.year }}</h3>
-            <p
-              *ngIf="entry.subtitle"
-              class="mt-1 text-xs font-bold uppercase tracking-wide text-[#E4372A]"
-            >
-              {{ entry.subtitle }}
-            </p>
-            <h4 *ngIf="entry.heading" class="mt-1 text-lg font-semibold text-gray-800">
-              {{ entry.heading }}
-            </h4>
-
-            <div
-              *ngIf="entry.paragraphs"
-              class="mt-4 max-w-2xl space-y-3 text-sm leading-relaxed text-gray-700"
-              style="overflow-wrap: break-word"
-            >
-              <p *ngFor="let paragraph of entry.paragraphs">
-                <ng-container *ngFor="let run of paragraph">
-                  <strong *ngIf="run.bold" class="font-semibold text-gray-900">{{
-                    run.text
-                  }}</strong>
-                  <ng-container *ngIf="!run.bold">{{ run.text }}</ng-container>
-                </ng-container>
-              </p>
+          <div
+            *ngFor="let entry of timeline; let i = index"
+            class="grid grid-cols-[2rem_1fr] gap-6 sm:grid-cols-[3rem_1fr]"
+          >
+            <div class="relative flex justify-center">
+              <div
+                #yearNode
+                [attr.data-year]="entry.year"
+                class="relative z-10 mt-2 h-4 w-4 rounded-full ring-4 ring-[#F8F9FA] transition-[background-color,box-shadow] duration-300"
+                [style.background-color]="isNodeReached(i) ? '#E4372A' : '#D1D5DB'"
+                [class.shadow-[0_0_10px_2px_rgba(228,55,42,0.55)]]="isNodeReached(i)"
+              ></div>
             </div>
 
-            <div class="mt-6 space-y-6">
-              <div
-                *ngFor="let image of entry.images"
-                class="overflow-hidden rounded-lg bg-gray-200 shadow-sm"
+            <div class="pb-16">
+              <h3 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">{{ entry.year }}</h3>
+              <p
+                *ngIf="entry.subtitle"
+                class="mt-1 text-xs font-bold uppercase tracking-wide text-[#E4372A]"
               >
-                <img
-                  *ngIf="!image.broken"
-                  [src]="image.src"
-                  [alt]="image.alt"
-                  (error)="onImageError(image, $event)"
-                  class="h-auto w-full max-w-full object-cover"
-                />
+                {{ entry.subtitle }}
+              </p>
+              <h4 *ngIf="entry.heading" class="mt-1 text-lg font-semibold text-gray-800">
+                {{ entry.heading }}
+              </h4>
+
+              <div
+                *ngIf="entry.paragraphs"
+                class="mt-4 max-w-full space-y-3 text-base leading-relaxed text-gray-800 sm:text-lg"
+                style="overflow-wrap: break-word"
+              >
+                <p *ngFor="let paragraph of entry.paragraphs">
+                  <ng-container *ngFor="let run of paragraph">
+                    <strong *ngIf="run.bold" class="font-semibold text-gray-900">{{
+                      run.text
+                    }}</strong>
+                    <ng-container *ngIf="!run.bold">{{ run.text }}</ng-container>
+                  </ng-container>
+                </p>
+              </div>
+
+              <div class="mt-6 space-y-6">
                 <div
-                  *ngIf="image.broken"
-                  class="flex h-56 max-w-full items-center justify-center px-4 text-center text-xs font-medium text-gray-400"
+                  *ngFor="let image of entry.images"
+                  class="overflow-hidden rounded-lg bg-gray-200 shadow-sm"
                 >
-                  {{ image.alt }} — photo coming soon
+                  <img
+                    *ngIf="!image.broken"
+                    [src]="image.src"
+                    [alt]="image.alt"
+                    (error)="onImageError(image, $event)"
+                    class="h-auto w-full max-w-full object-cover"
+                  />
+                  <div
+                    *ngIf="image.broken"
+                    class="flex h-56 max-w-full items-center justify-center px-4 text-center text-xs font-medium text-gray-400"
+                  >
+                    {{ image.alt }} — photo coming soon
+                  </div>
                 </div>
               </div>
             </div>
@@ -311,21 +287,21 @@
   </section>
 
   <!-- Section D: dark footer -->
-  <footer id="site-footer" class="bg-[#0D0F12] px-6 py-12 text-gray-300">
+  <footer id="site-footer" class="footer-section bg-[#0D0F12] px-6 py-12 text-gray-300">
     <div class="mx-auto max-w-7xl">
       <p class="text-3xl font-extrabold">
         <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>
       </p>
       <p class="mt-1 text-sm font-semibold text-white">Racing Team and Powder Coating Services</p>
 
-      <div class="mt-8 flex items-center gap-4 border-b border-white/10 pb-6">
+      <div class="social-links mt-8 flex items-center gap-6 border-b border-white/10 pb-6">
         <a
           href="#"
           aria-label="Find us on the map"
           class="opacity-80 transition-opacity hover:opacity-100"
         >
           <svg
-            class="h-4 w-4"
+            class="h-6 w-6"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -340,7 +316,7 @@
           aria-label="ChardWorkz on Facebook"
           class="opacity-80 transition-opacity hover:opacity-100"
         >
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
             <path
               d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94Z"
             />
@@ -352,7 +328,7 @@
           class="opacity-80 transition-opacity hover:opacity-100"
         >
           <svg
-            class="h-4 w-4"
+            class="h-6 w-6"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -368,13 +344,13 @@
           aria-label="ChardWorkz on TikTok"
           class="opacity-80 transition-opacity hover:opacity-100"
         >
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
             <path
               d="M14.5 2h2.6c.2 1.6 1.2 3 2.9 3.4v2.7c-1.1 0-2.1-.3-3-1v6.6c0 3-2.5 5.3-5.4 5.3S6.2 16.7 6.2 13.7c0-2.9 2.3-5.2 5.1-5.3v2.8c-1.3.1-2.3 1.1-2.3 2.5 0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5V2Z"
             />
           </svg>
         </a>
-        <span class="h-4 w-px bg-white/20"></span>
+        <span class="h-8 w-px bg-white/20"></span>
         <a href="#" class="text-sm hover:text-white">contact</a>
       </div>
 
@@ -406,55 +382,5 @@
     </div>
   </footer>
 
-  <!-- Mobile slide-over menu -->
-  <div
-    class="fixed inset-0 z-40 bg-black/60 transition-opacity duration-200 ease-out sm:hidden"
-    [class.opacity-100]="mobileMenuOpen()"
-    [class.opacity-0]="!mobileMenuOpen()"
-    [class.pointer-events-none]="!mobileMenuOpen()"
-    (click)="closeMobileMenu()"
-  ></div>
-  <aside
-    class="fixed inset-y-0 right-0 z-50 w-72 max-w-[80%] bg-[#0D0F12] px-6 py-6 text-white shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:hidden"
-    [class.translate-x-0]="mobileMenuOpen()"
-    [class.translate-x-full]="!mobileMenuOpen()"
-  >
-    <div class="flex items-center justify-between">
-      <p class="text-xl font-black italic">
-        <span class="text-[#E4372A]">Chard</span><span class="text-white">Workz</span>
-      </p>
-      <button
-        type="button"
-        (click)="closeMobileMenu()"
-        aria-label="Close menu"
-        class="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-white transition-transform duration-150 ease-out active:scale-90"
-      >
-        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
-        </svg>
-      </button>
-    </div>
-    <nav class="mt-10 flex flex-col gap-6 text-sm font-semibold uppercase tracking-wide">
-      <button
-        type="button"
-        (click)="goTo('home-top'); closeMobileMenu()"
-        class="text-left text-white"
-      >
-        Home
-      </button>
-      <span class="cursor-not-allowed text-gray-500" title="Services page coming soon"
-        >Services</span
-      >
-      <span class="cursor-not-allowed text-gray-500" title="Parts &amp; Catalog page coming soon"
-        >Parts &amp; Catalog</span
-      >
-      <button
-        type="button"
-        (click)="goTo('site-footer'); closeMobileMenu()"
-        class="text-left text-gray-300"
-      >
-        Contact
-      </button>
-    </nav>
-  </aside>
+  <app-floating-nav-rail class="navbar-side" (navigate)="goTo($event)"></app-floating-nav-rail>
 </div>

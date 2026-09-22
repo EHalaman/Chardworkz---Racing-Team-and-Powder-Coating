@@ -1,0 +1,42 @@
+<nav
+  class="fixed bottom-4 left-1/2 z-50 flex w-[90%] max-w-md -translate-x-1/2 flex-row items-center justify-around gap-2 rounded-full border border-slate-200/80 bg-white/95 px-4 py-2.5 shadow-2xl shadow-slate-900/10 backdrop-blur-md md:bottom-auto md:left-6 md:top-1/2 md:w-auto md:max-w-none md:-translate-y-1/2 md:translate-x-0 md:flex-col md:justify-start md:gap-6 md:rounded-3xl md:px-3 md:py-6"
+  aria-label="Primary"
+>
+  <ng-container *ngFor="let item of items">
+    <button
+      *ngIf="item.targetId; else disabledItem"
+      type="button"
+      (click)="goTo(item)"
+      [attr.aria-label]="item.label"
+      [attr.title]="item.label"
+      class="group flex items-center justify-center rounded-2xl p-3 transition-colors duration-200 ease-out-expo"
+      [ngClass]="
+        activeTargetId() === item.targetId
+          ? 'bg-[#E4372A]/10 text-[#E4372A]'
+          : 'text-slate-500 hover:text-slate-900'
+      "
+    >
+      <svg
+        *ngIf="item.icon === 'home'"
+        lucideHome
+        class="h-6 w-6 shrink-0 transition-transform duration-200 ease-out-expo group-hover:scale-110"
+      ></svg>
+      <svg
+        *ngIf="item.icon === 'contact'"
+        lucideMail
+        class="h-6 w-6 shrink-0 transition-transform duration-200 ease-out-expo group-hover:scale-110"
+      ></svg>
+    </button>
+
+    <ng-template #disabledItem>
+      <span
+        class="flex cursor-not-allowed items-center justify-center rounded-2xl p-3 text-slate-300"
+        [attr.aria-label]="item.label"
+        [title]="item.disabledTitle"
+      >
+        <svg *ngIf="item.icon === 'services'" lucideWrench class="h-6 w-6 shrink-0"></svg>
+        <svg *ngIf="item.icon === 'parts'" lucidePackage class="h-6 w-6 shrink-0"></svg>
+      </span>
+    </ng-template>
+  </ng-container>
+</nav>

@@ -2,8 +2,10 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  NgZone,
   OnDestroy,
   QueryList,
+  ViewChild,
   ViewChildren,
   signal,
 } from '@angular/core';
@@ -43,7 +45,7 @@ const LOGOS = `${RESOURCES}/LOGOS`;
 @Component({
   selector: 'app-home',
   standalone: false,
-  styleUrl: './home.css',
+  styleUrl: './home.scss',
   templateUrl: './home.html',
 })
 export class Home implements AfterViewInit, OnDestroy {
@@ -51,8 +53,6 @@ export class Home implements AfterViewInit, OnDestroy {
   // bike composited in one banner - only the social icon row is drawn on top.
   // Same photo as the old CHARD_WORKZ_HERO.png, re-exported as the "finale" JPG.
   readonly heroBackground = `${RESOURCES}/HERO_BACKGROUND_FINALE.jpg`;
-
-  readonly mobileMenuOpen = signal(false);
 
   readonly historySummary =
     'Mula sa isang simpleng garahe sa Pintong Bukawe hanggang sa national circuit podium — dokumentado ang 9 taong ebolusyon namin sa Suzuki Raider DOHC engineering.';
@@ -185,58 +185,100 @@ export class Home implements AfterViewInit, OnDestroy {
     { name: 'Quantum Batteries', logo: `${LOGOS}/QUANTUMBATTER_LOGO.png` },
   ];
 
-  readonly activeYear = signal(this.timeline[0].year);
+  /** Drives the center track's fill line - continuously updated from scroll position, not
+   *  discrete per-year steps (see ngAfterViewInit). */
+  readonly progressPercent = signal(0);
 
+  @ViewChild('trackEl') private trackEl!: ElementRef<HTMLElement>;
   @ViewChildren('yearNode') private yearNodes!: QueryList<ElementRef<HTMLElement>>;
 
   /** RxJS-driven smooth anchor navigation, per the hero cards / sidebar / back-to-top link. */
   private readonly scrollTo$ = new Subject<string>();
   private readonly scrollToSub: Subscription;
-  private observer?: IntersectionObserver;
 
-  constructor() {
+  /** Each year node's offset from the track's top, as a % of the track's total height -
+   *  cached once (layout-dependent, not scroll-dependent) and reused on every scroll tick. */
+  private nodeOffsetPercents: number[] = [];
+  private scrollRaf: number | null = null;
+  private readonly onScroll = () => this.scheduleProgressUpdate();
+  private readonly onResize = () => {
+    this.cacheNodeOffsets();
+    this.scheduleProgressUpdate();
+  };
+
+  constructor(private readonly ngZone: NgZone) {
     this.scrollToSub = this.scrollTo$.subscribe((id) => {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
   ngAfterViewInit(): void {
-    // Drives the timeline rail's active-year node as the visitor scrolls,
-    // rather than a scroll-position calculation re-run on every scroll event.
-    this.observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((entry) => entry.isIntersecting);
-        if (visible.length === 0) {
-          return;
-        }
-        const topMost = visible.reduce((a, b) =>
-          a.boundingClientRect.top < b.boundingClientRect.top ? a : b,
-        );
-        const year = topMost.target.getAttribute('data-year');
-        if (year) {
-          this.activeYear.set(year);
-        }
-      },
-      { rootMargin: '-35% 0px -50% 0px', threshold: 0 },
-    );
-    this.yearNodes.forEach((node) => this.observer?.observe(node.nativeElement));
+    this.cacheNodeOffsets();
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+      window.addEventListener('resize', this.onResize, { passive: true });
+    });
+    this.scheduleProgressUpdate();
   }
 
   ngOnDestroy(): void {
-    this.observer?.disconnect();
+    window.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('resize', this.onResize);
+    if (this.scrollRaf !== null) {
+      cancelAnimationFrame(this.scrollRaf);
+    }
     this.scrollToSub.unsubscribe();
+  }
+
+  /** offsetTop/offsetParent don't reliably reach the track (year nodes sit several
+   *  positioned ancestors deep), so use a getBoundingClientRect delta instead - it stays
+   *  correct regardless of the DOM's offsetParent chain. */
+  private cacheNodeOffsets(): void {
+    const track = this.trackEl?.nativeElement;
+    if (!track) {
+      return;
+    }
+    const trackTop = track.getBoundingClientRect().top + window.scrollY;
+    const trackHeight = track.getBoundingClientRect().height;
+    this.nodeOffsetPercents = this.yearNodes.map((node) => {
+      const nodeTop = node.nativeElement.getBoundingClientRect().top + window.scrollY;
+      return trackHeight > 0 ? ((nodeTop - trackTop) / trackHeight) * 100 : 0;
+    });
+  }
+
+  private scheduleProgressUpdate(): void {
+    if (this.scrollRaf !== null) {
+      return;
+    }
+    this.scrollRaf = requestAnimationFrame(() => {
+      this.scrollRaf = null;
+      this.updateProgress();
+    });
+  }
+
+  private updateProgress(): void {
+    const track = this.trackEl?.nativeElement;
+    if (!track) {
+      return;
+    }
+    const rect = track.getBoundingClientRect();
+    const raw = rect.height > 0 ? (window.innerHeight / 2 - rect.top) / rect.height : 0;
+    const percent = Math.min(100, Math.max(0, raw * 100));
+
+    this.ngZone.run(() => {
+      this.progressPercent.set(percent);
+    });
+  }
+
+  /** True once the fill line has crossed this node's position - every node it has already
+   *  passed stays lit, not just the single "current" one. */
+  isNodeReached(index: number): boolean {
+    const offset = this.nodeOffsetPercents[index];
+    return offset !== undefined && offset <= this.progressPercent();
   }
 
   goTo(id: string): void {
     this.scrollTo$.next(id);
-  }
-
-  toggleMobileMenu(): void {
-    this.mobileMenuOpen.update((open) => !open);
-  }
-
-  closeMobileMenu(): void {
-    this.mobileMenuOpen.set(false);
   }
 
   /** Falls back once to a known-working asset, then gives up and shows a CSS placeholder. */
