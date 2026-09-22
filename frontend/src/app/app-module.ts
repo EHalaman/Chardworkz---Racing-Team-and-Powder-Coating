@@ -17,6 +17,7 @@ import { ReportsModule } from './reports/reports-module';
 import { SettingsModule } from './settings/settings-module';
 import { ActivitiesModule } from './activities/activities-module';
 import { ActivityLogModule } from './activity-log/activity-log-module';
+import { HomeModule } from './home/home-module';
 
 @NgModule({
   declarations: [App],
@@ -35,6 +36,7 @@ import { ActivityLogModule } from './activity-log/activity-log-module';
     SettingsModule,
     ActivitiesModule,
     ActivityLogModule,
+    HomeModule,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),

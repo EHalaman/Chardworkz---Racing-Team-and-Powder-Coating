@@ -32,7 +32,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         // A 401 on a request that *did* carry a token means the session died
         // (expired/invalidated) server-side, not a login failure.
         auth.logout();
-        inject(Router).navigateByUrl('/login');
+        inject(Router).navigateByUrl('/admin/login');
       }
       return throwError(() => error);
     }),

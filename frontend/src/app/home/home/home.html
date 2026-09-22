@@ -1,0 +1,358 @@
+<div id="home-top" class="bg-[#F8F9FA] font-sans">
+  <!-- Section A: dark executive hero banner -->
+  <section
+    class="relative overflow-hidden bg-[#0D0F12] bg-cover bg-top bg-no-repeat"
+    [style.background-image]="'url(' + heroBackground + ')'"
+  >
+    <!-- Darkens the right/lower half (where the headline and cards sit) without
+         flattening the trophy backdrop and Sir Richard's photo baked into the banner. -->
+    <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80"></div>
+
+    <div class="relative mx-auto flex max-w-7xl items-center justify-end px-6 py-5">
+      <div class="flex items-center gap-4 text-white">
+        <a
+          href="#"
+          aria-label="Find us on the map"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z" />
+            <circle cx="12" cy="9.5" r="2.3" />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on Facebook"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94Z"
+            />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on Instagram"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="5" />
+            <circle cx="12" cy="12" r="4" />
+            <circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on TikTok"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M14.5 2h2.6c.2 1.6 1.2 3 2.9 3.4v2.7c-1.1 0-2.1-.3-3-1v6.6c0 3-2.5 5.3-5.4 5.3S6.2 16.7 6.2 13.7c0-2.9 2.3-5.2 5.1-5.3v2.8c-1.3.1-2.3 1.1-2.3 2.5 0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5V2Z"
+            />
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="relative mx-auto max-w-7xl px-6 pb-10 pt-28 sm:pt-40 lg:pt-52">
+      <div class="max-w-xl space-y-5 lg:ml-auto">
+        <h1
+          class="text-3xl font-extrabold uppercase leading-tight tracking-tight text-[#E4372A] sm:text-4xl"
+        >
+          Maximize Suzuki Power to Reach Podium Performance
+        </h1>
+        <p class="max-w-md text-sm font-semibold text-gray-200 sm:text-base">
+          Don't just ride the Underbone King. Master it with race-bred calibration and track-tested
+          components from
+          <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>.
+        </p>
+
+        <div class="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
+          <div
+            class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/10 px-4 py-3 opacity-60 backdrop-blur-sm"
+            aria-disabled="true"
+          >
+            <div>
+              <p class="text-sm font-bold text-white">
+                Services
+                <span class="ml-1 text-[10px] font-medium uppercase tracking-wide text-gray-400"
+                  >Coming soon</span
+                >
+              </p>
+              <p class="mt-0.5 text-xs text-gray-300">
+                Unlock the true potential of the Underbone King with race-proven components built
+                for absolute speed and durability.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            (click)="goTo('site-footer')"
+            class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-left backdrop-blur-sm transition-colors hover:bg-white/20"
+          >
+            <div>
+              <p class="text-sm font-bold text-white">Contact Us</p>
+              <p class="mt-0.5 text-xs text-gray-300">
+                Reach us through social media or send an email for more information.
+              </p>
+            </div>
+            <svg
+              class="h-8 w-8 shrink-0 text-white"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9 8l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section B: vertical heritage timeline -->
+  <section class="mx-auto max-w-7xl px-6 py-16">
+    <div class="grid grid-cols-1 gap-10 lg:grid-cols-[14rem_1fr]">
+      <nav class="hidden lg:block">
+        <div class="sticky top-8 w-40 rounded-full bg-gray-200/70 py-8">
+          <ul class="space-y-6 text-center text-sm font-semibold text-gray-700">
+            <li>
+              <button type="button" (click)="goTo('home-top')" class="font-bold text-gray-900">
+                HOME
+              </button>
+            </li>
+            <li>
+              <span class="cursor-not-allowed text-gray-400" title="Services page coming soon"
+                >SERVICES</span
+              >
+            </li>
+            <li>
+              <span
+                class="cursor-not-allowed text-gray-400"
+                title="Parts &amp; Catalog page coming soon"
+                >PARTS &amp; CATALOG</span
+              >
+            </li>
+            <li>
+              <button
+                type="button"
+                (click)="goTo('site-footer')"
+                class="font-normal text-gray-600 hover:text-gray-900"
+              >
+                Contact
+              </button>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <div>
+        <p class="text-sm font-bold uppercase tracking-wide text-[#E4372A]">Our History</p>
+        <h2 class="mt-1 text-4xl font-extrabold uppercase leading-none sm:text-5xl">
+          <span class="text-gray-900">Discover</span><br />
+          <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>
+        </h2>
+
+        <div class="mt-14">
+          <div
+            *ngFor="let entry of timeline; let last = last"
+            class="grid grid-cols-[2rem_1fr] gap-6 sm:grid-cols-[3rem_1fr]"
+          >
+            <div class="relative flex justify-center">
+              <div
+                *ngIf="!last"
+                class="absolute top-3 w-0.5 bg-[#E4372A]/25"
+                style="height: calc(100% + 2.5rem)"
+              ></div>
+              <div
+                #yearNode
+                [attr.data-year]="entry.year"
+                class="relative z-10 mt-2 h-4 w-4 rounded-full ring-4 ring-[#F8F9FA] transition-colors duration-300"
+                [style.background-color]="activeYear() === entry.year ? '#E4372A' : '#D1D5DB'"
+              ></div>
+            </div>
+
+            <div class="pb-16">
+              <h3 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">{{ entry.year }}</h3>
+              <h4 *ngIf="entry.heading" class="mt-1 text-lg font-semibold text-gray-800">
+                {{ entry.heading }}
+              </h4>
+
+              <div
+                *ngIf="entry.paragraphs"
+                class="mt-4 max-w-2xl space-y-3 text-sm leading-relaxed text-gray-700"
+              >
+                <p *ngFor="let paragraph of entry.paragraphs">
+                  <ng-container *ngFor="let run of paragraph">
+                    <strong *ngIf="run.bold" class="font-semibold text-gray-900">{{
+                      run.text
+                    }}</strong>
+                    <ng-container *ngIf="!run.bold">{{ run.text }}</ng-container>
+                  </ng-container>
+                </p>
+              </div>
+
+              <div class="mt-6 space-y-6">
+                <div
+                  *ngFor="let image of entry.images"
+                  class="overflow-hidden rounded-2xl bg-gray-200"
+                >
+                  <img
+                    *ngIf="!image.broken"
+                    [src]="image.src"
+                    [alt]="image.alt"
+                    (error)="onImageError(image, $event)"
+                    class="h-auto w-full max-w-2xl object-cover"
+                  />
+                  <div
+                    *ngIf="image.broken"
+                    class="flex h-56 max-w-2xl items-center justify-center px-4 text-center text-xs font-medium text-gray-400"
+                  >
+                    {{ image.alt }} — photo coming soon
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section C: sponsor & brand partner grid -->
+  <section class="bg-white px-6 py-16">
+    <div class="mx-auto max-w-7xl">
+      <h2 class="text-2xl font-extrabold uppercase text-gray-900">Our Partners</h2>
+      <div class="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <div
+          *ngFor="let sponsor of sponsors"
+          class="flex h-20 items-center justify-center rounded-lg border border-gray-100 p-3"
+        >
+          <img
+            *ngIf="!sponsor.broken"
+            [src]="sponsor.logo"
+            [alt]="sponsor.name"
+            (error)="onImageError(sponsor, $event)"
+            class="max-h-full max-w-full object-contain"
+          />
+          <span *ngIf="sponsor.broken" class="text-center text-xs font-semibold text-gray-500">{{
+            sponsor.name
+          }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section D: dark footer -->
+  <footer id="site-footer" class="bg-[#0D0F12] px-6 py-12 text-gray-300">
+    <div class="mx-auto max-w-7xl">
+      <p class="text-3xl font-extrabold">
+        <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>
+      </p>
+      <p class="mt-1 text-sm font-semibold text-white">Racing Team and Powder Coating Services</p>
+
+      <div class="mt-8 flex items-center gap-4 border-b border-white/10 pb-6">
+        <a
+          href="#"
+          aria-label="Find us on the map"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z" />
+            <circle cx="12" cy="9.5" r="2.3" />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on Facebook"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94Z"
+            />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on Instagram"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="5" />
+            <circle cx="12" cy="12" r="4" />
+            <circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on TikTok"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M14.5 2h2.6c.2 1.6 1.2 3 2.9 3.4v2.7c-1.1 0-2.1-.3-3-1v6.6c0 3-2.5 5.3-5.4 5.3S6.2 16.7 6.2 13.7c0-2.9 2.3-5.2 5.1-5.3v2.8c-1.3.1-2.3 1.1-2.3 2.5 0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5V2Z"
+            />
+          </svg>
+        </a>
+        <span class="h-4 w-px bg-white/20"></span>
+        <a href="#" class="text-sm hover:text-white">contact</a>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <p>&copy; ChardWorkz Philippines. All rights reserved.</p>
+        <div class="flex flex-wrap gap-4">
+          <a href="#" class="hover:text-white">Privacy Policy</a>
+          <a href="#" class="hover:text-white">Cookies Policy</a>
+          <a href="#" class="hover:text-white">Terms of Use</a>
+          <a href="#" class="hover:text-white">Data Act Notice</a>
+        </div>
+        <button
+          type="button"
+          (click)="goTo('home-top')"
+          class="flex items-center gap-1 hover:text-white"
+        >
+          TOP
+          <svg
+            class="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M6 15l6-6 6 6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </footer>
+</div>

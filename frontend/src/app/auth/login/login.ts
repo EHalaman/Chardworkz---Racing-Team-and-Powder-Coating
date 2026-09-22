@@ -30,7 +30,7 @@ export class Login {
         this.submitting.set(false);
         // Employee has no Dashboard access (Layout.ALL_NAV_ITEMS) - send them
         // straight to the one screen their role can actually use.
-        const destination = response.role === 'EMPLOYEE' ? '/register' : '/dashboard';
+        const destination = response.role === 'EMPLOYEE' ? '/admin/register' : '/admin/dashboard';
         this.router.navigateByUrl(destination);
       },
       error: () => {

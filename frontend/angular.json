@@ -50,6 +50,17 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "src/assets/SHOW_CASE_HOMEPAGE",
+                "output": "assets/SHOW_CASE_HOMEPAGE",
+                "ignore": [
+                  "HOME_PAGE_COMPONENT.png",
+                  "CATALOGUE_PAGE_COMPONENT.png",
+                  "SERVICE_PAGE_COMPONENT.png",
+                  "SELECTED_CARD_CATALOGUE_COMPONENT_EXAMPLE.png"
+                ]
               }
             ],
             "styles": ["src/styles.css"]

@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { PermissionsService } from './permissions';
 
 export interface LoginResponse {
   token: string;
@@ -21,12 +22,22 @@ export class AuthService {
   private readonly session = signal<LoginResponse | null>(this.readStoredSession());
   readonly currentUser = this.session.asReadonly();
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private permissions: PermissionsService,
+  ) {}
 
   login(username: string, password: string): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${environment.apiBaseUrl}/api/auth/login`, { username, password })
-      .pipe(tap((response) => this.persistSession(response)));
+      .pipe(
+        tap((response) => {
+          // A different Manager may be signing in on this same shared tab -
+          // never let their session read another user's cached flags.
+          this.permissions.clear();
+          this.persistSession(response);
+        }),
+      );
   }
 
   /** Called after a self-service profile edit re-issues a token with a new fullName claim. */
@@ -37,6 +48,7 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(STORAGE_KEY);
     this.session.set(null);
+    this.permissions.clear();
   }
 
   getToken(): string | null {

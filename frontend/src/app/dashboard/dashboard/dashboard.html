@@ -370,7 +370,7 @@
     <div class="dashboard-card">
       <div class="mb-4 flex items-center justify-between">
         <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Recent Activities</h2>
-        <a routerLink="/activities" class="text-xs font-medium text-primary hover:underline">
+        <a routerLink="/admin/activities" class="text-xs font-medium text-primary hover:underline">
           View all
         </a>
       </div>
@@ -465,7 +465,7 @@
             </div>
           </div>
           <a
-            [routerLink]="['/inventory']"
+            [routerLink]="['/admin/inventory']"
             [queryParams]="reorderQueryParams(alert)"
             class="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-center text-xs font-medium text-white transition-colors hover:bg-primary-hover"
           >

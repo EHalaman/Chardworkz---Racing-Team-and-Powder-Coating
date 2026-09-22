@@ -19,7 +19,7 @@ export const roleGuard: CanActivateChildFn = (_childRoute, state) => {
   if (!role) {
     // authGuard (on the same route tree) handles the logged-out case; this
     // is just a defensive fallback if it's ever reached without a session.
-    return inject(Router).createUrlTree(['/login']);
+    return inject(Router).createUrlTree(['/admin/login']);
   }
 
   const guarded =
@@ -31,5 +31,7 @@ export const roleGuard: CanActivateChildFn = (_childRoute, state) => {
 
   // Same "where does this role actually land" logic as Login's post-login
   // redirect - Employee has no Dashboard access.
-  return inject(Router).createUrlTree([role === 'employee' ? '/register' : '/dashboard']);
+  return inject(Router).createUrlTree([
+    role === 'employee' ? '/admin/register' : '/admin/dashboard',
+  ]);
 };

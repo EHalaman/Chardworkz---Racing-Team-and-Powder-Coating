@@ -14,11 +14,13 @@ import { Reports } from './reports/reports/reports';
 import { Settings } from './settings/settings/settings';
 import { Activities } from './activities/activities/activities';
 import { ActivityLog } from './activity-log/activity-log/activity-log';
+import { Home } from './home/home/home';
 
 const routes: Routes = [
-  { path: 'login', component: Login, data: { title: 'Login' } },
+  { path: '', component: Home, data: { title: 'ChardWorkz' } },
+  { path: 'admin/login', component: Login, data: { title: 'Login' } },
   {
-    path: '',
+    path: 'admin',
     component: Layout,
     canActivate: [authGuard],
     canActivateChild: [roleGuard],

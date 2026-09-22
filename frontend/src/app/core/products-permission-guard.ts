@@ -5,9 +5,9 @@ import { AuthService } from './auth';
 import { PermissionsService } from './permissions';
 
 /**
- * role-guard.ts already enforces that only Owner/Manager reach /products at
- * all - this is the extra, permission-level gate on top of that: a Manager
- * whose MANAGER_MANAGE_PRODUCTS flag is off gets redirected to /dashboard
+ * role-guard.ts already enforces that only Owner/Manager reach /admin/products
+ * at all - this is the extra, permission-level gate on top of that: a Manager
+ * whose MANAGER_MANAGE_PRODUCTS flag is off gets redirected to /admin/dashboard
  * even though their role alone would otherwise be allowed in. Owner is
  * always allowed, same as every other MANAGER_MANAGE_PRODUCTS check.
  * Fails closed on a load error, matching this app's existing convention for
@@ -24,10 +24,9 @@ export const productsPermissionGuard: CanActivateFn = () => {
 
   return permissionsService.list().pipe(
     map((permissions) => {
-      const enabled =
-        permissions.find((p) => p.permissionKey === 'MANAGER_MANAGE_PRODUCTS')?.enabled ?? false;
-      return enabled ? true : router.createUrlTree(['/dashboard']);
+      const enabled = permissionsService.hasPermission(permissions, 'MANAGER_MANAGE_PRODUCTS');
+      return enabled ? true : router.createUrlTree(['/admin/dashboard']);
     }),
-    catchError(() => of(router.createUrlTree(['/dashboard']))),
+    catchError(() => of(router.createUrlTree(['/admin/dashboard']))),
   );
 };

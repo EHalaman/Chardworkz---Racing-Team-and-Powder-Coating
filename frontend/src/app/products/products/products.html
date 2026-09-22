@@ -9,7 +9,7 @@
       </p>
     </div>
     <a
-      [routerLink]="archived ? '/products' : '/products/archived'"
+      [routerLink]="archived ? '/admin/products' : '/admin/products/archived'"
       class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
     >
       {{ archived ? '← Back to catalog' : 'View archived' }}
@@ -101,6 +101,9 @@
                     : product.stockQuantity + ' in stock'
                 }}
                 · {{ product.category }}
+                <span *ngIf="product.oemPartNo" class="font-mono"
+                  >· OEM {{ product.oemPartNo }}</span
+                >
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
@@ -129,7 +132,7 @@
                   *ngIf="
                     product.active && product.category !== 'SERVICES' && product.stockQuantity === 0
                   "
-                  [routerLink]="'/inventory'"
+                  [routerLink]="'/admin/inventory'"
                   [queryParams]="{ restock: product.id }"
                   class="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
                 >
@@ -193,6 +196,17 @@
                 class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
               />
             </div>
+            <div class="flex-1 basis-32">
+              <label class="text-xs font-medium text-gray-700 dark:text-gray-300"
+                >OEM part no.</label
+              >
+              <input
+                #editOemPartNo
+                type="text"
+                [value]="product.oemPartNo ?? ''"
+                class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+              />
+            </div>
             <div class="w-24">
               <label
                 class="text-xs font-medium text-gray-700 dark:text-gray-300"
@@ -225,7 +239,15 @@
             </div>
             <button
               type="button"
-              (click)="saveEdit(product, editName.value, editBrandTag.value, editPrice.value)"
+              (click)="
+                saveEdit(
+                  product,
+                  editName.value,
+                  editBrandTag.value,
+                  editOemPartNo.value,
+                  editPrice.value
+                )
+              "
               class="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
             >
               Save
@@ -303,6 +325,16 @@
       </div>
 
       <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">OEM part no.</label>
+        <input
+          #oemPartNo
+          type="text"
+          placeholder="e.g. 09482-00646-000"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div>
         <label
           class="text-sm font-medium text-gray-700 dark:text-gray-300"
           title="Price charged to the customer."
@@ -340,9 +372,10 @@
         type="button"
         [disabled]="submitting()"
         (click)="
-          createProduct(name.value, brandTag.value, unitPrice.value);
+          createProduct(name.value, brandTag.value, oemPartNo.value, unitPrice.value);
           name.value = '';
           brandTag.value = '';
+          oemPartNo.value = '';
           unitPrice.value = ''
         "
         class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"

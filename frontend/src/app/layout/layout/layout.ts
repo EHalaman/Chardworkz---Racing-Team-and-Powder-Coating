@@ -11,7 +11,7 @@ import {
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subscription, catchError, filter, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
-import { PermissionsService } from '../../core/permissions';
+import { PermissionFlag, PermissionKey, PermissionsService } from '../../core/permissions';
 import { ThemeService } from '../../core/theme';
 import { DashboardAlert, DashboardService } from '../../dashboard/dashboard';
 
@@ -30,6 +30,8 @@ export interface NavItem {
     | 'settings'
     | 'activity-log';
   roles: Role[];
+  /** Only relevant to the 'manager' role - Owner is always allowed regardless. Gates the item behind this flag, same convention as MANAGER_MANAGE_PRODUCTS. */
+  requiredPermission?: PermissionKey;
 }
 
 export interface Tab {
@@ -42,19 +44,40 @@ export interface Tab {
 // Exported so core/role-guard.ts can enforce the exact same per-route roles
 // at the router level instead of duplicating this mapping a second time.
 export const ALL_NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', roles: ['owner', 'manager'] },
-  { label: 'Register', path: '/register', icon: 'register', roles: ['manager', 'employee'] },
-  { label: 'Products', path: '/products', icon: 'products', roles: ['owner', 'manager'] },
-  { label: 'Inventory', path: '/inventory', icon: 'inventory', roles: ['owner', 'manager'] },
-  { label: 'Sales Reports', path: '/reports', icon: 'reports', roles: ['owner', 'manager'] },
-  { label: 'Roles', path: '/roles', icon: 'roles', roles: ['owner'] },
+  { label: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard', roles: ['owner', 'manager'] },
+  {
+    label: 'Register',
+    path: '/admin/register',
+    icon: 'register',
+    roles: ['manager', 'employee'],
+  },
+  {
+    label: 'Products',
+    path: '/admin/products',
+    icon: 'products',
+    roles: ['owner', 'manager'],
+    requiredPermission: 'MANAGER_MANAGE_PRODUCTS',
+  },
+  {
+    label: 'Inventory',
+    path: '/admin/inventory',
+    icon: 'inventory',
+    roles: ['owner', 'manager'],
+  },
+  {
+    label: 'Sales Reports',
+    path: '/admin/reports',
+    icon: 'reports',
+    roles: ['owner', 'manager'],
+  },
+  { label: 'Roles', path: '/admin/roles', icon: 'roles', roles: ['owner'] },
   {
     label: 'Activity Log',
-    path: '/activity-log',
+    path: '/admin/activity-log',
     icon: 'activity-log',
     roles: ['owner', 'manager'],
   },
-  { label: 'Settings', path: '/settings', icon: 'settings', roles: ['owner'] },
+  { label: 'Settings', path: '/admin/settings', icon: 'settings', roles: ['owner'] },
 ];
 
 /**
@@ -64,8 +87,8 @@ export const ALL_NAV_ITEMS: NavItem[] = [
  * silently become open to every role by default.
  */
 export const HIDDEN_GUARDED_ROUTES: { path: string; roles: Role[] }[] = [
-  { path: '/activities', roles: ['owner', 'manager'] },
-  { path: '/products/archived', roles: ['owner', 'manager'] },
+  { path: '/admin/activities', roles: ['owner', 'manager'] },
+  { path: '/admin/products/archived', roles: ['owner', 'manager'] },
 ];
 
 @Component({
@@ -85,7 +108,7 @@ export class Layout implements OnInit, OnDestroy {
   readonly isAlertsOpen = signal(false);
   readonly alerts = signal<DashboardAlert[]>([]);
   /** Fails closed for Manager (Owner never needs this) - same "hidden until proven enabled" default Products/Roles already use for this same flag. */
-  readonly canManageProducts = signal(false);
+  readonly permissions = signal<PermissionFlag[]>([]);
 
   @ViewChild('alertsWrapper') private alertsWrapper?: ElementRef<HTMLElement>;
   @ViewChild('roleMenuWrapper') private roleMenuWrapper?: ElementRef<HTMLElement>;
@@ -138,17 +161,12 @@ export class Layout implements OnInit, OnDestroy {
     }
 
     // Owner never needs this (always allowed) - only fetch for Manager,
-    // whose access to the Products nav tab itself now depends on it.
+    // whose access to a requiredPermission-gated nav item depends on it.
     if (this.auth.currentUser()?.role === 'MANAGER') {
       this.permissionsService
         .list()
         .pipe(catchError(() => of([])))
-        .subscribe((permissions) =>
-          this.canManageProducts.set(
-            permissions.find((p) => p.permissionKey === 'MANAGER_MANAGE_PRODUCTS')?.enabled ??
-              false,
-          ),
-        );
+        .subscribe((permissions) => this.permissions.set(permissions));
     }
   }
 
@@ -160,7 +178,10 @@ export class Layout implements OnInit, OnDestroy {
     const role = this.auth.currentUser()?.role.toLowerCase() as Role | undefined;
     if (!role) return [];
     return ALL_NAV_ITEMS.filter((item) => item.roles.includes(role)).filter(
-      (item) => item.path !== '/products' || role !== 'manager' || this.canManageProducts(),
+      (item) =>
+        !item.requiredPermission ||
+        role !== 'manager' ||
+        this.permissionsService.hasPermission(this.permissions(), item.requiredPermission),
     );
   }
 
@@ -179,7 +200,7 @@ export class Layout implements OnInit, OnDestroy {
   /** Deep-links straight into Inventory's restock flow for this specific product, pre-filling the suggested reorder quantity. */
   routeToAlert(alert: DashboardAlert): void {
     this.isAlertsOpen.set(false);
-    this.router.navigate(['/inventory'], {
+    this.router.navigate(['/admin/inventory'], {
       queryParams: { restock: alert.productId, qty: alert.suggestedReorderQty },
     });
   }
@@ -196,7 +217,7 @@ export class Layout implements OnInit, OnDestroy {
 
   logout(): void {
     this.auth.logout();
-    this.router.navigateByUrl('/login');
+    this.router.navigateByUrl('/admin/login');
   }
 
   /**
@@ -231,7 +252,7 @@ export class Layout implements OnInit, OnDestroy {
     this.openTabs.splice(index, 1);
 
     if (this.openTabs.length === 0) {
-      this.router.navigateByUrl('/dashboard');
+      this.router.navigateByUrl('/admin/dashboard');
       return;
     }
     if (wasActive) {
