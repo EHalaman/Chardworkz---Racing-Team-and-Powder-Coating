@@ -24,3 +24,65 @@
 .footer-section {
   padding-bottom: 8em;
 }
+
+.paragraph-logo{
+  font-family: 'Potta One', Poppins, sans-serif;
+  font-size: 1.2rem;
+}
+
+/* Section C sponsor marquee */
+@keyframes marquee-x-left {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes marquee-x-right {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes marquee-y-down {
+  0% {
+    transform: translate3d(0, -50%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes marquee-y-up {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, -50%, 0);
+  }
+}
+
+.animate-marquee-x-left {
+  animation: marquee-x-left 25s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-x-right {
+  animation: marquee-x-right 25s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-y-down {
+  animation: marquee-y-down 20s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-y-up {
+  animation: marquee-y-up 20s linear infinite;
+  will-change: transform;
+}

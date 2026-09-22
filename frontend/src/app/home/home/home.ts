@@ -185,6 +185,14 @@ export class Home implements AfterViewInit, OnDestroy {
     { name: 'Quantum Batteries', logo: `${LOGOS}/QUANTUMBATTER_LOGO.png` },
   ];
 
+  get reversedSponsors(): Sponsor[] {
+    return [...this.sponsors].reverse();
+  }
+
+  /** Sponsors doubled back-to-back so a -50% track translation loops seamlessly. */
+  readonly sponsorsLoop: Sponsor[] = [...this.sponsors, ...this.sponsors];
+  readonly reversedSponsorsLoop: Sponsor[] = [...this.reversedSponsors, ...this.reversedSponsors];
+
   /** Drives the center track's fill line - continuously updated from scroll position, not
    *  discrete per-year steps (see ngAfterViewInit). */
   readonly progressPercent = signal(0);
