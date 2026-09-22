@@ -3,6 +3,9 @@
   font-family: 'Radio Canada', sans-serif;
 }
 
+.chardworkz-logo {
+  font-family: 'Potta One', Poppins, sans-serif;
+}
 .notched-badge {
   clip-path: polygon(0 0, 100% 0, 100% 85%, 88% 100%, 0 100%);
 }
@@ -26,4 +29,9 @@
   &.is-morphing {
     opacity: 0;
   }
+}
+
+/* Top-left notched corner for the EST. 2017 badge */
+.est-notched-badge {
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px);
 }

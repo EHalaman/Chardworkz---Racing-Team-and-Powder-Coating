@@ -10,6 +10,27 @@ import {
 
 const ASSETS = 'assets/SHOW_CASE_HOMEPAGE/SERVICES_PAGE';
 
+export interface RaceUpdate {
+  category: string;
+  title: string;
+  summary: string;
+  imageLeftTop: string;
+  imageLeftBottom: string;
+  imageRight: string;
+  ctaText: string;
+}
+
+const LATEST_RACE_UPDATE: RaceUpdate = {
+  category: '2026 Season — Points Leader',
+  title: 'ChardWorkz #52 Leads Underbone Limited 155 & Open Categories',
+  summary:
+    'Kasama ang roster nina Lauren Jay Ewag (#52), Jhareld Resultay, Renz Pereja, at Evander Soliveres, ang ChardWorkz Racing Team ang kasalukuyang Points Leader sa Underbone Limited 155 at Open Categories ngayong 2026 Season — patunay na iba ang gawang-Pintong Bukawe sa bawat leg ng karera.',
+  imageLeftTop: `${ASSETS}/race_update_left_top_image.png`,
+  imageLeftBottom: `${ASSETS}/race_update_left_bottom_image.png`,
+  imageRight: `${ASSETS}/race_update_right_image.png`,
+  ctaText: 'Discover More',
+};
+
 /** Non-linear checkpoints the engines counter jumps through before morphing to "Countless" -
  *  gives it a scrambling feel rather than a plain linear count. */
 const ENGINES_CHECKPOINTS: { value: number; at: number }[] = [
@@ -98,6 +119,7 @@ const SERVICE_OFFERS: ServiceOffer[] = [
 export class Services implements AfterViewInit, OnDestroy {
   readonly heroBackground = `${ASSETS}/HERO-background.png`;
   readonly serviceOffers: ServiceOffer[] = SERVICE_OFFERS;
+  readonly latestRaceUpdate: RaceUpdate = LATEST_RACE_UPDATE;
 
   readonly yearsDisplay = signal('0');
   readonly trophiesDisplay = signal('0');
