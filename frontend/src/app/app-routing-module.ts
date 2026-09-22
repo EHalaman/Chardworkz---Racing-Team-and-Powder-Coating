@@ -16,10 +16,17 @@ import { Activities } from './activities/activities/activities';
 import { ActivityLog } from './activity-log/activity-log/activity-log';
 import { Home } from './customer_home/home/home/home';
 import { Services } from './customer_home/services/service_page/services';
+import { CustomerShell } from './customer_home/customer-shell/customer-shell';
 
 const routes: Routes = [
-  { path: '', component: Home, data: { title: 'ChardWorkz' } },
-  { path: 'services', component: Services, data: { title: 'Services' } },
+  {
+    path: '',
+    component: CustomerShell,
+    children: [
+      { path: '', component: Home, data: { title: 'ChardWorkz' } },
+      { path: 'services', component: Services, data: { title: 'Services' } },
+    ],
+  },
   { path: 'admin/login', component: Login, data: { title: 'Login' } },
   {
     path: 'admin',

@@ -19,6 +19,7 @@ import { ActivitiesModule } from './activities/activities-module';
 import { ActivityLogModule } from './activity-log/activity-log-module';
 import { HomeModule } from './customer_home/home/home-module';
 import { ServicesModule } from './customer_home/services/services-module';
+import { CustomerShellModule } from './customer_home/customer-shell-module';
 
 @NgModule({
   declarations: [App],
@@ -39,6 +40,7 @@ import { ServicesModule } from './customer_home/services/services-module';
     ActivityLogModule,
     HomeModule,
     ServicesModule,
+    CustomerShellModule,
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),

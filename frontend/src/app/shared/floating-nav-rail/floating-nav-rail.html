@@ -4,21 +4,24 @@
 >
   <ng-container *ngFor="let item of items">
     <button
-      *ngIf="item.targetId; else disabledItem"
+      *ngIf="item.targetId || item.route; else disabledItem"
       type="button"
       (click)="goTo(item)"
       [attr.aria-label]="item.label"
       [attr.title]="item.label"
       class="group flex items-center justify-center rounded-2xl p-3 transition-colors duration-200 ease-out-expo"
       [ngClass]="
-        activeTargetId() === item.targetId
-          ? 'bg-[#E4372A]/10 text-[#E4372A]'
-          : 'text-slate-500 hover:text-slate-900'
+        isActive(item) ? 'bg-[#E4372A]/10 text-[#E4372A]' : 'text-slate-500 hover:text-slate-900'
       "
     >
       <svg
         *ngIf="item.icon === 'home'"
         lucideHome
+        class="h-6 w-6 shrink-0 transition-transform duration-200 ease-out-expo group-hover:scale-110"
+      ></svg>
+      <svg
+        *ngIf="item.icon === 'services'"
+        lucideWrench
         class="h-6 w-6 shrink-0 transition-transform duration-200 ease-out-expo group-hover:scale-110"
       ></svg>
       <svg
@@ -34,7 +37,6 @@
         [attr.aria-label]="item.label"
         [title]="item.disabledTitle"
       >
-        <svg *ngIf="item.icon === 'services'" lucideWrench class="h-6 w-6 shrink-0"></svg>
         <svg *ngIf="item.icon === 'parts'" lucidePackage class="h-6 w-6 shrink-0"></svg>
       </span>
     </ng-template>
