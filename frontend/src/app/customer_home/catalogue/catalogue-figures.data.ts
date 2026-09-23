@@ -5,6 +5,12 @@ import { CRANK_BALANCER_PARTS } from './catalogue-crank-balancer.data';
 import { CRANKCASE_COVER_PARTS } from './catalogue-crankcase-cover.data';
 import { CRANKCASE_PARTS } from './catalogue-crankcase.data';
 import { CRANKSHAFT_PARTS } from './catalogue-crankshaft.data';
+import { CYLINDER_PARTS } from './catalogue-cylinder.data';
+import { CYLINDER_HEAD_PARTS } from './catalogue-cylinder-head.data';
+import { MUFFLER_PARTS } from './catalogue-muffler.data';
+import { OIL_PUMP_PARTS } from './catalogue-oil-pump.data';
+import { RADIATOR_PARTS } from './catalogue-radiator.data';
+import { RADIATOR_HOSE_PARTS } from './catalogue-radiator-hose.data';
 
 export type CatalogueCategory = 'ENGINE' | 'TRANSMISSION' | 'ELECTRICAL' | 'BODY';
 
@@ -139,6 +145,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-cylinder-fig-107a-1-b-4/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0013.jpg',
+    diagramParts: CYLINDER_PARTS,
   },
   {
     category: 'ENGINE',
@@ -147,6 +154,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-cylinder-head-fig-103a-1-b-3/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0012.jpg',
+    diagramParts: CYLINDER_HEAD_PARTS,
   },
   {
     category: 'ENGINE',
@@ -155,6 +163,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-muffler-fig-163a-1-b-15/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0028.jpg',
+    diagramParts: MUFFLER_PARTS,
   },
   {
     category: 'ENGINE',
@@ -163,6 +172,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-oil-pump-fig-170a-1-c-3/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0025.jpg',
+    diagramParts: OIL_PUMP_PARTS,
   },
   {
     category: 'ENGINE',
@@ -171,6 +181,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-radiator-fig-185a-1-c-6/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0032.jpg',
+    diagramParts: RADIATOR_PARTS,
   },
   {
     category: 'ENGINE',
@@ -179,6 +190,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-radiator-hose-fig-187a-1-c-7/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0033.jpg',
+    diagramParts: RADIATOR_HOSE_PARTS,
   },
   {
     category: 'ENGINE',
