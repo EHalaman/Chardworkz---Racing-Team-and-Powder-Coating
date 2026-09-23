@@ -2,6 +2,9 @@ import { CYLINDER_HEAD_COVER_PARTS } from './catalogue-cylinder-head-cover.data'
 import { AIR_CLEANER_PARTS } from './catalogue-air-cleaner.data';
 import { CAMSHAFT_VALVE_PARTS } from './catalogue-camshaft-valve.data';
 import { CRANK_BALANCER_PARTS } from './catalogue-crank-balancer.data';
+import { CRANKCASE_COVER_PARTS } from './catalogue-crankcase-cover.data';
+import { CRANKCASE_PARTS } from './catalogue-crankcase.data';
+import { CRANKSHAFT_PARTS } from './catalogue-crankshaft.data';
 
 export type CatalogueCategory = 'ENGINE' | 'TRANSMISSION' | 'ELECTRICAL' | 'BODY';
 
@@ -109,6 +112,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-crankcase-cover-fig-112a-1-b-6/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0015.jpg',
+    diagramParts: CRANKCASE_COVER_PARTS,
   },
   {
     category: 'ENGINE',
@@ -117,6 +121,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-crankcase-fig-108a-1-b-5/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0014.jpg',
+    diagramParts: CRANKCASE_PARTS,
   },
   {
     category: 'ENGINE',
@@ -125,6 +130,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-crankshaft-fig-120a-1-b-7/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0016.jpg',
+    diagramParts: CRANKSHAFT_PARTS,
   },
   {
     category: 'ENGINE',
