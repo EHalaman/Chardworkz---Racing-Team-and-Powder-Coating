@@ -17,6 +17,9 @@ import { WATER_PUMP_PARTS } from './catalogue-water-pump.data';
 import { CAM_CHAIN_PARTS } from './catalogue-cam-chain.data';
 import { HANDLEBAR_PARTS } from './catalogue-handlebar.data';
 import { CLUTCH_PARTS } from './catalogue-clutch.data';
+import { GEAR_SHIFTING_PARTS } from './catalogue-gear-shifting.data';
+import { KICK_STARTER_PARTS } from './catalogue-kick-starter.data';
+import { TRANSMISSION_PARTS } from './catalogue-transmission.data';
 
 export type CatalogueCategory = 'ENGINE' | 'TRANSMISSION' | 'ELECTRICAL' | 'BODY';
 
@@ -261,6 +264,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-gear-shifting-fig-212a-1-c-12/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0033.jpg',
+    diagramParts: GEAR_SHIFTING_PARTS,
   },
   {
     category: 'TRANSMISSION',
@@ -269,6 +273,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-kick-starter-fig-240a-1-c-11/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0035.jpg',
+    diagramParts: KICK_STARTER_PARTS,
   },
   {
     category: 'TRANSMISSION',
@@ -277,6 +282,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-transmission-fig-206a-1-c-10/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0031.jpg',
+    diagramParts: TRANSMISSION_PARTS,
   },
 
   // ELECTRICAL (14)
