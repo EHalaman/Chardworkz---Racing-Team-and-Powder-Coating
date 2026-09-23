@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  font-family: 'Radio Canada', sans-serif;
+}
+
+.chardworkz-logo {
+  font-family: 'Potta One', Poppins, sans-serif;
+}
+.paragraph-logo {
+  font-family: 'Potta One', Poppins, sans-serif;
+  font-size: 1.2rem;
+}
+
+.footer-section {
+  padding-bottom: 8em;
+}
+
+/* Scoped to this new section only - the rest of the page keeps the site's established
+   Radio Canada/Potta One typography, per the site-wide look already built elsewhere. */
+.catalogue_context {
+  font-family: 'Quicksand', sans-serif;
+}

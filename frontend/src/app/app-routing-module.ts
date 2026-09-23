@@ -16,6 +16,7 @@ import { Activities } from './activities/activities/activities';
 import { ActivityLog } from './activity-log/activity-log/activity-log';
 import { Home } from './customer_home/home/home/home';
 import { Services } from './customer_home/services/service_page/services';
+import { Catalogue } from './customer_home/catalogue/catalogue_page/catalogue';
 import { CustomerShell } from './customer_home/customer-shell/customer-shell';
 
 const routes: Routes = [
@@ -25,6 +26,7 @@ const routes: Routes = [
     children: [
       { path: '', component: Home, data: { title: 'ChardWorkz' } },
       { path: 'services', component: Services, data: { title: 'Services' } },
+      { path: 'catalogue', component: Catalogue, data: { title: 'Catalogue' } },
     ],
   },
   { path: 'admin/login', component: Login, data: { title: 'Login' } },

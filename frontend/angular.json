@@ -54,13 +54,13 @@
               },
               {
                 "glob": "**/*",
-                "input": "src/assets/SHOW_CASE_HOMEPAGE",
-                "output": "assets/SHOW_CASE_HOMEPAGE",
+                "input": "src/assets",
+                "output": "assets",
                 "ignore": [
-                  "HOME_PAGE_COMPONENT.png",
-                  "CATALOGUE_PAGE_COMPONENT.png",
-                  "SERVICE_PAGE_COMPONENT.png",
-                  "SELECTED_CARD_CATALOGUE_COMPONENT_EXAMPLE.png"
+                  "SHOW_CASE_HOMEPAGE/HOME_PAGE_COMPONENT.png",
+                  "SHOW_CASE_HOMEPAGE/CATALOGUE_PAGE_COMPONENT.png",
+                  "SHOW_CASE_HOMEPAGE/SERVICE_PAGE_COMPONENT.png",
+                  "SHOW_CASE_HOMEPAGE/SELECTED_CARD_CATALOGUE_COMPONENT_EXAMPLE.png"
                 ]
               }
             ],

@@ -29,6 +29,11 @@
         lucideMail
         class="h-6 w-6 shrink-0 transition-transform duration-200 ease-out-expo group-hover:scale-110"
       ></svg>
+      <svg
+        *ngIf="item.icon === 'parts'"
+        lucidePackage
+        class="h-6 w-6 shrink-0 transition-transform duration-200 ease-out-expo group-hover:scale-110"
+      ></svg>
     </button>
 
     <ng-template #disabledItem>

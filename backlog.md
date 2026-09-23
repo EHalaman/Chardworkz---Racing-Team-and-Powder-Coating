@@ -145,6 +145,12 @@ All 12 questions from `docs/project-initiation-draft.md` §5 were answered by th
 - [ ] **Declined: Draft-PO / 1-click purchase-order system** — no purchase-order entity exists anywhere in this app; the reorder alerts link into the existing Receive Stock form (pre-filled) instead of a new PO workflow. Revisit only if a real multi-step procurement flow (draft → approve → receive) is actually wanted.
 - [ ] Inventory turnover / Days Sales of Inventory (DSI) was in the original proposal but not built this session (not part of the "quick wins" the user picked) — computable later from the same cost-approximation data (`estimatedCostTotal`) plus average inventory value over a period.
 
+## Public Catalogue page (`/catalogue`, customer-facing site, 2026-09-23)
+
+- [x] Built the public `/catalogue` page (`customer_home/catalogue/`) — hero studio-angle viewer (6 real Raider photos, drag/swipe/click stepper), and a "Browse by Category" grid of all 61 real Suzuki PH figures (ENGINE/TRANSMISSION/ELECTRICAL/BODY), each scraped live from `mc.suzuki.com.ph/genuine-part/raider-r150-fi/` with a real FIG code, title, and diagram image (`catalogue-figures.data.ts`) — zero placeholder/broken images, verified via real `load`/`error` events on all 61.
+- [x] Built the real Schematic Inspection View (hotspot diagram + synced parts table) for one figure — CYLINDER HEAD COVER (`catalogue-cylinder-head-cover.data.ts`) — with verified real part numbers/prices, hotspot coordinates measured directly against the real image (not guessed), and a top/bottom tooltip-flip fix so it never clips near the diagram's top edge.
+- [ ] **Next step: build the same Inspect Diagram (hotspot + synced parts table) view for the other 60 figures.** Each needs its own verified per-part breakdown (ref no./part no./name/qty/price) and hotspot x/y coordinates measured against that figure's real diagram image, the same way CYLINDER HEAD COVER was done — real diagram images for all 61 already exist (`catalogue-figures.data.ts`), but only CYLINDER HEAD COVER has real part-level data behind it today. Until a figure has this, its card correctly falls back to "View on Suzuki PH" only (no fabricated detail view).
+
 ## Project housekeeping
 
 - [ ] Confirm the `owner` field set in `PROJECT-CONTEXT.md`/`memory.md`/`handoff.md` ("Eleomar Halaman") is the correct business-side point of contact for ChardWorkz, not just the session user.

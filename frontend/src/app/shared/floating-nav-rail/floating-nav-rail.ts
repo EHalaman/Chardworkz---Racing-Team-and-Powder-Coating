@@ -32,11 +32,7 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
   readonly items: NavItem[] = [
     { label: 'Home', icon: 'home', targetId: 'hero-section' },
     { label: 'Services', icon: 'services', route: '/services' },
-    {
-      label: 'Parts & Catalog',
-      icon: 'parts',
-      disabledTitle: 'Parts & Catalog page coming soon',
-    },
+    { label: 'Parts & Catalog', icon: 'parts', route: '/catalogue' },
     { label: 'Contact', icon: 'contact', targetId: 'site-footer' },
   ];
 
