@@ -74,6 +74,15 @@ body {
   .dashboard-card {
     @apply rounded-3xl border border-gray-200 bg-surface p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800;
   }
+
+  /* Hides the native scrollbar while keeping wheel/trackpad/touch scrolling. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /*
