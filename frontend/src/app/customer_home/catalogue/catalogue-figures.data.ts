@@ -11,6 +11,9 @@ import { MUFFLER_PARTS } from './catalogue-muffler.data';
 import { OIL_PUMP_PARTS } from './catalogue-oil-pump.data';
 import { RADIATOR_PARTS } from './catalogue-radiator.data';
 import { RADIATOR_HOSE_PARTS } from './catalogue-radiator-hose.data';
+import { STARTER_CLUTCH_PARTS } from './catalogue-starter-clutch.data';
+import { THROTTLE_BODY_PARTS } from './catalogue-throttle-body.data';
+import { WATER_PUMP_PARTS } from './catalogue-water-pump.data';
 
 export type CatalogueCategory = 'ENGINE' | 'TRANSMISSION' | 'ELECTRICAL' | 'BODY';
 
@@ -199,6 +202,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-starter-clutch-fig-122a-1-b-8/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0017.jpg',
+    diagramParts: STARTER_CLUTCH_PARTS,
   },
   {
     category: 'ENGINE',
@@ -207,6 +211,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-throttle-body-fig-140a-1-b-13/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0022.jpg',
+    diagramParts: THROTTLE_BODY_PARTS,
   },
   {
     category: 'ENGINE',
@@ -215,6 +220,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-water-pump-fig-180a-1-c-5/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0027.jpg',
+    diagramParts: WATER_PUMP_PARTS,
   },
   {
     category: 'ENGINE',
