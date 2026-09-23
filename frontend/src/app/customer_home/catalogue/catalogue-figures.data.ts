@@ -14,6 +14,9 @@ import { RADIATOR_HOSE_PARTS } from './catalogue-radiator-hose.data';
 import { STARTER_CLUTCH_PARTS } from './catalogue-starter-clutch.data';
 import { THROTTLE_BODY_PARTS } from './catalogue-throttle-body.data';
 import { WATER_PUMP_PARTS } from './catalogue-water-pump.data';
+import { CAM_CHAIN_PARTS } from './catalogue-cam-chain.data';
+import { HANDLEBAR_PARTS } from './catalogue-handlebar.data';
+import { CLUTCH_PARTS } from './catalogue-clutch.data';
 
 export type CatalogueCategory = 'ENGINE' | 'TRANSMISSION' | 'ELECTRICAL' | 'BODY';
 
@@ -229,6 +232,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-cam-chain-fig-127a-1-b-12/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2025/03/FU150MFXM4_P311st-Edition_page-0022-new.jpg',
+    diagramParts: CAM_CHAIN_PARTS,
   },
   {
     category: 'ENGINE',
@@ -237,6 +241,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-handlebar-fig-462a-1-e-8/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2025/03/FU150MFXM4_P311st-Edition_page-0057-new-image.jpg',
+    diagramParts: HANDLEBAR_PARTS,
   },
 
   // TRANSMISSION (4)
@@ -247,6 +252,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-clutch-fig-201a-1-c-9/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150RF-RLM5_P31FINAL_page-0035.jpg',
+    diagramParts: CLUTCH_PARTS,
   },
   {
     category: 'TRANSMISSION',
