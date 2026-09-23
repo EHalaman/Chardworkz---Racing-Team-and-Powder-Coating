@@ -1,14 +1,10 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
-import { CATALOGUE_FIGURES, CatalogueCategory, CatalogueFigure } from '../catalogue-figures.data';
 import {
-  CYLINDER_HEAD_COVER_DIAGRAM,
-  CYLINDER_HEAD_COVER_PARTS,
-  CylinderHeadCoverPart,
-} from '../catalogue-cylinder-head-cover.data';
-
-/** The one figure with a real verified diagram+parts breakdown today - matched by title
- *  against catalogue-figures.data.ts so its card can open the detail view. */
-const DETAIL_FIGURE_TITLE = 'CYLINDER HEAD COVER';
+  CATALOGUE_FIGURES,
+  CatalogueCategory,
+  CatalogueDiagramPart,
+  CatalogueFigure,
+} from '../catalogue-figures.data';
 
 const ASSETS = 'assets/raider15fi';
 
@@ -76,10 +72,43 @@ export class Catalogue implements OnInit {
       : this.figures.filter((figure) => figure.category === category);
   });
 
-  readonly diagramSrc = CYLINDER_HEAD_COVER_DIAGRAM;
-  readonly diagramParts: CylinderHeadCoverPart[] = CYLINDER_HEAD_COVER_PARTS;
   readonly selectedFigure = signal<CatalogueFigure | null>(null);
-  readonly activeRefNo = signal<number | null>(null);
+  readonly diagramSrc = computed(() => this.selectedFigure()?.imageUrl ?? '');
+  readonly diagramParts = computed(() => this.selectedFigure()?.diagramParts ?? []);
+  readonly activeGroupKey = signal<string | null>(null);
+
+  /** One entry per physical hotspot position, not per table row - a "15.1".."15.19" style
+   *  group (see CatalogueDiagramPart's refNo doc) shares one dot on the diagram, so rendering
+   *  one button per row would stack N identical buttons exactly on top of each other. */
+  readonly hotspotGroups = computed(() => {
+    const map = new Map<string, CatalogueDiagramPart[]>();
+    for (const part of this.diagramParts()) {
+      const key = this.groupKeyOf(part.refNo);
+      const group = map.get(key) ?? [];
+      group.push(part);
+      map.set(key, group);
+    }
+    return Array.from(map.entries())
+      .filter(([, parts]) => parts[0].xRatio !== undefined && parts[0].yRatio !== undefined)
+      .map(([groupKey, parts]) => {
+        const prices = parts.map((p) => p.price).filter((p): p is number => p !== null);
+        const uniquePrices = [...new Set(prices)];
+        const priceLabel =
+          uniquePrices.length === 0
+            ? 'Not listed'
+            : uniquePrices.length === 1
+              ? `₱ ${uniquePrices[0].toLocaleString('en-PH')}`
+              : `₱ ${Math.min(...uniquePrices).toLocaleString('en-PH')}–₱ ${Math.max(...uniquePrices).toLocaleString('en-PH')}`;
+        return {
+          groupKey,
+          xRatio: parts[0].xRatio as number,
+          yRatio: parts[0].yRatio as number,
+          partName: parts[0].partName,
+          priceLabel,
+          variantCount: parts.length,
+        };
+      });
+  });
 
   private dragStartX: number | null = null;
   private readonly SWIPE_THRESHOLD_PX = 40;
@@ -149,23 +178,50 @@ export class Catalogue implements OnInit {
   }
 
   hasDetail(figure: CatalogueFigure): boolean {
-    return figure.title === DETAIL_FIGURE_TITLE;
+    return !!figure.diagramParts?.length;
   }
 
   openDetail(figure: CatalogueFigure): void {
     if (this.hasDetail(figure)) {
       this.selectedFigure.set(figure);
-      this.activeRefNo.set(null);
+      this.activeGroupKey.set(null);
     }
   }
 
   closeDetail(): void {
     this.selectedFigure.set(null);
-    this.activeRefNo.set(null);
+    this.activeGroupKey.set(null);
   }
 
-  setActiveRef(refNo: number | null): void {
-    this.activeRefNo.set(refNo);
+  /** Accepts either a group key ("15") or a full row refNo ("15.7") - both normalize to the
+   *  same group, so hovering any one variant row highlights the whole group's hotspot. */
+  setActiveGroup(refNo: string | null): void {
+    this.activeGroupKey.set(refNo === null ? null : this.groupKeyOf(refNo));
+  }
+
+  /** A "15.1" row belongs to group "15" (see CatalogueDiagramPart's refNo doc); a plain "1"
+   *  row is its own group. */
+  private groupKeyOf(refNo: string): string {
+    return refNo.includes('.') ? refNo.split('.')[0] : refNo;
+  }
+
+  isRowActive(part: CatalogueDiagramPart): boolean {
+    return this.activeGroupKey() === this.groupKeyOf(part.refNo);
+  }
+
+  /** Keeps the hotspot tooltip's rendered box within the diagram's own width - a tooltip
+   *  centered on a hotspot near the left/right edge (e.g. refNo 1 at xRatio 5) would otherwise
+   *  extend past the page's own overflow-x-hidden boundary and get clipped off-screen, especially
+   *  on narrow/mobile viewports where the diagram takes up most of the screen width. */
+  tooltipClasses(spot: { xRatio: number; yRatio: number }): string {
+    const vertical = spot.yRatio < 25 ? 'top-full mt-2' : 'bottom-full mb-2';
+    const horizontal =
+      spot.xRatio < 20
+        ? 'left-0 translate-x-0'
+        : spot.xRatio > 80
+          ? 'right-0 left-auto translate-x-0'
+          : 'left-1/2 -translate-x-1/2';
+    return `${vertical} ${horizontal}`;
   }
 
   scrollToTop(): void {
