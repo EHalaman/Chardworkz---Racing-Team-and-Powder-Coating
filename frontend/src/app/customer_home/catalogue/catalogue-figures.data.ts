@@ -20,6 +20,9 @@ import { CLUTCH_PARTS } from './catalogue-clutch.data';
 import { GEAR_SHIFTING_PARTS } from './catalogue-gear-shifting.data';
 import { KICK_STARTER_PARTS } from './catalogue-kick-starter.data';
 import { TRANSMISSION_PARTS } from './catalogue-transmission.data';
+import { BATTERY_PARTS } from './catalogue-battery.data';
+import { ELECTRICAL_PARTS } from './catalogue-electrical.data';
+import { FUEL_PUMP_PARTS } from './catalogue-fuel-pump.data';
 
 export type CatalogueCategory = 'ENGINE' | 'TRANSMISSION' | 'ELECTRICAL' | 'BODY';
 
@@ -293,6 +296,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-battery-fig-310d-1-c-14/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0042.jpg',
+    diagramParts: BATTERY_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -301,6 +305,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-electrical-fu150rfm5_p31-fig-312a-1-d-5/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0044.jpg',
+    diagramParts: ELECTRICAL_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -309,6 +314,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-fuel-pump-fig-172a-1-c-4/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0026.jpg',
+    diagramParts: FUEL_PUMP_PARTS,
   },
   {
     category: 'ELECTRICAL',
