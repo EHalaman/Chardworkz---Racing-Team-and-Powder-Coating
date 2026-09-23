@@ -50,7 +50,7 @@ export class Settings implements OnInit {
   }
 
   isPermissionEnabled(key: PermissionKey): boolean {
-    return this.permissions().find((p) => p.permissionKey === key)?.enabled ?? false;
+    return this.permissionsService.hasPermission(this.permissions(), key);
   }
 
   togglePermission(key: PermissionKey): void {

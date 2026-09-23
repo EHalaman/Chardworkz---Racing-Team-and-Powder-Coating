@@ -1,0 +1,110 @@
+id	name	oem_part_no	unit_price	price_source
+8	NGK MR8E-9 Spark Plug	09482-00646-000	292.00	confirmed_real_price_suzuki_ph
+10	Fuse 20A (Main)	09481-20102-000	82.00	confirmed_real_price_suzuki_ph
+13	Front Disc Brake Pad Set	59100-34880-000	420.00	still_placeholder
+15	Front Brake Hose	59480-12K30-000	1258.00	confirmed_real_price_suzuki_ph
+16	Rear Brake Hose	69480-12K00-000	350.00	still_placeholder
+17	RK 428KLO Drive Chain (116L)	27610-12K00-116	1650.00	still_placeholder
+18	Paper Air Cleaner Element	13780-12K00-000	427.00	confirmed_real_price_suzuki_ph
+19	Oil Filter Element	16510-45H10-000	150.00	still_placeholder
+21	Valve Spring - Intake	12921-12K00-000	227.00	confirmed_real_price_suzuki_ph
+22	Valve Spring - Exhaust	12921-12K00-000	227.00	confirmed_real_price_suzuki_ph
+23	Throttle Cable	58300-12K00-000	395.00	confirmed_real_price_suzuki_ph
+24	Clutch Cable	58200-12K00-000	459.00	confirmed_real_price_suzuki_ph
+155	Cylinder Head Cover Gasket No.1	11173-12K00-000	269.00	confirmed_real_price_suzuki_ph
+156	Cylinder Head Cover Gasket No.2	11178-12K00-000	56.00	confirmed_real_price_suzuki_ph
+157	Cylinder Head Gasket (Genuine OEM)	11141-12K01-000	311.00	confirmed_real_price_suzuki_ph
+158	O-Ring - Cylinder Head	09280-35009-000	36.00	confirmed_real_price_suzuki_ph
+159	O-Ring 3.1x16.8mm - Crankcase Cover	09280-17003-000	54.00	confirmed_real_price_suzuki_ph
+160	O-Ring 3.1x32.7mm - Crankcase Cover	09280-33004-000	70.00	confirmed_real_price_suzuki_ph
+161	O-Ring 2.4x13.8mm - Crankcase Cover	09280-14003-000	24.00	confirmed_real_price_suzuki_ph
+162	Engine Sprocket Cover	11360-12K10-000	374.00	confirmed_real_price_suzuki_ph
+163	Crankshaft Bearing (28058)	09262-28058-000	662.00	confirmed_real_price_suzuki_ph
+164	Crankshaft Bearing (35103)	09262-35103-000	686.00	confirmed_real_price_suzuki_ph
+165	Crankshaft Oil Seal 12x21x7mm	09282-12L01-000	200.00	confirmed_real_price_suzuki_ph
+166	Starter Clutch Bearing	09263-22075-000	282.00	confirmed_real_price_suzuki_ph
+167	Crank Balancer Bearing (15054)	09262-15054-000	340.00	confirmed_real_price_suzuki_ph
+168	Crank Balancer Bearing (15055)	09262-15055-000	279.00	confirmed_real_price_suzuki_ph
+169	Camshaft Sprocket (34T)	12741-12K00-000	414.00	confirmed_real_price_suzuki_ph
+170	Valve Spring Retainer	12931-25G20-000	79.00	confirmed_real_price_suzuki_ph
+171	Valve Spring Seat	12933-12K00-000	50.00	confirmed_real_price_suzuki_ph
+172	Valve Stem Oil Seal 4.5x10x8mm	09289-04002-000	92.00	confirmed_real_price_suzuki_ph
+173	Cam Chain	12760-12K00-000	961.00	confirmed_real_price_suzuki_ph
+174	Cam Chain Guide No.1	12771-12K00-000	138.00	confirmed_real_price_suzuki_ph
+175	Cam Chain Guide No.2	12782-12K01-000	177.00	confirmed_real_price_suzuki_ph
+176	Cam Chain Tensioner	12811-12K00-000	460.00	confirmed_real_price_suzuki_ph
+177	Cam Chain Tensioner Bolt	12812-35C00-000	40.00	still_placeholder
+178	O-Ring - Throttle Body	13453-36F00-000	141.00	confirmed_real_price_suzuki_ph
+179	O-Ring - Throttle Body (Injector)	15716-42J00-000	435.00	confirmed_real_price_suzuki_ph
+181	Air Cleaner Drain Plug	13878-12K00-000	52.00	confirmed_real_price_suzuki_ph
+182	Fuel Pump Strainer/Filter	15420-12K00-000	382.00	confirmed_real_price_suzuki_ph
+183	O-Ring - Fuel Pump	15424-09JB0-000	79.00	confirmed_real_price_suzuki_ph
+184	O-Ring, Fuel Pump (Mounting)	15201-09JA0-000	432.00	confirmed_real_price_suzuki_ph
+185	O-Ring - Water Pump Case	17431-12K10-000	145.00	confirmed_real_price_suzuki_ph
+186	Water Pump Shaft Oil Seal	17461-12K00-000	655.00	confirmed_real_price_suzuki_ph
+187	Water Pump Bearing	08113-0608A-000	209.00	confirmed_real_price_suzuki_ph
+188	Transmission Bearing (62040)	08110-62040-000	336.00	confirmed_real_price_suzuki_ph
+189	Transmission Bearing (60020)	08120-60020-000	185.00	confirmed_real_price_suzuki_ph
+190	Drive Shaft Oil Seal	24399-12K00-000	91.00	confirmed_real_price_suzuki_ph
+191	Transmission Bearing (62020)	08110-62020-000	180.00	still_placeholder
+192	Transmission Bearing (62040-B)	08120-62040-000	180.00	still_placeholder
+193	Countershaft Bearing Retainer	24741-20A10-000	28.00	confirmed_real_price_suzuki_ph
+194	Engine (Front) Sprocket (14T)	27511-25G20-000	296.00	confirmed_real_price_suzuki_ph
+195	Engine Sprocket Lock Plate	27512-25G00-000	68.00	confirmed_real_price_suzuki_ph
+196	Transmission Bearing (60027)	08120-60027-000	180.00	still_placeholder
+197	Gear Shift Shaft Bearing	08110-69050-000	150.00	still_placeholder
+198	Gear Shift Shaft Oil Seal 14x22x6mm	09283-14014-000	71.00	confirmed_real_price_suzuki_ph
+199	O-Ring - Gear Shifting	37722-25G00-000	60.00	confirmed_real_price_suzuki_ph
+200	Kick Starter Oil Seal 16x24x5mm	09283-16008-000	75.00	confirmed_real_price_suzuki_ph
+201	O-Ring - Starting Motor	31156-12K00-000	71.00	confirmed_real_price_suzuki_ph
+202	O-Ring - Starter Motor Cover	31264-05530-000	23.00	confirmed_real_price_suzuki_ph
+203	O-Ring - Starter Motor Housing	09280-12K00-000	225.00	confirmed_real_price_suzuki_ph
+204	Magneto Lead Clamp (A)	32371-12K00-000	36.00	confirmed_real_price_suzuki_ph
+205	Magneto Lead Clamp (B)	32371-16H00-000	25.00	still_placeholder
+206	Spark Plug Cap	33510-25G00-000	352.00	confirmed_real_price_suzuki_ph
+207	Spark Plug Seal	33541-25G00-000	71.00	confirmed_real_price_suzuki_ph
+208	High Tension Cord Seal	33542-25G10-000	152.00	confirmed_real_price_suzuki_ph
+209	Headlamp Bulb 12V 10W	09471-12203-000	60.00	still_placeholder
+210	Tail/Brake Light Bulb 12V 18/5W	09471-12119-000	60.00	still_placeholder
+211	Turn Signal Bulb 12V 5W	09471-12216-000	40.00	still_placeholder
+212	Battery Cushion Rubber	92274-12K00-000	44.00	confirmed_real_price_suzuki_ph
+213	Front Footrest Assembly RH	43501-12K10-000	871.00	confirmed_real_price_suzuki_ph
+214	Front Footrest Bracket RH	43510-12K10-000	567.00	confirmed_real_price_suzuki_ph
+215	Front Footrest Bar RH	43516-35F10-000	549.00	confirmed_real_price_suzuki_ph
+216	Front Footrest Assembly LH	43502-12K10-000	871.00	confirmed_real_price_suzuki_ph
+217	Front Footrest Bracket LH	43520-12K10-000	504.00	confirmed_real_price_suzuki_ph
+218	Front Footrest Bar LH	43526-35F10-000	532.00	confirmed_real_price_suzuki_ph
+219	Footrest Guard RH	43586-12K00-000	105.00	confirmed_real_price_suzuki_ph
+220	Footrest Guard LH	43596-12K00-000	105.00	confirmed_real_price_suzuki_ph
+221	Rear View Mirror RH	56500-23K00-000	703.00	confirmed_real_price_suzuki_ph
+222	Rear View Mirror LH	56600-23K00-000	703.00	confirmed_real_price_suzuki_ph
+223	Clutch Cable Guide	58620-12K01-000	60.00	confirmed_real_price_suzuki_ph
+224	Clutch Cable Stopper	58634-12K00-000	67.00	confirmed_real_price_suzuki_ph
+225	Throttle Grip	57110-12K01-000	231.00	confirmed_real_price_suzuki_ph
+226	Front Brake Lever	57421-21D30-000	285.00	confirmed_real_price_suzuki_ph
+227	Handlebar Grip LH	57211-40J01-000	197.00	confirmed_real_price_suzuki_ph
+228	Clutch Lever	57621-23FB0-000	307.00	confirmed_real_price_suzuki_ph
+229	Front Fork Dust Seal	51571-09G00-000	56.00	confirmed_real_price_suzuki_ph
+230	O-Ring - Front Fork	51117-09G00-000	19.00	confirmed_real_price_suzuki_ph
+231	Steering Stem Upper Dust Seal	51643-06001-000	129.00	confirmed_real_price_suzuki_ph
+232	Front Wheel Bearing	08113-6301B-000	248.00	confirmed_real_price_suzuki_ph
+233	Front Wheel Oil Seal 25x40x6mm	09285-25008-000	65.00	confirmed_real_price_suzuki_ph
+234	Front Brake Disc	59211-25G60-000	3172.00	confirmed_real_price_suzuki_ph
+235	Front Tire	55110-12K00-000	4035.00	confirmed_real_price_suzuki_ph
+236	Front Caliper Piston Seal Set	59300-13820-000	878.00	confirmed_real_price_suzuki_ph
+237	Front Brake Hose Lower Clamp	59268-19D60-000	52.00	confirmed_real_price_suzuki_ph
+238	Swingarm Chain Buffer	61273-25G10-000	131.00	confirmed_real_price_suzuki_ph
+239	Chain Case Cover	61311-12K00-000	277.00	confirmed_real_price_suzuki_ph
+240	Rear Brake Disc	69211-25G50-000	1259.00	confirmed_real_price_suzuki_ph
+241	Rear Wheel Bearing (Inner)	08143-6201B-000	524.00	confirmed_real_price_suzuki_ph
+242	Rear Sprocket Drum Retainer	64733-12K00-000	117.00	confirmed_real_price_suzuki_ph
+243	Rear Sprocket Drum	64611-12K00-000	775.00	confirmed_real_price_suzuki_ph
+244	Rear Wheel Bearing (Outer)	08113-6203B-000	409.00	confirmed_real_price_suzuki_ph
+245	Rear Sprocket Drum Spacer	64741-25G00-000	151.00	confirmed_real_price_suzuki_ph
+246	Rear Sprocket (38T)	64511-12K00-000	810.00	confirmed_real_price_suzuki_ph
+247	Chain Adjuster	61410-28F00-000	264.00	confirmed_real_price_suzuki_ph
+248	Chain Adjuster Guide Plate	61421-05F00-000	232.00	confirmed_real_price_suzuki_ph
+249	Rear Tire	65110-12K00-000	3808.00	confirmed_real_price_suzuki_ph
+250	Rear Caliper Piston Seal Set	69300-12810-000	661.00	confirmed_real_price_suzuki_ph
+251	O-Ring - Rear Master Cylinder	69686-34200-000	59.00	confirmed_real_price_suzuki_ph
+252	Rear Brake Hose Clamp	69734-12K00-000	59.00	confirmed_real_price_suzuki_ph

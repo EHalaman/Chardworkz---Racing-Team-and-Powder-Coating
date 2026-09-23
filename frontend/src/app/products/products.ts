@@ -9,6 +9,7 @@ export interface ProductSummary {
   id: number;
   name: string;
   brandTag: string | null;
+  oemPartNo: string | null;
   unitPrice: number;
   category: ProductCategory;
   stockQuantity: number;
@@ -20,6 +21,7 @@ export interface ProductSummary {
 export interface ProductRequest {
   name: string;
   brandTag: string | null;
+  oemPartNo: string | null;
   unitPrice: number;
   category: ProductCategory;
 }

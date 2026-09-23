@@ -36,6 +36,10 @@ public class Product {
     @Column(name = "brand_tag", length = 100)
     private String brandTag;
 
+    /** Manufacturer's genuine-parts catalogue number, e.g. Suzuki's "09482-00646-000" - distinct from {@code sku} (an internal barcode scheme, still unused). */
+    @Column(name = "oem_part_no", length = 30)
+    private String oemPartNo;
+
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice;
 

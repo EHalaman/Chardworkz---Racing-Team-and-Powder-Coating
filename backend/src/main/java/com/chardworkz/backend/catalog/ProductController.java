@@ -86,6 +86,7 @@ public class ProductController {
         Product product = Product.builder()
             .name(request.name())
             .brandTag(request.brandTag())
+            .oemPartNo(request.oemPartNo())
             .unitPrice(request.unitPrice())
             .category(request.category())
             .active(true)
@@ -107,6 +108,7 @@ public class ProductController {
         Product product = findOrThrow(id);
         product.setName(request.name());
         product.setBrandTag(request.brandTag());
+        product.setOemPartNo(request.oemPartNo());
         product.setUnitPrice(request.unitPrice());
         product.setCategory(request.category());
         product.setUpdatedAt(Instant.now());
@@ -177,6 +179,7 @@ public class ProductController {
                 product.getId(),
                 product.getName(),
                 product.getBrandTag(),
+                product.getOemPartNo(),
                 product.getUnitPrice(),
                 product.getCategory(),
                 quantityByProductId.getOrDefault(product.getId(), 0),
@@ -194,7 +197,7 @@ public class ProductController {
             .map(StockLevel::getQuantity)
             .orElse(0);
         return new ProductSummaryResponse(
-            product.getId(), product.getName(), product.getBrandTag(), product.getUnitPrice(),
+            product.getId(), product.getName(), product.getBrandTag(), product.getOemPartNo(), product.getUnitPrice(),
             product.getCategory(), quantity, product.isActive(), product.getCreatedAt(), product.getDeletedAt());
     }
 

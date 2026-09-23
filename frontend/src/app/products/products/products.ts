@@ -74,11 +74,10 @@ export class Products implements OnInit {
 
   /** Single master flag (migration V13) covering the whole catalog page for Manager - add, edit, delete, and deactivate/reactivate all gate on this one flag; Owner is always allowed. */
   get canManageProducts(): boolean {
-    return this.isOwner || this.isPermissionEnabled('MANAGER_MANAGE_PRODUCTS');
-  }
-
-  private isPermissionEnabled(key: string): boolean {
-    return this.permissions().find((p) => p.permissionKey === key)?.enabled ?? false;
+    return (
+      this.isOwner ||
+      this.permissionsService.hasPermission(this.permissions(), 'MANAGER_MANAGE_PRODUCTS')
+    );
   }
 
   get filteredProducts(): ProductSummary[] {
@@ -100,7 +99,9 @@ export class Products implements OnInit {
     if (term) {
       list = list.filter(
         (p) =>
-          p.name.toLowerCase().includes(term) || (p.brandTag ?? '').toLowerCase().includes(term),
+          p.name.toLowerCase().includes(term) ||
+          (p.brandTag ?? '').toLowerCase().includes(term) ||
+          (p.oemPartNo ?? '').toLowerCase().includes(term),
       );
     }
 
@@ -162,8 +163,8 @@ export class Products implements OnInit {
     this.editingId.set(null);
   }
 
-  createProduct(name: string, brandTag: string, unitPrice: string): void {
-    const request = this.toRequest(name, brandTag, unitPrice, this.newCategory());
+  createProduct(name: string, brandTag: string, oemPartNo: string, unitPrice: string): void {
+    const request = this.toRequest(name, brandTag, oemPartNo, unitPrice, this.newCategory());
     if (!request) {
       this.errorMessage.set('Enter a name and a valid price.');
       return;
@@ -187,8 +188,14 @@ export class Products implements OnInit {
     });
   }
 
-  saveEdit(product: ProductSummary, name: string, brandTag: string, unitPrice: string): void {
-    const request = this.toRequest(name, brandTag, unitPrice, this.editingCategory());
+  saveEdit(
+    product: ProductSummary,
+    name: string,
+    brandTag: string,
+    oemPartNo: string,
+    unitPrice: string,
+  ): void {
+    const request = this.toRequest(name, brandTag, oemPartNo, unitPrice, this.editingCategory());
     if (!request) {
       this.errorMessage.set('Enter a name and a valid price.');
       return;
@@ -248,6 +255,7 @@ export class Products implements OnInit {
   private toRequest(
     name: string,
     brandTag: string,
+    oemPartNo: string,
     unitPrice: string,
     category: ProductCategory,
   ): ProductRequest | null {
@@ -256,7 +264,13 @@ export class Products implements OnInit {
     if (!trimmedName || !Number.isFinite(price) || price < 0) {
       return null;
     }
-    return { name: trimmedName, brandTag: brandTag.trim() || null, unitPrice: price, category };
+    return {
+      name: trimmedName,
+      brandTag: brandTag.trim() || null,
+      oemPartNo: oemPartNo.trim() || null,
+      unitPrice: price,
+      category,
+    };
   }
 
   private loadProducts(): void {

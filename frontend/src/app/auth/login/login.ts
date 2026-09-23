@@ -1,5 +1,5 @@
 import { Component, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth';
 
 @Component({
@@ -16,6 +16,7 @@ export class Login {
   constructor(
     private auth: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
   ) {}
 
   toggleShowPassword(): void {
@@ -29,9 +30,16 @@ export class Login {
       next: (response) => {
         this.submitting.set(false);
         // Employee has no Dashboard access (Layout.ALL_NAV_ITEMS) - send them
-        // straight to the one screen their role can actually use.
-        const destination = response.role === 'EMPLOYEE' ? '/admin/register' : '/admin/dashboard';
-        this.router.navigateByUrl(destination);
+        // straight to the one screen their role can actually use. roleGuard
+        // still bounces returnUrl to that same default if it's not one this
+        // role can reach, so this is a convenience, not a bypass.
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+        const fallback = response.role === 'EMPLOYEE' ? '/admin/register' : '/admin/dashboard';
+        this.router.navigateByUrl(returnUrl || fallback).then((navigated) => {
+          if (!navigated) {
+            this.router.navigateByUrl(fallback);
+          }
+        });
       },
       error: () => {
         this.submitting.set(false);

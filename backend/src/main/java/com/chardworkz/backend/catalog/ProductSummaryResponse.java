@@ -7,6 +7,7 @@ public record ProductSummaryResponse(
     Long id,
     String name,
     String brandTag,
+    String oemPartNo,
     BigDecimal unitPrice,
     Category category,
     int stockQuantity,
