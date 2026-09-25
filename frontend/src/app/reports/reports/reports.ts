@@ -1,11 +1,23 @@
-import { Component, ElementRef, HostListener, OnInit, ViewChild, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  signal,
+} from '@angular/core';
+import { Subscription, debounceTime, filter, merge } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { SalesEventsService } from '../../core/sales-events';
 import { downloadBlob } from '../../core/utils/download.util';
 import { SaleReceipt, SalesService } from '../../register/sales';
 import { CashierSummary, ReportsService, RecentSale, SalesReport } from '../reports';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const RECENT_SALES_PAGE_SIZE = 10;
+/** Same reasoning as Register's identical constant - see there. */
+const SSE_REFRESH_DEBOUNCE_MS = 500;
 type SortOrder = 'NEWEST' | 'OLDEST';
 
 @Component({
@@ -14,7 +26,7 @@ type SortOrder = 'NEWEST' | 'OLDEST';
   styleUrl: './reports.css',
   templateUrl: './reports.html',
 })
-export class Reports implements OnInit {
+export class Reports implements OnInit, OnDestroy {
   readonly report = signal<SalesReport | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly loading = signal(false);
@@ -51,11 +63,13 @@ export class Reports implements OnInit {
 
   @ViewChild('cashierCombobox') private cashierComboboxWrapper?: ElementRef<HTMLElement>;
   private searchDebounceHandle?: ReturnType<typeof setTimeout>;
+  private saleEventsSub?: Subscription;
 
   constructor(
     private reportsService: ReportsService,
     private salesService: SalesService,
     readonly auth: AuthService,
+    private salesEventsService: SalesEventsService,
   ) {}
 
   get isOwner(): boolean {
@@ -173,6 +187,27 @@ export class Reports implements OnInit {
   ngOnInit(): void {
     this.loadReport();
     this.loadCashiers();
+
+    // Same reasoning as Dashboard's ngOnInit - see
+    // docs/realtime-sales-sync-spec-2026-09-25.md.
+    this.saleEventsSub = merge(
+      this.salesEventsService.saleRecorded$.pipe(
+        filter((event) => {
+          const branch = this.selectedBranch();
+          return !branch || branch === event.branchCode;
+        }),
+      ),
+      this.salesEventsService.reconnected$,
+    )
+      .pipe(debounceTime(SSE_REFRESH_DEBOUNCE_MS))
+      .subscribe(() => {
+        this.loadReport();
+        this.runSearch();
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.saleEventsSub?.unsubscribe();
   }
 
   selectBranch(branchCode: string | null): void {

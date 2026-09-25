@@ -9,12 +9,14 @@ import com.chardworkz.backend.catalog.Product;
 import com.chardworkz.backend.catalog.ProductCostService;
 import com.chardworkz.backend.catalog.ProductRepository;
 import com.chardworkz.backend.inventory.StockLevelRepository;
+import com.chardworkz.backend.realtime.SaleCreatedEvent;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,7 @@ public class SaleService {
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
     private final ProductCostService productCostService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public SaleAckResponse recordSale(CreateSaleRequest request, String branchCode, Long employeeId) {
@@ -115,6 +118,12 @@ public class SaleService {
         for (CreateSaleLineRequest lineRequest : request.lines()) {
             stockLevelRepository.clampDecrement(lineRequest.productId(), branch.getId(), lineRequest.quantity());
         }
+
+        // Genuine first-time persistence only - never on either alreadySynced
+        // replay path above. A @TransactionalEventListener(AFTER_COMMIT) picks
+        // this up once this transaction actually commits, not before (see
+        // docs/realtime-sales-sync-spec-2026-09-25.md).
+        eventPublisher.publishEvent(new SaleCreatedEvent(branch.getCode(), sale.getId(), sale.getSoldAt()));
 
         return new SaleAckResponse(request.id(), false);
     }

@@ -1,8 +1,9 @@
-import { Component, OnInit, ViewChild, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, signal } from '@angular/core';
 import { ChartConfiguration, ScriptableContext } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
-import { forkJoin, catchError, of } from 'rxjs';
+import { Subscription, catchError, debounceTime, filter, forkJoin, merge, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { SalesEventsService } from '../../core/sales-events';
 import {
   DashboardActivity,
   DashboardAlert,
@@ -62,6 +63,9 @@ const EMPTY_ANALYTICS: DashboardAnalytics = {
   chartSeries: [],
 };
 
+/** Same reasoning as Register's identical constant - see there. */
+const SSE_REFRESH_DEBOUNCE_MS = 500;
+
 /** Real data throughout, wired to /api/dashboard/*. Each stream falls back
  * to an empty/zeroed value on error rather than failing the whole page -
  * one flaky endpoint shouldn't blank the entire Dashboard. */
@@ -71,7 +75,7 @@ const EMPTY_ANALYTICS: DashboardAnalytics = {
   styleUrl: './dashboard.css',
   templateUrl: './dashboard.html',
 })
-export class Dashboard implements OnInit {
+export class Dashboard implements OnInit, OnDestroy {
   readonly summary = signal<DashboardSummary>(EMPTY_SUMMARY);
   readonly loadError = signal<string | null>(null);
   readonly alerts = signal<DashboardAlert[]>([]);
@@ -204,9 +208,12 @@ export class Dashboard implements OnInit {
     },
   };
 
+  private saleEventsSub?: Subscription;
+
   constructor(
     private dashboardService: DashboardService,
     readonly auth: AuthService,
+    private salesEventsService: SalesEventsService,
   ) {}
 
   get isOwner(): boolean {
@@ -230,6 +237,30 @@ export class Dashboard implements OnInit {
   ngOnInit(): void {
     this.loadDashboard();
     this.loadAnalytics();
+
+    // A completed sale anywhere the current branch filter cares about
+    // (everywhere, if "Both branches"/unset) refreshes this screen live -
+    // see docs/realtime-sales-sync-spec-2026-09-25.md. A reconnect always
+    // refreshes regardless of branch; a specific sale event only refreshes
+    // when it's relevant to the current filter.
+    this.saleEventsSub = merge(
+      this.salesEventsService.saleRecorded$.pipe(
+        filter((event) => {
+          const branch = this.selectedBranch();
+          return !branch || branch === event.branchCode;
+        }),
+      ),
+      this.salesEventsService.reconnected$,
+    )
+      .pipe(debounceTime(SSE_REFRESH_DEBOUNCE_MS))
+      .subscribe(() => {
+        this.loadDashboard();
+        this.loadAnalytics();
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.saleEventsSub?.unsubscribe();
   }
 
   selectBranch(branchCode: string | null): void {

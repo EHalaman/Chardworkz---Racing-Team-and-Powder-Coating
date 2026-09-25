@@ -1,6 +1,7 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { catchError, of } from 'rxjs';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Subscription, catchError, debounceTime, merge, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { SalesEventsService } from '../../core/sales-events';
 import { formatPHMobileAsTyped, isValidPHMobileNumber } from '../../core/utils/ph-phone.util';
 import { OfflineSaleQueueService } from '../../offline-sales/offline-sale-queue';
 import { ProductsService, ProductSummary } from '../../products/products';
@@ -20,13 +21,16 @@ const BRANCH_NAMES: Record<string, string> = {
   MASINAG: 'Masinag Branch',
 };
 
+/** Collapses a burst of near-simultaneous SALE_RECORDED events (e.g. an offline register reconnecting and syncing several queued sales at once) into a single refresh instead of one per event - flagged by /code-review on the first version of this wiring. */
+const SSE_REFRESH_DEBOUNCE_MS = 500;
+
 @Component({
   selector: 'app-register',
   standalone: false,
   styleUrl: './register.css',
   templateUrl: './register.html',
 })
-export class Register implements OnInit {
+export class Register implements OnInit, OnDestroy {
   readonly products = signal<ProductSummary[]>([]);
   readonly searchTerm = signal('');
   readonly cart = signal<CartLine[]>([]);
@@ -53,15 +57,32 @@ export class Register implements OnInit {
     { value: 'EWALLET_OTHER', label: 'Other e-wallet' },
   ];
 
+  private saleEventsSub?: Subscription;
+
   constructor(
     private productsService: ProductsService,
     private queue: OfflineSaleQueueService,
     private shiftSummaryService: ShiftSummaryService,
     private salesService: SalesService,
     readonly auth: AuthService,
+    private salesEventsService: SalesEventsService,
   ) {}
 
   ngOnInit(): void {
+    // No branch filtering needed here, unlike Dashboard/Reports - Register
+    // is never Owner-accessible (see Layout.ALL_NAV_ITEMS), and a non-Owner
+    // account only ever receives SSE events for its own branch in the first
+    // place (SseEmitterRegistry#sendToBranch). See
+    // docs/realtime-sales-sync-spec-2026-09-25.md.
+    this.saleEventsSub = merge(
+      this.salesEventsService.saleRecorded$,
+      this.salesEventsService.reconnected$,
+    )
+      .pipe(debounceTime(SSE_REFRESH_DEBOUNCE_MS))
+      .subscribe(() => {
+        this.loadShiftSummary();
+        this.loadRecentTransactions();
+      });
     this.productsService.list().subscribe({
       next: (products) => this.products.set(products),
       // Client-side search below still works against whatever loaded before
@@ -70,6 +91,10 @@ export class Register implements OnInit {
     });
     this.loadShiftSummary();
     this.loadRecentTransactions();
+  }
+
+  ngOnDestroy(): void {
+    this.saleEventsSub?.unsubscribe();
   }
 
   get isEmployee(): boolean {
