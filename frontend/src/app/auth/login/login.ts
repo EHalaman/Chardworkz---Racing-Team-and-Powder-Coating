@@ -11,17 +11,12 @@ import { AuthService } from '../../core/auth';
 export class Login {
   readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly showPassword = signal(false);
 
   constructor(
     private auth: AuthService,
     private router: Router,
     private route: ActivatedRoute,
   ) {}
-
-  toggleShowPassword(): void {
-    this.showPassword.update((show) => !show);
-  }
 
   onSubmit(username: string, password: string): void {
     this.errorMessage.set(null);
