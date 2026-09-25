@@ -15,8 +15,8 @@ export type NavAction = { type: 'anchor'; id: string } | { type: 'route'; path: 
 
 /**
  * Site-wide floating nav (left dock on desktop, bottom bar on mobile), mounted once
- * outside <router-outlet> by the customer shell. Home/Contact stay anchor-scroll targets
- * on the Home page; Services is a real route. Active state and the hero/footer
+ * outside <router-outlet> by the customer shell. Home stays an anchor-scroll target on
+ * the Home page; Services/Parts/Contact are real routes. Active state and the hero
  * IntersectionObserver both need to react to route changes since this component is never
  * destroyed/recreated on navigation.
  */
@@ -33,7 +33,7 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
     { label: 'Home', icon: 'home', targetId: 'hero-section' },
     { label: 'Services', icon: 'services', route: '/services' },
     { label: 'Parts & Catalog', icon: 'parts', route: '/catalogue' },
-    { label: 'Contact', icon: 'contact', targetId: 'site-footer' },
+    { label: 'Contact', icon: 'contact', route: '/contact' },
   ];
 
   readonly activeTargetId = signal('hero-section');
@@ -78,8 +78,8 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
     return !!item.targetId && this.currentUrl() === '/' && this.activeTargetId() === item.targetId;
   }
 
-  /** Re-run on every navigation - hero-section/site-footer only exist on '/', so a direct
-   *  load of another route must not leave a stale observer watching detached elements.
+  /** Re-run on every navigation - hero-section only exists on '/', so a direct load of
+   *  another route must not leave a stale observer watching a detached element.
    *  Retries briefly on a fresh bootstrap: this component is a template sibling of
    *  <router-outlet>, so there's no guarantee Home's own elements have painted into the
    *  DOM yet the first time this runs. Cancels any retry chain a prior call left pending,
@@ -88,7 +88,7 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
     this.clearPendingRetry();
     this.observer?.disconnect();
 
-    const observedIds = ['hero-section', 'site-footer'];
+    const observedIds = ['hero-section'];
     const targets = observedIds
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -101,9 +101,8 @@ export class FloatingNavRail implements AfterViewInit, OnDestroy {
 
     this.observer = new IntersectionObserver(
       (entries) => {
-        // Ratio-of-target-visible, not a viewport center-band: the footer is
-        // shorter than half the viewport, so it can sit fully visible at the
-        // bottom of the page without ever crossing a fixed center band.
+        // Ratio-of-target-visible, not a viewport center-band: keeps working correctly
+        // if a future anchor target ends up shorter than half the viewport.
         const visible = entries.filter((entry) => entry.isIntersecting);
         if (visible.length === 0) {
           return;

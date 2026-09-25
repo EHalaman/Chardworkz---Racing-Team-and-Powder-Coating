@@ -18,7 +18,7 @@
         <div class="flex items-center justify-end gap-4">
           <div class="social-links hidden items-center gap-6 text-white sm:flex">
             <a
-              href="#"
+              routerLink="/contact"
               aria-label="Find us on the map"
               class="opacity-80 transition-opacity hover:opacity-100"
             >
@@ -119,9 +119,8 @@
               </span>
             </a>
 
-            <button
-              type="button"
-              (click)="goTo('site-footer')"
+            <a
+              routerLink="/contact"
               class="group flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl border border-white/20 bg-white/[0.15] px-4 py-3 text-left backdrop-blur-md transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white/[0.22] active:scale-[0.98] xl:flex-[1_1_472px]"
             >
               <div>
@@ -144,7 +143,7 @@
                   <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </span>
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -371,7 +370,7 @@
 
       <div class="social-links mt-8 flex items-center gap-6 border-b border-white/10 pb-6">
         <a
-          href="#"
+          routerLink="/contact"
           aria-label="Find us on the map"
           class="opacity-80 transition-opacity hover:opacity-100"
         >
@@ -426,7 +425,7 @@
           </svg>
         </a>
         <span class="h-8 w-px bg-white/20"></span>
-        <a href="#" class="text-sm hover:text-white">contact</a>
+        <a routerLink="/contact" class="text-sm hover:text-white">contact</a>
       </div>
 
       <div class="mt-6 flex flex-col gap-3 text-xs sm:flex-row sm:items-center sm:justify-between">

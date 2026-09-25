@@ -1,0 +1,424 @@
+<div id="contact-top" class="box-border w-full overflow-x-hidden bg-[#F8F9FA]">
+  <!-- Header bar: reused from home.html -->
+  <div class="relative z-20 bg-[#0D0F12] px-6 py-12 text-gray-300">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
+      <div>
+        <p class="text-5xl font-extrabold">
+          <span class="chardworkz-logo text-[#E4372A]">Chard</span
+          ><span class="text-[#2C5FE0]">Workz</span>
+        </p>
+        <span class="paragraph-logo">Racing Team and Powder Coating Services</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-4">
+        <div class="social-links hidden items-center gap-6 text-white sm:flex">
+          <a
+            routerLink="/contact"
+            aria-label="Find us on the map"
+            class="opacity-80 transition-opacity hover:opacity-100"
+          >
+            <svg
+              class="h-7 w-7"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z" />
+              <circle cx="12" cy="9.5" r="2.3" />
+            </svg>
+          </a>
+          <a
+            href="#"
+            aria-label="ChardWorkz on Facebook"
+            class="opacity-80 transition-opacity hover:opacity-100"
+          >
+            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94Z"
+              />
+            </svg>
+          </a>
+          <a
+            href="#"
+            aria-label="ChardWorkz on Instagram"
+            class="opacity-80 transition-opacity hover:opacity-100"
+          >
+            <svg
+              class="h-7 w-7"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+            </svg>
+          </a>
+          <a
+            href="#"
+            aria-label="ChardWorkz on TikTok"
+            class="opacity-80 transition-opacity hover:opacity-100"
+          >
+            <svg class="h-7 w-7" viewBox="5 -2 24 24" fill="currentColor">
+              <path
+                d="M14.5 2h2.6c.2 1.6 1.2 3 2.9 3.4v2.7c-1.1 0-2.1-.3-3-1v6.6c0 3-2.5 5.3-5.4 5.3S6.2 16.7 6.2 13.7c0-2.9 2.3-5.2 5.1-5.3v2.8c-1.3.1-2.3 1.1-2.3 2.5 0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5V2Z"
+              />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- contact-intro: text-only, no hero image asset exists for this page yet -->
+  <section class="contact-intro bg-[#0D0F12] px-6 py-16 text-center sm:py-20">
+    <div class="mx-auto max-w-3xl">
+      <div class="flex items-center justify-center gap-3">
+        <span class="h-1 w-8 bg-[#E6D800]"></span>
+        <p class="text-xs font-bold uppercase tracking-widest text-[#E6D800]">Get In Touch</p>
+        <span class="h-1 w-8 bg-[#E6D800]"></span>
+      </div>
+      <h1
+        class="mt-4 text-4xl font-extrabold uppercase leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl"
+      >
+        Contact Us
+      </h1>
+      <p class="mt-4 text-sm leading-relaxed text-gray-300 sm:text-base">
+        If you have any questions, feel free to get in touch with us via phone, email, the form
+        below, or on social media!
+      </p>
+    </div>
+  </section>
+
+  <!-- get-in-touch: form + contact info / hours -->
+  <section class="get-in-touch bg-[#0D0F12] px-4 pb-16 sm:px-8 sm:pb-24 lg:px-12">
+    <div class="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-5 lg:gap-8">
+      <!-- Contact form card -->
+      <div class="rounded-xl border border-white/10 bg-[#1C1F26] p-6 sm:p-8 lg:col-span-3">
+        <h2 class="text-xl font-extrabold uppercase tracking-wide text-white sm:text-2xl">
+          Get In Touch
+        </h2>
+
+        <form
+          class="mt-6 flex flex-col gap-4"
+          (submit)="
+            $event.preventDefault();
+            sendMessage(contactName.value, contactMessage.value, contactEmail.value);
+            contactName.value = '';
+            contactEmail.value = '';
+            contactMessage.value = ''
+          "
+        >
+          <input
+            #contactName
+            type="text"
+            required
+            maxlength="150"
+            placeholder="Enter your name*"
+            class="w-full rounded-lg border border-white/15 bg-[#14161C] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-[#E6D800] focus:outline-none focus:ring-1 focus:ring-[#E6D800]"
+          />
+
+          <div class="flex items-stretch gap-2">
+            <span
+              class="flex items-center rounded-lg border border-white/15 bg-[#14161C] px-3 text-sm font-medium text-gray-400"
+              >+63</span
+            >
+            <input
+              type="tel"
+              inputmode="numeric"
+              maxlength="12"
+              placeholder="Enter your phone number*"
+              autocomplete="tel"
+              [value]="customerPhoneDisplay()"
+              (input)="onPhoneInput($any($event.target).value)"
+              class="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14161C] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-[#E6D800] focus:outline-none focus:ring-1 focus:ring-[#E6D800]"
+            />
+          </div>
+
+          <input
+            #contactEmail
+            type="email"
+            required
+            maxlength="100"
+            placeholder="Enter your email*"
+            class="w-full rounded-lg border border-white/15 bg-[#14161C] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-[#E6D800] focus:outline-none focus:ring-1 focus:ring-[#E6D800]"
+          />
+
+          <textarea
+            #contactMessage
+            required
+            rows="5"
+            maxlength="1000"
+            placeholder="Your message"
+            class="w-full resize-none rounded-lg border border-white/15 bg-[#14161C] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-[#E6D800] focus:outline-none focus:ring-1 focus:ring-[#E6D800]"
+          ></textarea>
+
+          <button
+            type="submit"
+            class="notched-badge mt-2 inline-flex w-fit items-center gap-2 bg-[#711511] px-6 py-3 text-sm font-bold uppercase text-white transition-transform duration-200 hover:scale-105 hover:bg-[#58110D]"
+          >
+            Send Message
+            <svg
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+
+          <p *ngIf="submitted()" class="text-xs font-medium text-[#E6D800]">
+            Your email app should now be open with your message pre-filled — just hit send.
+          </p>
+        </form>
+      </div>
+
+      <!-- Contact info + hours -->
+      <div class="flex flex-col gap-6 lg:col-span-2">
+        <div class="rounded-xl border border-white/10 bg-[#1C1F26] p-6 sm:p-8">
+          <h3 class="text-xs font-bold uppercase tracking-widest text-[#E6D800]">
+            Contact Information
+          </h3>
+          <div class="mt-4 flex flex-col gap-3 text-sm text-gray-200">
+            <a [href]="'tel:' + phoneTel" class="flex items-center gap-3 hover:text-white">
+              <svg
+                class="h-5 w-5 shrink-0 text-[#E6D800]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <path
+                  d="M4 5c0-.6.4-1 1-1h2.4c.5 0 .9.3 1 .8l.7 3a1 1 0 0 1-.3 1L7.5 10a11 11 0 0 0 6.5 6.5l1.2-1.3a1 1 0 0 1 1-.3l3 .7c.5.1.8.5.8 1V19c0 .6-.4 1-1 1h-1C10.5 20 4 13.5 4 6V5Z"
+                />
+              </svg>
+              {{ phoneDisplay }}
+            </a>
+            <a [href]="'mailto:' + email" class="flex items-center gap-3 hover:text-white">
+              <svg
+                class="h-5 w-5 shrink-0 text-[#E6D800]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="m4 7 8 6 8-6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              {{ email }}
+            </a>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-white/10 bg-[#1C1F26] p-6 sm:p-8">
+          <h3 class="text-xs font-bold uppercase tracking-widest text-[#E6D800]">Business Hours</h3>
+          <div class="mt-4 flex flex-col gap-2 text-sm text-gray-200">
+            <div
+              *ngFor="let row of hours"
+              class="flex items-center justify-between gap-4 border-b border-white/5 pb-2 last:border-0 last:pb-0"
+            >
+              <span>{{ row.days }}</span>
+              <span class="font-semibold text-white">{{ row.time }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- locations-and-offices -->
+  <section class="locations-and-offices bg-[#F8F9FA] px-4 py-16 sm:px-8 sm:py-20 lg:px-12">
+    <div class="mx-auto max-w-7xl">
+      <div class="flex items-center gap-3">
+        <span class="h-1 w-6 bg-[#711511]"></span>
+        <p class="text-xs font-bold uppercase tracking-widest text-[#711511]">
+          Locations &amp; Offices
+        </p>
+      </div>
+      <h2
+        class="mt-2 text-3xl font-extrabold uppercase leading-tight tracking-tight text-black sm:text-4xl lg:text-5xl"
+      >
+        Where We Work From
+      </h2>
+
+      <div class="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+        <div
+          *ngFor="let branch of branches"
+          class="overflow-hidden rounded-xl border border-black/10 bg-white shadow-lg"
+        >
+          <iframe
+            [src]="branch.embedUrl"
+            class="h-64 w-full border-0"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            [attr.title]="branch.name"
+          ></iframe>
+          <div class="p-6">
+            <h3 class="text-lg font-extrabold text-black">{{ branch.name }}</h3>
+            <p class="mt-1 text-sm text-gray-600">{{ branch.address }}</p>
+            <a
+              [href]="branch.mapsUrl"
+              target="_blank"
+              rel="noopener"
+              class="mt-3 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-[#711511] hover:text-[#58110D]"
+            >
+              Open in Google Maps
+              <svg
+                class="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+              >
+                <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- faq -->
+  <section class="faq-section bg-[#F8F9FA] px-4 pb-16 sm:px-8 sm:pb-24 lg:px-12">
+    <div class="mx-auto max-w-4xl">
+      <div class="flex items-center gap-3">
+        <span class="h-1 w-6 bg-[#711511]"></span>
+        <p class="text-xs font-bold uppercase tracking-widest text-[#711511]">FAQ</p>
+      </div>
+      <h2
+        class="mt-2 text-3xl font-extrabold uppercase leading-tight tracking-tight text-black sm:text-4xl lg:text-5xl"
+      >
+        Frequently Asked Questions
+      </h2>
+
+      <div class="mt-10 flex flex-col gap-3">
+        <div
+          *ngFor="let faq of faqs; let i = index"
+          class="overflow-hidden rounded-xl border border-black/10 bg-white"
+        >
+          <button
+            type="button"
+            (click)="toggleFaq(i)"
+            class="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+          >
+            <span class="text-sm font-bold text-black sm:text-base">{{ faq.question }}</span>
+            <svg
+              class="h-4 w-4 shrink-0 text-[#711511] transition-transform duration-200"
+              [class.rotate-180]="openFaqIndex() === i"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <div *ngIf="openFaqIndex() === i" class="faq-answer px-5 pb-4 text-sm text-gray-600">
+            {{ faq.answer }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer: reused from home.html -->
+  <footer id="contact-footer" class="footer-section bg-[#0D0F12] px-6 py-12 text-gray-300">
+    <div class="mx-auto max-w-7xl">
+      <p class="text-3xl font-extrabold">
+        <span class="text-[#E4372A]">Chard</span><span class="text-[#2C5FE0]">Workz</span>
+      </p>
+      <p class="mt-1 text-sm font-semibold text-white">Racing Team and Powder Coating Services</p>
+
+      <div class="social-links mt-8 flex items-center gap-6 border-b border-white/10 pb-6">
+        <a
+          routerLink="/contact"
+          aria-label="Find us on the map"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg
+            class="h-6 w-6"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z" />
+            <circle cx="12" cy="9.5" r="2.3" />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on Facebook"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94Z"
+            />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on Instagram"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg
+            class="h-6 w-6"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="5" />
+            <circle cx="12" cy="12" r="4" />
+            <circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+          </svg>
+        </a>
+        <a
+          href="#"
+          aria-label="ChardWorkz on TikTok"
+          class="opacity-80 transition-opacity hover:opacity-100"
+        >
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M14.5 2h2.6c.2 1.6 1.2 3 2.9 3.4v2.7c-1.1 0-2.1-.3-3-1v6.6c0 3-2.5 5.3-5.4 5.3S6.2 16.7 6.2 13.7c0-2.9 2.3-5.2 5.1-5.3v2.8c-1.3.1-2.3 1.1-2.3 2.5 0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5V2Z"
+            />
+          </svg>
+        </a>
+        <span class="h-8 w-px bg-white/20"></span>
+        <a routerLink="/contact" class="text-sm hover:text-white">contact</a>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <p>&copy; ChardWorkz Philippines. All rights reserved.</p>
+        <div class="flex flex-wrap gap-4">
+          <a href="#" class="hover:text-white">Privacy Policy</a>
+          <a href="#" class="hover:text-white">Cookies Policy</a>
+          <a href="#" class="hover:text-white">Terms of Use</a>
+          <a href="#" class="hover:text-white">Data Act Notice</a>
+        </div>
+        <button
+          type="button"
+          (click)="scrollToTop()"
+          class="flex items-center gap-1 hover:text-white"
+        >
+          TOP
+          <svg
+            class="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M6 15l6-6 6 6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </footer>
+</div>

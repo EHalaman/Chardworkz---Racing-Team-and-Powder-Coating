@@ -17,6 +17,7 @@ import { ActivityLog } from './activity-log/activity-log/activity-log';
 import { Home } from './customer_home/home/home/home';
 import { Services } from './customer_home/services/service_page/services';
 import { Catalogue } from './customer_home/catalogue/catalogue_page/catalogue';
+import { Contact } from './customer_home/contact/contact_page/contact';
 import { CustomerShell } from './customer_home/customer-shell/customer-shell';
 
 const routes: Routes = [
@@ -27,6 +28,7 @@ const routes: Routes = [
       { path: '', component: Home, data: { title: 'ChardWorkz' } },
       { path: 'services', component: Services, data: { title: 'Services' } },
       { path: 'catalogue', component: Catalogue, data: { title: 'Catalogue' } },
+      { path: 'contact', component: Contact, data: { title: 'Contact Us' } },
     ],
   },
   { path: 'admin/login', component: Login, data: { title: 'Login' } },

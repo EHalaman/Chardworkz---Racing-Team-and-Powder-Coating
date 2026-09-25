@@ -3,17 +3,17 @@
   <div class="relative z-20 bg-[#0D0F12] px-6 py-12 text-gray-300">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
       <div>
-          <p class="text-5xl font-extrabold">
-            <span class="chardworkz-logo text-[#E4372A]">Chard</span
-            ><span class="text-[#2C5FE0]">Workz</span>
-          </p>
+        <p class="text-5xl font-extrabold">
+          <span class="chardworkz-logo text-[#E4372A]">Chard</span
+          ><span class="text-[#2C5FE0]">Workz</span>
+        </p>
         <span class="paragraph-logo">Racing Team and Powder Coating Services</span>
       </div>
 
       <div class="flex items-center justify-end gap-4">
         <div class="social-links hidden items-center gap-6 text-white sm:flex">
           <a
-            href="#"
+            routerLink="/contact"
             aria-label="Find us on the map"
             class="opacity-80 transition-opacity hover:opacity-100"
           >
@@ -423,7 +423,6 @@
         class="mt-8 grid grid-cols-1 overflow-hidden rounded-xl border border-white/10 bg-[#14161C] shadow-2xl lg:grid-cols-12"
       >
         <div class="border-l-4 border-[#711511] p-6 lg:col-span-6 lg:p-10">
-        
           <h3 class="mt-2 text-2xl font-extrabold leading-tight text-white sm:text-3xl lg:text-4xl">
             {{ latestRaceUpdate.title }}
           </h3>
@@ -486,7 +485,7 @@
 
       <div class="social-links mt-8 flex items-center gap-6 border-b border-white/10 pb-6">
         <a
-          href="#"
+          routerLink="/contact"
           aria-label="Find us on the map"
           class="opacity-80 transition-opacity hover:opacity-100"
         >
@@ -541,7 +540,7 @@
           </svg>
         </a>
         <span class="h-8 w-px bg-white/20"></span>
-        <a href="#" class="text-sm hover:text-white">contact</a>
+        <a routerLink="/contact" class="text-sm hover:text-white">contact</a>
       </div>
 
       <div class="mt-6 flex flex-col gap-3 text-xs sm:flex-row sm:items-center sm:justify-between">
