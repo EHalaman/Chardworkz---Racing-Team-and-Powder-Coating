@@ -23,6 +23,42 @@ import { TRANSMISSION_PARTS } from './catalogue-transmission.data';
 import { BATTERY_PARTS } from './catalogue-battery.data';
 import { ELECTRICAL_PARTS } from './catalogue-electrical.data';
 import { FUEL_PUMP_PARTS } from './catalogue-fuel-pump.data';
+import { HANDLE_SWITCH_PARTS } from './catalogue-handle-switch.data';
+import { HEADLAMP_PARTS } from './catalogue-headlamp.data';
+import { LOCK_SET_PARTS } from './catalogue-lock-set.data';
+import { MAGNETO_PARTS } from './catalogue-magneto.data';
+import { REAR_COMBINATION_LAMP_PARTS } from './catalogue-rear-combination-lamp.data';
+import { SPEEDOMETER_PARTS } from './catalogue-speedometer.data';
+import { STARTING_MOTOR_PARTS } from './catalogue-starting-motor.data';
+import { WIRING_HARNESS_PARTS } from './catalogue-wiring-harness.data';
+import { HEADLAMP_RLM5_PARTS } from './catalogue-headlamp-rlm5.data';
+import { HANDLE_SWITCH_RLM5_PARTS } from './catalogue-handle-switch-rlm5.data';
+import { LOCK_SET_RLM5_PARTS } from './catalogue-lock-set-rlm5.data';
+import { FOOTREST_PARTS } from './catalogue-footrest.data';
+import { FRAME_COVER_PARTS } from './catalogue-frame-cover.data';
+import { FRAME_PARTS } from './catalogue-frame.data';
+import { FRONT_BOX_PARTS } from './catalogue-front-box.data';
+import { FRONT_BRAKE_HOSE_PARTS } from './catalogue-front-brake-hose.data';
+import { FRONT_CALIPER_PARTS } from './catalogue-front-caliper.data';
+import { FRONT_FENDER_MFX_PARTS } from './catalogue-front-fender-mfx.data';
+import { FRONT_FENDER_MFZ_PARTS } from './catalogue-front-fender-mfz.data';
+import { FRONT_FORK_DAMPER_PARTS } from './catalogue-front-fork-damper.data';
+import { FRONT_MASTER_CYLINDER_PARTS } from './catalogue-front-master-cylinder.data';
+import { FRONT_WHEEL_PARTS } from './catalogue-front-wheel.data';
+import { FUEL_TANK_PARTS } from './catalogue-fuel-tank.data';
+import { HANDLE_LEVER_PARTS } from './catalogue-handle-lever.data';
+import { HEADLAMP_HOUSING_PARTS } from './catalogue-headlamp-housing.data';
+import { LABEL_PARTS } from './catalogue-label.data';
+import { PILLION_RIDER_HANDLE_PARTS } from './catalogue-pillion-rider-handle.data';
+import { REAR_CALIPER_PARTS } from './catalogue-rear-caliper.data';
+import { REAR_FENDER_PARTS } from './catalogue-rear-fender.data';
+import { REAR_MASTER_CYLINDER_PARTS } from './catalogue-rear-master-cylinder.data';
+import { REAR_SWINGING_ARM_PARTS } from './catalogue-rear-swinging-arm.data';
+import { REAR_WHEEL_PARTS } from './catalogue-rear-wheel.data';
+import { SEAT_PARTS } from './catalogue-seat.data';
+import { STAND_PARTS } from './catalogue-stand.data';
+import { STEERING_STEM_PARTS } from './catalogue-steering-stem.data';
+import { UNDER_COWLING_PARTS } from './catalogue-under-cowling.data';
 
 export type CatalogueCategory = 'ENGINE' | 'TRANSMISSION' | 'ELECTRICAL' | 'BODY';
 
@@ -323,6 +359,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-handle-switch-fu150rfm5_p31-fig-355a-1-e-5/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0057.jpg',
+    diagramParts: HANDLE_SWITCH_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -331,6 +368,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-headlamp-fig-333a-1-d-9/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0041.jpg',
+    diagramParts: HEADLAMP_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -339,6 +377,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-lock-set-fu150rlm5_p31-fig-352b-1-e-4/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0055.jpg',
+    diagramParts: LOCK_SET_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -347,6 +386,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-magneto-fig-303a-1-c-13/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0037.jpg',
+    diagramParts: MAGNETO_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -355,6 +395,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-rear-combination-lamp-fig-339a-1-d-3/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150RF-RLM5_P31FINAL_page-0052.jpg',
+    diagramParts: REAR_COMBINATION_LAMP_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -363,6 +404,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-speedometer-fu150rfm5_p31-fig-330a-1-d-7/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0040.jpg',
+    diagramParts: SPEEDOMETER_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -371,6 +413,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-starting-motor-fig-301a-1-c-14/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0036.jpg',
+    diagramParts: STARTING_MOTOR_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -379,6 +422,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-wiring-harness-fu150rfm5_p31-fig-350a-1-d-14/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0053.jpg',
+    diagramParts: WIRING_HARNESS_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -387,6 +431,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-headlamp-fig-333b-1-d-10-fu150rlm5_p31/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2026/01/FU150RF-RLM5_P31FINAL_page-0049.jpg',
+    diagramParts: HEADLAMP_RLM5_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -395,6 +440,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-handle-switch-fu150rlm5_p31-fig-355b-1-e-6/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2026/01/FU150RF-RLM5_P31FINAL_page-0058.jpg',
+    diagramParts: HANDLE_SWITCH_RLM5_PARTS,
   },
   {
     category: 'ELECTRICAL',
@@ -403,6 +449,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-lock-set-fu150rlm5_p3-fig-352b-1-e-4/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2026/01/FU150RF-RLM5_P31FINAL_page-0056.jpg',
+    diagramParts: LOCK_SET_RLM5_PARTS,
   },
 
   // BODY (25)
@@ -413,6 +460,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-footrest-fig-415a-1-d-10/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0049.jpg',
+    diagramParts: FOOTREST_PARTS,
   },
   {
     category: 'BODY',
@@ -421,6 +469,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-frame-cover-fu150rfm5_p31-fig-445a-1-e-14/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0066.jpg',
+    diagramParts: FRAME_COVER_PARTS,
   },
   {
     category: 'BODY',
@@ -429,6 +478,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-frame-fu150rfm5_p31-fig-401a-1-e-7/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150RF-RLM5_P31FINAL_page-0059.jpg',
+    diagramParts: FRAME_PARTS,
   },
   {
     category: 'BODY',
@@ -437,6 +487,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-front-box-fu150mfx-fig-489d-1-e-9/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0063.jpg',
+    diagramParts: FRONT_BOX_PARTS,
   },
   {
     category: 'BODY',
@@ -445,6 +496,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-front-brake-hose-fig-536a-1-f-3/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0072.jpg',
+    diagramParts: FRONT_BRAKE_HOSE_PARTS,
   },
   {
     category: 'BODY',
@@ -453,6 +505,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-front-caliper-fig-535a-1-f-2/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0071.jpg',
+    diagramParts: FRONT_CALIPER_PARTS,
   },
   {
     category: 'BODY',
@@ -461,6 +514,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-front-fender-fu150mfx-fig-460d-1-d-16/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0055.jpg',
+    diagramParts: FRONT_FENDER_MFX_PARTS,
   },
   {
     category: 'BODY',
@@ -469,6 +523,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-front-fender-fu150mfz-fig-460h-1-e-2/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0056.jpg',
+    diagramParts: FRONT_FENDER_MFZ_PARTS,
   },
   {
     category: 'BODY',
@@ -477,6 +532,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-front-fork-damper-fig-521a-1-e-13-1-e-14/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0067.jpg',
+    diagramParts: FRONT_FORK_DAMPER_PARTS,
   },
   {
     category: 'BODY',
@@ -485,6 +541,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-front-master-cylinder-fig-537a-1-f-4/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0073.jpg',
+    diagramParts: FRONT_MASTER_CYLINDER_PARTS,
   },
   {
     category: 'BODY',
@@ -493,6 +550,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-front-wheel-fig-530d-1-e-16/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0070.jpg',
+    diagramParts: FRONT_WHEEL_PARTS,
   },
   {
     category: 'BODY',
@@ -501,6 +559,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-fuel-tank-fu150rfm5_p31-fig-420a-1-e-12/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0050.jpg',
+    diagramParts: FUEL_TANK_PARTS,
   },
   {
     category: 'BODY',
@@ -509,6 +568,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-handle-lever-fig-467a-1-e-4/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0058.jpg',
+    diagramParts: HANDLE_LEVER_PARTS,
   },
   {
     category: 'BODY',
@@ -517,6 +577,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-headlamp-housing-fu150mfx-fig-451e-1-d-14/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0053.jpg',
+    diagramParts: HEADLAMP_HOUSING_PARTS,
   },
   {
     category: 'BODY',
@@ -525,6 +586,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-label-fig-496e-1-e-11/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0065.jpg',
+    diagramParts: LABEL_PARTS,
   },
   {
     category: 'BODY',
@@ -533,6 +595,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-pillion-rider-handle-fig-410a-1-d-9/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0048.jpg',
+    diagramParts: PILLION_RIDER_HANDLE_PARTS,
   },
   {
     category: 'BODY',
@@ -541,6 +604,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-rear-caliper-fig-555a-1-f-7/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0076.jpg',
+    diagramParts: REAR_CALIPER_PARTS,
   },
   {
     category: 'BODY',
@@ -549,6 +613,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-rear-fender-fig-474a-1-e-5/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0059.jpg',
+    diagramParts: REAR_FENDER_PARTS,
   },
   {
     category: 'BODY',
@@ -557,6 +622,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-rear-master-cylinder-fig-558a-1-f-8/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0077.jpg',
+    diagramParts: REAR_MASTER_CYLINDER_PARTS,
   },
   {
     category: 'BODY',
@@ -565,6 +631,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-rear-swinging-arm-fig-541a-1-f-5/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0074.jpg',
+    diagramParts: REAR_SWINGING_ARM_PARTS,
   },
   {
     category: 'BODY',
@@ -573,6 +640,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-rear-wheel-fig-550d-1-f-6/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0075.jpg',
+    diagramParts: REAR_WHEEL_PARTS,
   },
   {
     category: 'BODY',
@@ -581,6 +649,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-seat-fig-505a-1-e-12/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0066.jpg',
+    diagramParts: SEAT_PARTS,
   },
   {
     category: 'BODY',
@@ -589,6 +658,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-stand-fig-407a-1-d-8/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0047.jpg',
+    diagramParts: STAND_PARTS,
   },
   {
     category: 'BODY',
@@ -597,6 +667,7 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-steering-stem-fig-524a-1-e-15/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/09/FU150MFXM3_P31Final_page-0069.jpg',
+    diagramParts: STEERING_STEM_PARTS,
   },
   {
     category: 'BODY',
@@ -605,5 +676,6 @@ export const CATALOGUE_FIGURES: CatalogueFigure[] = [
     href: SUZUKI_PH_BASE + 'raider-r150-fi-under-cowling-fu150mfx-fig-483d-1-e-6/',
     imageUrl:
       'https://mc.suzuki.com.ph/wp-content/uploads/2024/10/FU150MFXM3_P31Final_page-0060.jpg',
+    diagramParts: UNDER_COWLING_PARTS,
   },
 ];
