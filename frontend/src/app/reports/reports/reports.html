@@ -15,30 +15,14 @@
 
   <div class="dashboard-card flex flex-wrap items-end gap-3">
     <div>
-      <label class="text-xs font-medium text-gray-700 dark:text-gray-300">From</label>
-      <input
-        #fromInput
-        type="date"
-        [value]="fromDate()"
-        class="mt-1 rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-      />
+      <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Date range</label>
+      <app-date-range-picker
+        class="mt-1 block"
+        [from]="fromDate()"
+        [to]="toDate()"
+        (rangeChange)="applyDateRange($event.from, $event.to)"
+      ></app-date-range-picker>
     </div>
-    <div>
-      <label class="text-xs font-medium text-gray-700 dark:text-gray-300">To</label>
-      <input
-        #toInput
-        type="date"
-        [value]="toDate()"
-        class="mt-1 rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-      />
-    </div>
-    <button
-      type="button"
-      (click)="applyDateRange(fromInput.value, toInput.value)"
-      class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-    >
-      Apply
-    </button>
 
     <button
       type="button"

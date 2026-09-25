@@ -4,10 +4,11 @@ import { LucideHouse, LucideWrench, LucidePackage, LucideMail } from '@lucide/an
 import { BlueprintHotspot } from './blueprint-hotspot/blueprint-hotspot';
 import { Placeholder } from './placeholder/placeholder';
 import { FloatingNavRail } from './floating-nav-rail/floating-nav-rail';
+import { DateRangePicker } from './date-range-picker/date-range-picker';
 
 @NgModule({
-  declarations: [Placeholder, BlueprintHotspot, FloatingNavRail],
+  declarations: [Placeholder, BlueprintHotspot, FloatingNavRail, DateRangePicker],
   imports: [CommonModule, LucideHouse, LucideWrench, LucidePackage, LucideMail],
-  exports: [Placeholder, BlueprintHotspot, FloatingNavRail],
+  exports: [Placeholder, BlueprintHotspot, FloatingNavRail, DateRangePicker],
 })
 export class SharedModule {}
