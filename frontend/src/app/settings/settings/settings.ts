@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, signal } from '@angular/core';
 import { AccountsService } from '../../roles/accounts';
 import { AuthService } from '../../core/auth';
+import { backendErrorMessage } from '../../core/utils/http-error.util';
 import { PermissionFlag, PermissionKey, PermissionsService } from '../../core/permissions';
 import { ThemeService } from '../../core/theme';
 import { Branch, BranchesService } from '../branches';
@@ -24,8 +25,6 @@ export class Settings implements OnInit {
   readonly passwordMessage = signal<string | null>(null);
   readonly passwordError = signal<string | null>(null);
   readonly savingPassword = signal(false);
-  readonly showCurrentPassword = signal(false);
-  readonly showNewPassword = signal(false);
 
   readonly permissions = signal<PermissionFlag[]>([]);
   readonly permissionError = signal<string | null>(null);
@@ -38,7 +37,20 @@ export class Settings implements OnInit {
     private permissionsService: PermissionsService,
   ) {}
 
+  /** Business branches and Manager permissions are Owner-only workspace admin, not part of any role's personal profile - see security-qa-audit-2026-09-25.md's Feature A follow-up. */
+  get isOwner(): boolean {
+    return this.auth.currentUser()?.role === 'OWNER';
+  }
+
   ngOnInit(): void {
+    // BranchController and the permission-toggle PATCH are Owner-only on the
+    // backend (PermissionController's GET is Owner+Manager, but this page
+    // hides that card from Manager too - see settings.html - so there's no
+    // reason to fetch it for anyone but the Owner). Skipping the call for a
+    // non-Owner avoids a guaranteed 403 for a card they'll never see.
+    if (!this.isOwner) {
+      return;
+    }
     this.branchesService.list().subscribe({
       next: (branches) => this.branches.set(branches),
       error: () => this.branchError.set('Could not load branches.'),
@@ -79,9 +91,9 @@ export class Settings implements OnInit {
         this.profileMessage.set('Profile updated.');
         setTimeout(() => this.profileMessage.set(null), 3000);
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.savingProfile.set(false);
-        this.profileError.set('Could not update your profile.');
+        this.profileError.set(backendErrorMessage(error, 'Could not update your profile.'));
       },
     });
   }
@@ -105,21 +117,9 @@ export class Settings implements OnInit {
       },
       error: (error: HttpErrorResponse) => {
         this.savingPassword.set(false);
-        this.passwordError.set(
-          error.status === 400
-            ? 'Current password is incorrect.'
-            : 'Could not change your password.',
-        );
+        this.passwordError.set(backendErrorMessage(error, 'Could not change your password.'));
       },
     });
-  }
-
-  toggleShowCurrentPassword(): void {
-    this.showCurrentPassword.update((show) => !show);
-  }
-
-  toggleShowNewPassword(): void {
-    this.showNewPassword.update((show) => !show);
   }
 
   startEditBranch(branch: Branch): void {

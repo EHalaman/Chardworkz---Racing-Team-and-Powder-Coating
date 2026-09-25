@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, signal } from '@angular/core';
 import { AuthService } from '../../core/auth';
+import { backendErrorMessage } from '../../core/utils/http-error.util';
 import { Account, AccountRole, AccountsService } from '../accounts';
 
 const PAGE_SIZE = 10;
@@ -24,7 +25,6 @@ export class Roles implements OnInit {
   readonly submitting = signal(false);
   readonly selectedRole = signal<AccountRole>('EMPLOYEE');
   readonly selectedBranch = signal('MAIN');
-  readonly showPassword = signal(false);
   readonly searchTerm = signal('');
   readonly currentPage = signal(1);
 
@@ -33,6 +33,10 @@ export class Roles implements OnInit {
   readonly editingBranch = signal('MAIN');
   readonly editSubmitting = signal(false);
   readonly editableRoleOptions = EDITABLE_ROLE_OPTIONS;
+
+  readonly resetPasswordAccount = signal<Account | null>(null);
+  readonly resetPasswordSubmitting = signal(false);
+  readonly resetPasswordError = signal<string | null>(null);
 
   readonly roleOptions: { value: AccountRole; label: string }[] = [
     { value: 'OWNER', label: 'Owner' },
@@ -52,10 +56,6 @@ export class Roles implements OnInit {
 
   ngOnInit(): void {
     this.loadAccounts();
-  }
-
-  toggleShowPassword(): void {
-    this.showPassword.update((show) => !show);
   }
 
   createAccount(username: string, password: string, fullName: string): void {
@@ -152,11 +152,19 @@ export class Roles implements OnInit {
     this.editingId.set(null);
   }
 
-  saveEdit(account: Account): void {
+  saveEdit(account: Account, fullName: string): void {
+    if (!fullName.trim()) {
+      this.errorMessage.set('Full name cannot be blank.');
+      return;
+    }
     this.errorMessage.set(null);
     this.editSubmitting.set(true);
     this.accountsService
-      .update(account.id, { role: this.editingRole(), branchCode: this.editingBranch() })
+      .update(account.id, {
+        fullName: fullName.trim(),
+        role: this.editingRole(),
+        branchCode: this.editingBranch(),
+      })
       .subscribe({
         next: (updated) => {
           this.editSubmitting.set(false);
@@ -170,6 +178,45 @@ export class Roles implements OnInit {
           this.errorMessage.set('Could not update that account.');
         },
       });
+  }
+
+  openResetPassword(account: Account): void {
+    this.resetPasswordError.set(null);
+    this.resetPasswordAccount.set(account);
+  }
+
+  closeResetPassword(): void {
+    this.resetPasswordAccount.set(null);
+    this.resetPasswordError.set(null);
+  }
+
+  submitResetPassword(newPassword: string, confirmPassword: string): void {
+    const account = this.resetPasswordAccount();
+    if (!account) {
+      return;
+    }
+    if (newPassword.length < 8) {
+      this.resetPasswordError.set('Temporary password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      this.resetPasswordError.set('Passwords do not match.');
+      return;
+    }
+    this.resetPasswordError.set(null);
+    this.resetPasswordSubmitting.set(true);
+    this.accountsService.resetPassword(account.id, newPassword).subscribe({
+      next: () => {
+        this.resetPasswordSubmitting.set(false);
+        this.successMessage.set(`Password reset for "${account.username}".`);
+        setTimeout(() => this.successMessage.set(null), 3000);
+        this.closeResetPassword();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.resetPasswordSubmitting.set(false);
+        this.resetPasswordError.set(backendErrorMessage(error, 'Could not reset that password.'));
+      },
+    });
   }
 
   private loadAccounts(): void {

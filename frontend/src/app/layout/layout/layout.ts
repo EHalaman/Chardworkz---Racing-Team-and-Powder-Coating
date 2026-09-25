@@ -12,6 +12,7 @@ import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subscription, catchError, filter, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import { PermissionFlag, PermissionKey, PermissionsService } from '../../core/permissions';
+import { SalesEventsService } from '../../core/sales-events';
 import { ThemeService } from '../../core/theme';
 import { DashboardAlert, DashboardService } from '../../dashboard/dashboard';
 
@@ -77,7 +78,18 @@ export const ALL_NAV_ITEMS: NavItem[] = [
     icon: 'activity-log',
     roles: ['owner', 'manager'],
   },
-  { label: 'Settings', path: '/admin/settings', icon: 'settings', roles: ['owner'] },
+  {
+    label: 'Settings',
+    path: '/admin/settings',
+    icon: 'settings',
+    // Every role can reach this for the self-service profile/password
+    // section - the page itself hides the Owner-only branch/permission
+    // cards from non-Owners (see Settings.isOwner). Was owner-only until
+    // security-qa-audit-2026-09-25.md's Feature A follow-up: /me and
+    // /me/password already existed backend-side but no non-Owner role could
+    // reach this page or its API at all.
+    roles: ['owner', 'manager', 'employee'],
+  },
 ];
 
 /**
@@ -122,6 +134,7 @@ export class Layout implements OnInit, OnDestroy {
     private theme: ThemeService,
     private dashboardService: DashboardService,
     private permissionsService: PermissionsService,
+    private salesEventsService: SalesEventsService,
   ) {
     this.isDarkMode = this.theme.isDarkMode;
   }
@@ -139,6 +152,13 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // One connection for the whole admin session, opened here since Layout
+    // is the persistent shell wrapping every /admin/* route and is never
+    // destroyed/recreated on navigation between them - Register, Dashboard
+    // and Reports each just read from this shared service rather than
+    // opening their own connection (see docs/realtime-sales-sync-spec-2026-09-25.md).
+    this.salesEventsService.connect();
+
     this.routerSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
@@ -172,6 +192,10 @@ export class Layout implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
+    // Navigating away from /admin entirely (e.g. to /admin/login on logout)
+    // destroys this component - close the stream rather than leave it open
+    // against a session that's ending.
+    this.salesEventsService.disconnect();
   }
 
   get navItems(): NavItem[] {

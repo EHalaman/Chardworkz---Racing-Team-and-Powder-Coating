@@ -25,6 +25,7 @@ export interface CreateAccountRequest {
 }
 
 export interface UpdateAccountRequest {
+  fullName: string;
   role: AccountRole;
   branchCode: string;
 }
@@ -49,6 +50,12 @@ export class AccountsService {
 
   update(id: number, request: UpdateAccountRequest): Observable<Account> {
     return this.http.patch<Account>(`${environment.apiBaseUrl}/api/accounts/${id}`, request);
+  }
+
+  resetPassword(id: number, newPassword: string): Observable<void> {
+    return this.http.patch<void>(`${environment.apiBaseUrl}/api/accounts/${id}/reset-password`, {
+      newPassword,
+    });
   }
 
   updateProfile(fullName: string): Observable<LoginResponse> {
