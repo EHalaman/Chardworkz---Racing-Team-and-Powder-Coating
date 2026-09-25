@@ -39,6 +39,15 @@ public class Account {
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
+    /**
+     * Bumped on every status change (see AccountController#updateStatus) so
+     * JwtAuthenticationFilter can reject tokens issued before a deactivation -
+     * without this, a token stays valid for its full lifetime regardless of
+     * what happens to the account afterward.
+     */
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

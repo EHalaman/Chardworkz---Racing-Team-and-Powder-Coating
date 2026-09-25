@@ -26,6 +26,7 @@ public class JwtService {
     private static final String CLAIM_BRANCH_CODE = "branchCode";
     private static final String CLAIM_FULL_NAME = "fullName";
     private static final String CLAIM_ACCOUNT_ID = "accountId";
+    private static final String CLAIM_TOKEN_VERSION = "tokenVersion";
 
     @Value("${app.jwt.secret:}")
     private String secret;
@@ -53,6 +54,7 @@ public class JwtService {
             .claim(CLAIM_BRANCH_CODE, account.getBranch().getCode())
             .claim(CLAIM_FULL_NAME, account.getFullName())
             .claim(CLAIM_ACCOUNT_ID, account.getId())
+            .claim(CLAIM_TOKEN_VERSION, account.getTokenVersion())
             .issuedAt(Date.from(now))
             .expiration(Date.from(now.plusSeconds(expirationMinutes * 60)))
             .signWith(signingKey)
@@ -83,5 +85,16 @@ public class JwtService {
      */
     public Long extractAccountId(Claims claims) {
         return claims.get(CLAIM_ACCOUNT_ID, Number.class).longValue();
+    }
+
+    /**
+     * Same {@code Number} note as {@link #extractAccountId} applies here.
+     * Returns -1 (guaranteed not to match any real account's version, which
+     * starts at 0) for a token issued before this claim existed, so an
+     * already-outstanding pre-upgrade token fails closed instead of NPEing.
+     */
+    public int extractTokenVersion(Claims claims) {
+        Number version = claims.get(CLAIM_TOKEN_VERSION, Number.class);
+        return version != null ? version.intValue() : -1;
     }
 }

@@ -1,5 +1,7 @@
 package com.chardworkz.backend.security;
 
+import com.chardworkz.backend.account.Account;
+import com.chardworkz.backend.account.AccountRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,9 +18,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Trusts the JWT's own claims (role, branch, full name) rather than hitting
- * the database on every request - the token is the source of truth for the
- * lifetime of its expiration window.
+ * Trusts the JWT's role/branch/full-name claims rather than re-reading them
+ * from the database on every request. Account status is the one exception:
+ * it does one lookup per request to confirm the account is still active and
+ * its token_version still matches the claim, so a deactivation (or any other
+ * status change - see AccountController#updateStatus) takes effect on the
+ * account's very next request instead of waiting out the token's remaining
+ * lifetime (security-qa-audit-2026-09-25.md, Ticket 4).
  */
 @Component
 @RequiredArgsConstructor
@@ -27,6 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final AccountRepository accountRepository;
 
     @Override
     protected void doFilterInternal(
@@ -37,7 +44,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith(BEARER_PREFIX)) {
             String token = header.substring(BEARER_PREFIX.length());
             Optional<Claims> claims = jwtService.parseClaims(token);
-            if (claims.isPresent() && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (claims.isPresent()
+                && SecurityContextHolder.getContext().getAuthentication() == null
+                && isSessionStillValid(claims.get())) {
                 String username = claims.get().getSubject();
                 String role = jwtService.extractRole(claims.get());
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
@@ -49,5 +58,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /** False leaves the request unauthenticated, which the security config turns into a 401. */
+    private boolean isSessionStillValid(Claims claims) {
+        Account account = accountRepository.findById(jwtService.extractAccountId(claims)).orElse(null);
+        return account != null
+            && account.isActive()
+            && account.getTokenVersion() == jwtService.extractTokenVersion(claims);
     }
 }

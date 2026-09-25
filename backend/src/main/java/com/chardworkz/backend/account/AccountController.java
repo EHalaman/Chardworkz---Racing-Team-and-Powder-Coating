@@ -169,6 +169,10 @@ public class AccountController {
         Account account = accountRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
         account.setActive(request.active());
+        // Invalidates any token already issued to this account (JwtAuthenticationFilter
+        // checks this on every request) so a deactivation takes effect immediately
+        // instead of waiting out the token's remaining lifetime.
+        account.setTokenVersion(account.getTokenVersion() + 1);
         account.setUpdatedAt(Instant.now());
         account = accountRepository.save(account);
 
