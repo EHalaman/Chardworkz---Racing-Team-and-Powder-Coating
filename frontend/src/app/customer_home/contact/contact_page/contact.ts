@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { formatPHMobileAsTyped } from '../../../core/utils/ph-phone.util';
+import { formatPHMobileAsTyped, isValidPHMobileNumber } from '../../../core/utils/ph-phone.util';
 
 export interface ContactBranch {
   id: string;
@@ -111,6 +111,7 @@ export class Contact {
   readonly phoneTel = CONTACT_PHONE_TEL;
 
   readonly customerPhoneDisplay = signal('');
+  readonly phoneWarning = signal<string | null>(null);
   readonly openFaqIndex = signal<number | null>(0);
   readonly submitted = signal(false);
 
@@ -135,14 +136,35 @@ export class Contact {
   }
 
   /** No backend inbox exists yet for this form (see handoff) — submitting opens the
-   *  visitor's own email client pre-filled, same stopgap agreed with the user. */
-  sendMessage(name: string, message: string, email: string): void {
+   *  visitor's own email client pre-filled, same stopgap agreed with the user. Phone is
+   *  required here (unlike register.ts's optional checkout field) since this is the only
+   *  way to reach a visitor back, so an invalid number blocks sending instead of just warning.
+   *  Takes the raw elements (not just their .value) so this method — not the template — owns
+   *  the branch on whether to clear the form, since Angular template statements can't reliably
+   *  express an `if` block around multiple assignments. */
+  onSubmit(
+    nameEl: HTMLInputElement,
+    emailEl: HTMLInputElement,
+    messageEl: HTMLTextAreaElement,
+  ): void {
     const phoneDigits = this.customerPhoneDisplay().replace(/\s/g, '');
-    const phoneLine = phoneDigits ? `Phone: +63 ${this.customerPhoneDisplay()}\n` : '';
-    const emailLine = email.trim() ? `Email: ${email.trim()}\n` : '';
-    const body = `Name: ${name.trim() || 'N/A'}\n${phoneLine}${emailLine}\nMessage:\n${message.trim()}`;
-    const subject = `Website Inquiry from ${name.trim() || 'a visitor'}`;
+    if (!isValidPHMobileNumber(phoneDigits)) {
+      this.phoneWarning.set('Enter a valid phone number.');
+      return;
+    }
+    this.phoneWarning.set(null);
+
+    const name = nameEl.value.trim();
+    const email = emailEl.value.trim();
+    const message = messageEl.value.trim();
+    const body = `Name: ${name || 'N/A'}\nPhone: +63 ${this.customerPhoneDisplay()}\nEmail: ${email || 'N/A'}\n\nMessage:\n${message}`;
+    const subject = `Website Inquiry from ${name || 'a visitor'}`;
     window.location.href = `mailto:${this.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    nameEl.value = '';
+    emailEl.value = '';
+    messageEl.value = '';
+    this.customerPhoneDisplay.set('');
     this.submitted.set(true);
   }
 

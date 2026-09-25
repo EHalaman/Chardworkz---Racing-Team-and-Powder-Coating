@@ -103,13 +103,7 @@
 
         <form
           class="mt-6 flex flex-col gap-4"
-          (submit)="
-            $event.preventDefault();
-            sendMessage(contactName.value, contactMessage.value, contactEmail.value);
-            contactName.value = '';
-            contactEmail.value = '';
-            contactMessage.value = ''
-          "
+          (submit)="$event.preventDefault(); onSubmit(contactName, contactEmail, contactMessage)"
         >
           <input
             #contactName
@@ -120,21 +114,26 @@
             class="w-full rounded-lg border border-white/15 bg-[#14161C] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-[#E6D800] focus:outline-none focus:ring-1 focus:ring-[#E6D800]"
           />
 
-          <div class="flex items-stretch gap-2">
-            <span
-              class="flex items-center rounded-lg border border-white/15 bg-[#14161C] px-3 text-sm font-medium text-gray-400"
-              >+63</span
-            >
-            <input
-              type="tel"
-              inputmode="numeric"
-              maxlength="12"
-              placeholder="Enter your phone number*"
-              autocomplete="tel"
-              [value]="customerPhoneDisplay()"
-              (input)="onPhoneInput($any($event.target).value)"
-              class="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14161C] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-[#E6D800] focus:outline-none focus:ring-1 focus:ring-[#E6D800]"
-            />
+          <div>
+            <div class="flex items-stretch gap-2">
+              <span
+                class="flex items-center rounded-lg border border-white/15 bg-[#14161C] px-3 text-sm font-medium text-gray-400"
+                >+63</span
+              >
+              <input
+                type="tel"
+                inputmode="numeric"
+                maxlength="12"
+                placeholder="Enter your phone number*"
+                autocomplete="tel"
+                [value]="customerPhoneDisplay()"
+                (input)="onPhoneInput($any($event.target).value)"
+                class="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#14161C] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-[#E6D800] focus:outline-none focus:ring-1 focus:ring-[#E6D800]"
+              />
+            </div>
+            <p *ngIf="phoneWarning()" class="mt-1 text-xs font-medium text-amber-500">
+              {{ phoneWarning() }}
+            </p>
           </div>
 
           <input
