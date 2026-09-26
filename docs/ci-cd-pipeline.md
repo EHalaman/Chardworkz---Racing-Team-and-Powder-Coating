@@ -86,9 +86,18 @@ Classic branch protection rules on both `main` and `staging` (`Settings > Branch
 2. Phase 2 will populate `staging`/`Production` environment secrets — do not put real credentials in repo-level secrets; scope them to the correct environment.
 3. Merge the Phase 1/2 commits from `main` forward into `development`/`staging` when convenient — they currently only exist on `main`.
 
+## Phase 2 — Cloudflare R2, started 2026-09-26
+
+- **R2 subscription enabled** on the EHalaman Cloudflare account (`E.halaman11@gmail.com`) — genuinely $0/month within free-tier limits (10GB storage, 1M Class A ops, 10M Class B ops/month); a payment method is required on file for overage billing but nothing is charged unless those limits are exceeded.
+- **A Budget Alert was set at $1** (`R2 Object Storage > Usage > Add Budget Alert`) as an early tripwire — emails `e.halaman11@gmail.com` if any billable usage appears at all, well before real money would be owed. Per the project's cloud cost guardrail (`CLAUDE.md`), check this before any bulk asset upload or usage-heavy R2 operation.
+- **Bucket created**: `chardworkz-assets` — Standard storage class (required for free-tier coverage; Infrequent Access is billed separately and not free-tier eligible), Automatic location (placed in Asia Pacific), private/not publicly accessible.
+- **API credentials generated**: an Account API Token (`chardworkz-assets-rw`, Object Read & Write, scoped strictly to the `chardworkz-assets` bucket only — not account-wide, TTL "Forever"). The resulting S3-compatible `Access Key ID`/`Secret Access Key` were added as `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` to **both** the `staging` and `Production` GitHub Environment secrets on the EHalaman repo. The values themselves are not recorded anywhere (including here) — Cloudflare only shows them once at creation time; if lost, revoke the token and generate a new one.
+- The R2 S3-compatible endpoint is `https://<account-id>.r2.cloudflarestorage.com` (account-specific, not secret) — not yet wired into the backend since no R2 integration code exists yet.
+- No backend code uses these credentials yet — this is provisioning ahead of the actual integration, at the user's explicit request. When that integration is built, it consumes `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/the endpoint via the GitHub Environment secrets already in place, plus Railway env vars for runtime (not yet configured — see Roadmap).
+
 ## Roadmap (not yet built)
 
-- **Phase 2 (remaining)** — Railway Postgres (staging vs. production instances), Spring Boot env vars/Flyway/connection pooling on Railway, then backfill real Railway URLs into `environment.ts`/`environment.staging.ts`; Cloudflare DNS/SSL/R2 buckets (no custom domain yet — using provider default subdomains for now, per user decision 2026-09-26).
+- **Phase 2 (remaining)** — Railway Postgres (staging vs. production instances), Spring Boot env vars/Flyway/connection pooling on Railway, then backfill real Railway URLs into `environment.ts`/`environment.staging.ts`; Cloudflare DNS/SSL (no custom domain yet — using provider default subdomains for now, per user decision 2026-09-26); actual backend R2 integration code (bucket is provisioned, nothing reads/writes to it yet).
 - **Phase 3 — CI workflows**: GitHub Actions running `mvn test` and `ng build` on every PR; a Flyway dry-run against an ephemeral Postgres container on PRs into `main` (replaces the rejected `prod-testing` branch's safety purpose).
 - **Phase 4 — Safety guardrails**: zero-downtime deploy pattern, migration safety checks, secrets-handling conventions.
 
