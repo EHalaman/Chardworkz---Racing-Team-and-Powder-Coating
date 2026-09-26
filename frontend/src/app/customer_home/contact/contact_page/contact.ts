@@ -111,7 +111,7 @@ export class Contact {
   readonly phoneTel = CONTACT_PHONE_TEL;
 
   readonly customerPhoneDisplay = signal('');
-  readonly phoneWarning = signal<string | null>(null);
+  readonly phoneSubmitAttempted = signal(false);
   readonly openFaqIndex = signal<number | null>(0);
   readonly submitted = signal(false);
 
@@ -129,6 +129,22 @@ export class Contact {
 
   onPhoneInput(value: string): void {
     this.customerPhoneDisplay.set(formatPHMobileAsTyped(value));
+  }
+
+  /**
+   * Computed live off customerPhoneDisplay so it clears as soon as the
+   * number is corrected, instead of staying stuck until the next Send
+   * click (mirrors register.ts's customerPhoneWarning). Suppressed before
+   * a submit attempt and under 10 digits so it doesn't nag mid-keystroke;
+   * once a submit has failed, it tracks every keystroke immediately since
+   * phone is required here (unlike register.ts's optional field).
+   */
+  get phoneWarning(): string | null {
+    const digits = this.customerPhoneDisplay().replace(/\s/g, '');
+    if (!this.phoneSubmitAttempted() && digits.length < 10) {
+      return null;
+    }
+    return isValidPHMobileNumber(digits) ? null : 'Enter a valid phone number.';
   }
 
   toggleFaq(index: number): void {
@@ -149,10 +165,10 @@ export class Contact {
   ): void {
     const phoneDigits = this.customerPhoneDisplay().replace(/\s/g, '');
     if (!isValidPHMobileNumber(phoneDigits)) {
-      this.phoneWarning.set('Enter a valid phone number.');
+      this.phoneSubmitAttempted.set(true);
+      this.submitted.set(false);
       return;
     }
-    this.phoneWarning.set(null);
 
     const name = nameEl.value.trim();
     const email = emailEl.value.trim();
