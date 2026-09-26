@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'REPLACE_WITH_RAILWAY_STAGING_URL',
+  apiBaseUrl: 'https://backend-staging-staging-a4b4.up.railway.app',
 };
