@@ -65,6 +65,7 @@ export interface InventoryImportRowResult {
   currentReorderThreshold: number | null;
   newReorderThreshold: number | null;
   valid: boolean;
+  created: boolean;
   reason: string | null;
 }
 
@@ -76,6 +77,7 @@ export interface InventoryImportPreview {
 
 export interface InventoryImportCommitResult {
   updatedCount: number;
+  createdCount: number;
   skippedCount: number;
 }
 

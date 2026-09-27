@@ -373,6 +373,7 @@ export class Inventory implements OnInit, OnDestroy {
         this.isImportModalOpen.set(false);
         this.successMessage.set(
           `Import complete — ${result.updatedCount} product(s) updated` +
+            (result.createdCount > 0 ? `, ${result.createdCount} product(s) created` : '') +
             (result.skippedCount > 0 ? `, ${result.skippedCount} row(s) skipped.` : '.'),
         );
         this.loadInventory();
