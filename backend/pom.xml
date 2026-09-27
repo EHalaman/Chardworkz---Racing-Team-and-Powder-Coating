@@ -199,6 +199,17 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<!-- Manual security pre-flight step, not bound to any lifecycle
+				     phase - run explicitly via `./mvnw dependency-check:check`
+				     before opening a production PR. Not run automatically by
+				     `mvn test`/`package` since the NVD data sync is slow and
+				     needs network access, which the CI runner shouldn't need
+				     just to run tests. -->
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<version>13.0.0</version>
+			</plugin>
 		</plugins>
 	</build>
 
