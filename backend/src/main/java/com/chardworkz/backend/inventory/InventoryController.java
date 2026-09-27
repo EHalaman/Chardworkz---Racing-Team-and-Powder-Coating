@@ -73,8 +73,9 @@ public class InventoryController {
     public List<InventorySummaryResponse> list(
         @RequestParam(required = false) String branchCode, Authentication authentication) {
         Branch branch = resolveBranch(authentication, branchCode);
+        Map<Long, StockLevel> stockLevelsByProductId = stockLevelsByProductId(branch);
         return productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES).stream()
-            .map(product -> toSummary(product, findStockLevel(product, branch)))
+            .map(product -> toSummary(product, stockLevelsByProductId.get(product.getId())))
             .toList();
     }
 
@@ -84,8 +85,7 @@ public class InventoryController {
         @RequestParam(required = false) String branchCode, Authentication authentication) {
         Branch branch = resolveBranch(authentication, branchCode);
         List<Product> products = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
-        Map<Long, StockLevel> stockLevelsByProductId = stockLevelRepository.findByBranchId(branch.getId()).stream()
-            .collect(Collectors.toMap(sl -> sl.getProduct().getId(), sl -> sl));
+        Map<Long, StockLevel> stockLevelsByProductId = stockLevelsByProductId(branch);
         byte[] xlsx = inventoryExportService.toXlsx(products, stockLevelsByProductId, branch);
 
         return ResponseEntity.ok()
@@ -197,10 +197,11 @@ public class InventoryController {
     }
 
     private BranchInventorySummary summarize(Branch branch, List<Product> activeProducts) {
+        Map<Long, StockLevel> stockLevelsByProductId = stockLevelsByProductId(branch);
         int inStockCount = 0;
         int lowStockCount = 0;
         for (Product product : activeProducts) {
-            InventorySummaryResponse summary = toSummary(product, findStockLevel(product, branch));
+            InventorySummaryResponse summary = toSummary(product, stockLevelsByProductId.get(product.getId()));
             if (summary.quantity() > 0) {
                 inStockCount++;
             }
@@ -271,8 +272,15 @@ public class InventoryController {
         }
     }
 
-    private StockLevel findStockLevel(Product product, Branch branch) {
-        return stockLevelRepository.findByProductIdAndBranchId(product.getId(), branch.getId()).orElse(null);
+    /**
+     * Every stock_level row for one branch, fetched once per request instead
+     * of one findByProductIdAndBranchId query per product - same N+1 fix
+     * already applied to {@code DashboardController} this session; {@link #list}
+     * and {@link #summarize} used to pay one query per product on every load.
+     */
+    private Map<Long, StockLevel> stockLevelsByProductId(Branch branch) {
+        return stockLevelRepository.findByBranchId(branch.getId()).stream()
+            .collect(Collectors.toMap(sl -> sl.getProduct().getId(), sl -> sl));
     }
 
     private StockLevel newStockLevel(Product product, Branch branch) {
