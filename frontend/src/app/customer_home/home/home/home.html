@@ -180,8 +180,8 @@
             aria-hidden="true"
           ></div>
           <div
-            class="pointer-events-none absolute left-4 top-0 w-0.5 -translate-x-1/2 bg-[#E4372A] transition-all duration-300 ease-out-expo sm:left-6"
-            [style.height.%]="progressPercent()"
+            class="timeline-fill pointer-events-none absolute inset-y-0 left-4 w-0.5 origin-top bg-[#E4372A] transition-transform duration-300 ease-out-expo sm:left-6"
+            [style.transform]="'translateX(-50%) scaleY(' + progressPercent() / 100 + ')'"
             aria-hidden="true"
           ></div>
           <div
