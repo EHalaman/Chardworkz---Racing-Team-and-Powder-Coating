@@ -614,6 +614,12 @@
               <div class="min-w-0">
                 <p class="truncate font-medium text-gray-900 dark:text-gray-100">
                   Row {{ row.rowNumber }} · {{ row.productName || '—' }}
+                  <span
+                    *ngIf="row.valid && row.created"
+                    class="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary"
+                  >
+                    New product
+                  </span>
                 </p>
                 <p *ngIf="row.valid" class="text-gray-500 dark:text-gray-400">
                   Stock {{ row.currentQuantity }} → {{ row.newQuantity }} · Reorder

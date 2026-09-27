@@ -9,6 +9,7 @@ import {
   DashboardAlert,
   DashboardAnalytics,
   DashboardService,
+  DashboardStore,
   DashboardSummary,
   DashboardTimeRange,
   MarginStatus,
@@ -80,6 +81,10 @@ export class Dashboard implements OnInit, OnDestroy {
   readonly loadError = signal<string | null>(null);
   readonly alerts = signal<DashboardAlert[]>([]);
   readonly topProductsTab = signal<'PARTS' | 'SERVICES'>('PARTS');
+
+  /** True only until the first real (cached or fetched) data is shown for
+   *  the current branch - see DashboardStore. */
+  readonly isInitialLoading = signal(true);
 
   readonly selectedBranch = signal<string | null>(null);
   readonly branchOptions = [
@@ -212,6 +217,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
   constructor(
     private dashboardService: DashboardService,
+    private dashboardStore: DashboardStore,
     readonly auth: AuthService,
     private salesEventsService: SalesEventsService,
   ) {}
@@ -265,6 +271,14 @@ export class Dashboard implements OnInit, OnDestroy {
 
   selectBranch(branchCode: string | null): void {
     this.selectedBranch.set(branchCode);
+    if (!this.dashboardStore.getSummary(branchCode)) {
+      // No cached data for this branch yet - show the loading skeleton
+      // instead of a stale/wrong-branch flash of the previous selection.
+      this.isInitialLoading.set(true);
+      this.summary.set(EMPTY_SUMMARY);
+      this.alerts.set([]);
+      this.recentActivities.set([]);
+    }
     this.loadDashboard();
     this.loadAnalytics();
   }
@@ -310,6 +324,23 @@ export class Dashboard implements OnInit, OnDestroy {
 
   private loadDashboard(): void {
     const branchCode = this.selectedBranch();
+
+    // Stale-while-revalidate: a cached visit to this branch shows instantly
+    // while the fetch below refreshes it in the background - see
+    // DashboardStore.
+    const cachedSummary = this.dashboardStore.getSummary(branchCode);
+    if (cachedSummary) {
+      this.summary.set(cachedSummary);
+      this.applySummaryToCharts(cachedSummary);
+      this.alerts.set(this.dashboardStore.getAlerts(branchCode) ?? []);
+      this.recentActivities.set(
+        (this.dashboardStore.getActivity(branchCode) ?? []).map((item) =>
+          this.toActivityFeedItem(item),
+        ),
+      );
+      this.isInitialLoading.set(false);
+    }
+
     forkJoin({
       summary: this.dashboardService.summary(branchCode).pipe(catchError(() => of(EMPTY_SUMMARY))),
       alerts: this.dashboardService
@@ -323,6 +354,10 @@ export class Dashboard implements OnInit, OnDestroy {
       this.applySummaryToCharts(summary);
       this.alerts.set(alerts);
       this.recentActivities.set(activity.map((item) => this.toActivityFeedItem(item)));
+      this.isInitialLoading.set(false);
+      this.dashboardStore.setSummary(branchCode, summary);
+      this.dashboardStore.setAlerts(branchCode, alerts);
+      this.dashboardStore.setActivity(branchCode, activity);
     });
   }
 
@@ -351,12 +386,22 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   private loadAnalytics(): void {
+    const branchCode = this.selectedBranch();
+    const timeRange = this.selectedTimeRange();
+
+    const cached = this.dashboardStore.getAnalytics(branchCode, timeRange);
+    if (cached) {
+      this.analytics.set(cached);
+      this.applyAnalyticsToChart(cached);
+    }
+
     this.dashboardService
-      .analytics(this.selectedTimeRange(), this.selectedBranch())
+      .analytics(timeRange, branchCode)
       .pipe(catchError(() => of(EMPTY_ANALYTICS)))
       .subscribe((analytics) => {
         this.analytics.set(analytics);
         this.applyAnalyticsToChart(analytics);
+        this.dashboardStore.setAnalytics(branchCode, timeRange, analytics);
       });
   }
 

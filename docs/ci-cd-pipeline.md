@@ -84,7 +84,7 @@ Classic branch protection rules on both `main` and `staging` (`Settings > Branch
 
 1. Once Phase 3's CI workflow exists, go back to both branch protection rules and select the real status-check job name(s) so "Require status checks to pass" actually gates something, and reference `environment: production`/`staging` in the workflow so the Environment-level protection rules (required reviewer, branch restriction) actually take effect on deploys.
 2. Phase 2 will populate `staging`/`Production` environment secrets — do not put real credentials in repo-level secrets; scope them to the correct environment.
-3. Merge the Phase 1/2 commits from `main` forward into `development`/`staging` when convenient — they currently only exist on `main`.
+3. ~~Merge the Phase 1/2 commits from `main` forward into `development`/`staging`~~ — done 2026-09-27; both were plain fast-forwards (no divergent commits on either branch). Repeat this whenever `main` gets commits `development`/`staging` should also carry.
 
 ## Phase 2 — Cloudflare R2, started 2026-09-26
 
@@ -95,9 +95,22 @@ Classic branch protection rules on both `main` and `staging` (`Settings > Branch
 - The R2 S3-compatible endpoint is `https://<account-id>.r2.cloudflarestorage.com` (account-specific, not secret) — not yet wired into the backend since no R2 integration code exists yet.
 - No backend code uses these credentials yet — this is provisioning ahead of the actual integration, at the user's explicit request. When that integration is built, it consumes `R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/the endpoint via the GitHub Environment secrets already in place, plus Railway env vars for runtime (not yet configured — see Roadmap).
 
+## Phase 2 — Railway (backend + Postgres), 2026-09-27
+
+- **Project**: `chardworkz` on Railway (trial plan — 30 days or $5.00 credit, whichever comes first; no indefinite free tier, per `CLAUDE.md`'s cost guardrail). Two environments: `production` (Railway's default) and `staging` (created manually).
+- **Postgres**: one instance per environment, each its own independent service (not a duplicated/shared environment) — `Postgres` in `production`, `Postgres-CHau` in `staging` (Railway auto-suffixed the name since a plain rename to `Postgres` collides — service names are unique per-project, not per-environment).
+- **Backend service**: deployed from the EHalaman GitHub repo, Root Directory `/backend`, Railpack builder (auto-detected `java@21.0.2`). `production` service (named `backend`) tracks the `main` branch; `staging` service (named `backend-staging`) tracks the `staging` branch — both auto-deploy on push.
+- **Env vars** (Service Variables, not repo secrets): `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/`DB_PASSWORD` set as Railway variable references (`${{Postgres.PGHOST}}` etc., or `${{Postgres-CHau.*}}` in staging) rather than copied literal values, so they stay in sync automatically if the DB service's credentials ever rotate. `JWT_SECRET` generated fresh per environment (64-char random, well over the app's 32-byte minimum) and pasted directly into Railway — never echoed to chat or committed anywhere. `CORS_ALLOWED_ORIGIN` set to `https://chardworkz.vercel.app` on `production`; left unset on `staging` since no staging Vercel deployment exists yet (see Open follow-ups). `BOOTSTRAP_OWNER_USERNAME`/`BOOTSTRAP_OWNER_PASSWORD` deliberately left unset on both — the app boots fine without them (just logs a warning, creates no account per `BootstrapAccountRunner`); set them intentionally later if/when a real admin login is needed.
+- **Flyway / connection pooling**: no extra config needed — the existing `spring.datasource.*` properties and the `flyway` Maven dependency pick up the same Railway-provided connection automatically, and both deployments came up `ACTIVE` with Hibernate's `ddl-auto=validate` passing (a schema mismatch would have failed the boot), confirming Flyway ran cleanly against both fresh databases.
+- **Public networking**: generated a Railway subdomain for each backend, port 8080 — `backend-production-d51a.up.railway.app` and `backend-staging-staging-a4b4.up.railway.app`. Both verified live via `curl` (clean `{"error":"Unauthorized"}` JSON from the app's own exception handler, not a Railway platform error — confirms the app fully booted, not just that the container started).
+- **GitHub App**: Railway's GitHub App needed a one-time authorization against the EHalaman account/repo before it could see any repos to deploy from.
+- Real Railway URLs backfilled into `frontend/src/environments/environment.ts` (`REPLACE_WITH_RAILWAY_PRODUCTION_URL` → the production URL above) and `environment.staging.ts` (same for staging), committed on `main` and merged forward.
+
 ## Roadmap (not yet built)
 
-- **Phase 2 (remaining)** — Railway Postgres (staging vs. production instances), Spring Boot env vars/Flyway/connection pooling on Railway, then backfill real Railway URLs into `environment.ts`/`environment.staging.ts`; Cloudflare DNS/SSL (no custom domain yet — using provider default subdomains for now, per user decision 2026-09-26); actual backend R2 integration code (bucket is provisioned, nothing reads/writes to it yet).
+- **Cloudflare DNS/SSL** — no custom domain yet, using provider default subdomains for now (Vercel's and Railway's), per user decision 2026-09-26.
+- Actual backend R2 integration code (bucket is provisioned, nothing reads/writes to it yet).
+- A staging Vercel deployment/domain, so `staging`'s `CORS_ALLOWED_ORIGIN` can be set to a real origin instead of being left blank.
 - **Phase 3 — CI workflows**: GitHub Actions running `mvn test` and `ng build` on every PR; a Flyway dry-run against an ephemeral Postgres container on PRs into `main` (replaces the rejected `prod-testing` branch's safety purpose).
 - **Phase 4 — Safety guardrails**: zero-downtime deploy pattern, migration safety checks, secrets-handling conventions.
 

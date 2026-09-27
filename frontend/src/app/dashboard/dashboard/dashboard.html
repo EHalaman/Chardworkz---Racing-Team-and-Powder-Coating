@@ -1,4 +1,19 @@
-<div class="space-y-6">
+<!-- First-ever load only (no cached data to show yet) - avoids flashing
+     "0 products"/"₱0.00" zero-state text before the real numbers arrive.
+     Repeat visits (DashboardStore has a cached value) skip this entirely and
+     render the last-known data immediately while a background refresh runs. -->
+<div *ngIf="isInitialLoading()" class="space-y-6" aria-busy="true" aria-live="polite">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="dashboard-card animate-pulse" *ngFor="let _ of [1, 2, 3]">
+      <div class="h-3 w-24 rounded bg-gray-200 dark:bg-slate-700"></div>
+      <div class="mt-3 h-7 w-32 rounded bg-gray-200 dark:bg-slate-700"></div>
+      <div class="mt-2 h-3 w-20 rounded bg-gray-200 dark:bg-slate-700"></div>
+    </div>
+  </div>
+  <div class="dashboard-card animate-pulse h-64"></div>
+</div>
+
+<div *ngIf="!isInitialLoading()" class="space-y-6">
   <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <span

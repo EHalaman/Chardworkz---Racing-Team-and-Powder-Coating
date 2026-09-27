@@ -25,9 +25,16 @@
   padding-bottom: 8em;
 }
 
-.paragraph-logo{
+.paragraph-logo {
   font-family: 'Potta One', Poppins, sans-serif;
   font-size: 1.2rem;
+}
+
+/* Timeline progress fill (home.ts's progressPercent) - GPU-composited via
+   scaleY rather than an animated `height`, so scroll-driven updates don't
+   trigger layout/paint on every frame. */
+.timeline-fill {
+  will-change: transform;
 }
 
 /* Section C sponsor marquee */
