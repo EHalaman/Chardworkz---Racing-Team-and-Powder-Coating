@@ -25,6 +25,22 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * status change - see AccountController#updateStatus) takes effect on the
  * account's very next request instead of waiting out the token's remaining
  * lifetime (security-qa-audit-2026-09-25.md, Ticket 4).
+ *
+ * <p>Must re-run on ASYNC dispatches (see {@link #shouldNotFilterAsyncDispatch()})
+ * because {@code SseEventController}'s long-lived {@code SseEmitter} responses
+ * are re-entered via an ASYNC dispatch whenever the container notices the
+ * connection was interrupted (e.g. a reverse proxy silently dropping an idle
+ * connection - see {@code SseEmitterRegistry#pingAll}'s own comment on this).
+ * Spring Boot's security filter chain runs on ASYNC dispatches by default, but
+ * {@link OncePerRequestFilter} skips them by default - without this override,
+ * the SecurityContext this filter populates on the original request is never
+ * restored on that later dispatch, so Spring Security's authorization check
+ * finds no Authentication and throws AuthorizationDeniedException against an
+ * already-committed response (visible in production logs as a recurring,
+ * functionally-harmless "Unable to handle the Spring Security Exception
+ * because the response is already committed" every time a proxy interrupts an
+ * open SSE stream). Same root cause as the documented /error-dispatch case in
+ * SecurityConfig, just a different dispatch type.
  */
 @Component
 @RequiredArgsConstructor
@@ -58,6 +74,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
     }
 
     /** False leaves the request unauthenticated, which the security config turns into a 401. */
