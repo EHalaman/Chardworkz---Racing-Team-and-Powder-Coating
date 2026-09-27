@@ -79,6 +79,7 @@ class AccountControllerRealtimeEventTest {
         when(authentication.getDetails()).thenReturn(claims);
         when(jwtService.extractAccountId(claims)).thenReturn(CALLER_ID);
         when(accountRepository.findById(TARGET_ID)).thenReturn(Optional.of(targetAccount()));
+        when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(passwordEncoder.encode("a-new-temp-password")).thenReturn("hashed");
 
         controller.resetPassword(TARGET_ID, new ResetPasswordRequest("a-new-temp-password"), authentication);
