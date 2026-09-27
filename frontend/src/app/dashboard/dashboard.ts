@@ -3,6 +3,12 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+type BranchKey = string | null;
+
+function branchKey(branchCode: BranchKey): string {
+  return branchCode ?? 'ALL';
+}
+
 export interface TopProduct {
   productName: string;
   quantitySold: number;
@@ -129,5 +135,60 @@ export class DashboardService {
     return this.http.get<DashboardAnalytics>(`${environment.apiBaseUrl}/api/dashboard/analytics`, {
       params,
     });
+  }
+}
+
+/**
+ * In-memory, singleton-service-backed cache for the Dashboard screen -
+ * keyed by branch (and, for analytics, time range too) - so navigating away
+ * and back shows the last-known data immediately instead of the harsh
+ * "0 products"/"₱0.00" flash of a fresh {@link Dashboard} component re-init.
+ * Not a full NgRx-style store (this app doesn't use one elsewhere): plain
+ * Maps are enough since only the Dashboard component itself reads this.
+ * The component still always fires a background refetch on every visit
+ * (stale-while-revalidate) - this only changes what's shown *while* that
+ * fetch is in flight, never skips it.
+ */
+@Injectable({ providedIn: 'root' })
+export class DashboardStore {
+  private readonly summaryByBranch = new Map<string, DashboardSummary>();
+  private readonly alertsByBranch = new Map<string, DashboardAlert[]>();
+  private readonly activityByBranch = new Map<string, DashboardActivity[]>();
+  private readonly analyticsByKey = new Map<string, DashboardAnalytics>();
+
+  getSummary(branchCode: BranchKey): DashboardSummary | null {
+    return this.summaryByBranch.get(branchKey(branchCode)) ?? null;
+  }
+
+  setSummary(branchCode: BranchKey, value: DashboardSummary): void {
+    this.summaryByBranch.set(branchKey(branchCode), value);
+  }
+
+  getAlerts(branchCode: BranchKey): DashboardAlert[] | null {
+    return this.alertsByBranch.get(branchKey(branchCode)) ?? null;
+  }
+
+  setAlerts(branchCode: BranchKey, value: DashboardAlert[]): void {
+    this.alertsByBranch.set(branchKey(branchCode), value);
+  }
+
+  getActivity(branchCode: BranchKey): DashboardActivity[] | null {
+    return this.activityByBranch.get(branchKey(branchCode)) ?? null;
+  }
+
+  setActivity(branchCode: BranchKey, value: DashboardActivity[]): void {
+    this.activityByBranch.set(branchKey(branchCode), value);
+  }
+
+  getAnalytics(branchCode: BranchKey, timeRange: DashboardTimeRange): DashboardAnalytics | null {
+    return this.analyticsByKey.get(`${branchKey(branchCode)}:${timeRange}`) ?? null;
+  }
+
+  setAnalytics(
+    branchCode: BranchKey,
+    timeRange: DashboardTimeRange,
+    value: DashboardAnalytics,
+  ): void {
+    this.analyticsByKey.set(`${branchKey(branchCode)}:${timeRange}`, value);
   }
 }
