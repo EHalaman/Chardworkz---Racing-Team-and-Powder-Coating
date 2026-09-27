@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -31,6 +33,27 @@ public class ApiExceptionHandler {
         body.put("error", status.getReasonPhrase());
         body.put("message", ex.getReason());
         return ResponseEntity.status(status).body(body);
+    }
+
+    /**
+     * Without this, a {@code @Valid @RequestBody} rejection (e.g. {@code CreateAccountRequest}'s
+     * password {@code @Size(min = 8)}) never reaches the frontend's {@code backendErrorMessage()}
+     * helper - {@link MethodArgumentNotValidException} isn't a {@link ResponseStatusException},
+     * so it fell through to Spring's own default body with no top-level {@code message} string,
+     * and every caller silently showed its generic fallback text instead of the real reason.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
+        FieldError fieldError = ex.getBindingResult().getFieldError();
+        String message = fieldError != null
+            ? fieldError.getField() + " " + fieldError.getDefaultMessage()
+            : "Validation failed.";
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", Instant.now().toString());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", HttpStatus.BAD_REQUEST.getReasonPhrase());
+        body.put("message", message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     /** Without this, exceeding {@code spring.servlet.multipart.max-file-size} surfaces as a raw 500 instead of a clean, actionable rejection. */
