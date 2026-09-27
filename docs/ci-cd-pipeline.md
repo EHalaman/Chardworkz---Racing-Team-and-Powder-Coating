@@ -3,7 +3,7 @@ title: "ChardWorkz — CI/CD Pipeline"
 type: documentation
 status: active
 created: 2026-09-26
-updated: 2026-09-26
+updated: 2026-09-27
 ai_access: internal
 ai_generated: true
 review_status: draft
@@ -36,11 +36,11 @@ Done on `kaotikus27/ChardWorkz` on 2026-09-26, then **redone identically on `EHa
 
 Started from a single `main` branch with no CI, no Dockerfile, no Railway/Vercel config. Adopted a **3-branch model** (a 4th `prod-testing` branch was considered and rejected — its safety purpose is better served by a Flyway dry-run CI job against an ephemeral Postgres container on every PR into `main`, planned for Phase 3, so it never has to become a real merge target):
 
-| Branch        | Purpose                                               | Deploys to                                          |
-| ------------- | ----------------------------------------------------- | --------------------------------------------------- |
-| `development` | Feature integration, local/dev testing                | Nothing auto-deployed yet                           |
-| `staging`     | Release-candidate testing, UAT, staging DB validation | Vercel Staging + Railway Staging DB (Phase 2)       |
-| `main`        | Protected, live production                            | Vercel Production + Railway Production DB (Phase 2) |
+| Branch        | Purpose                                                      | Deploys to                                                                         |
+| ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `development` | Feature integration, local/dev testing                       | Nothing auto-deployed yet                                                          |
+| `staging`     | Release-candidate testing, UAT, CI/review gate before `main` | Vercel Staging preview only (Railway staging decommissioned 2026-09-27, see below) |
+| `main`        | Protected, live production                                   | Vercel Production + Railway Production DB (Phase 2)                                |
 
 Flow: feature branch → PR into `development` → PR into `staging` → PR into `main`.
 
@@ -105,6 +105,24 @@ Classic branch protection rules on both `main` and `staging` (`Settings > Branch
 - **Public networking**: generated a Railway subdomain for each backend, port 8080 — `backend-production-d51a.up.railway.app` and `backend-staging-staging-a4b4.up.railway.app`. Both verified live via `curl` (clean `{"error":"Unauthorized"}` JSON from the app's own exception handler, not a Railway platform error — confirms the app fully booted, not just that the container started).
 - **GitHub App**: Railway's GitHub App needed a one-time authorization against the EHalaman account/repo before it could see any repos to deploy from.
 - Real Railway URLs backfilled into `frontend/src/environments/environment.ts` (`REPLACE_WITH_RAILWAY_PRODUCTION_URL` → the production URL above) and `environment.staging.ts` (same for staging), committed on `main` and merged forward.
+
+## Railway staging decommissioned (2026-09-27, DEC-080)
+
+The Railway `staging` environment — the `backend-staging` service and its `Postgres-CHau` database described above — was **deleted entirely** via Railway's own "Delete Environment" action (Project Settings → Environments), at the user's request, purely on cost grounds: Railway's trial credit is a one-time, non-renewing allowance shared across both environments, and staging's ongoing compute/DB usage had no production benefit once local Postgres 17 + `mvn test` already cover pre-merge validation.
+
+**What still exists / still works:**
+
+- The git `staging` branch itself, unchanged — still the required PR target between `development` and `main`, still carrying its own required CI checks (`mvn test`, `ng build` from `.github/workflows/ci.yml`). It's now a pure CI/review gate with no live cloud deployment behind it.
+- Vercel's staging preview (`chardworkz-git-staging-eleomar-halamans-projects-fb608c77.vercel.app`) — Vercel Hobby auto-builds every branch for free regardless of Railway, so this keeps building on pushes to `staging`.
+
+**What broke, deliberately, as a result:**
+
+- `environment.staging.ts`'s `apiBaseUrl` now points at a Railway URL (`backend-staging-staging-a4b4.up.railway.app`) that no longer exists. The Vercel staging preview will load fine (it's a static build) but any API call from it will fail. Useful only for layout/visual checks now, not functional testing.
+- `backend-staging`'s Service Variables, `CORS_ALLOWED_ORIGIN` setting, and the `owner-staging` bootstrap account (set up earlier the same session) are all gone with the service.
+
+**Real discrepancy surfaced while trying to back up Postgres-CHau before deletion (no backup was ultimately taken — user chose to skip it):** the actual deployed Postgres-CHau was running **PostgreSQL 18.6**, not 17 as this project's docs/local dev setup assume (`pg_dump` 17.11 refused to dump it — a hard client-must-be->=-server-version check, no override). Production's actual Postgres version was never checked against this — worth confirming before assuming it matches local dev's v17.
+
+**To reinstate staging later** (e.g. once Railway's trial credit is replaced by a paid plan): re-provision a `Postgres` service and a `backend-staging` service in a new/existing `staging` environment on Railway (Root Directory `/backend`, tracks the `staging` branch), re-set `CORS_ALLOWED_ORIGIN` to the Vercel staging preview URL, re-set `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/`DB_PASSWORD` as variable references to the new Postgres service, generate a fresh `JWT_SECRET`, and update `environment.staging.ts`'s `apiBaseUrl` to the new backend's URL.
 
 ## Roadmap (not yet built)
 
