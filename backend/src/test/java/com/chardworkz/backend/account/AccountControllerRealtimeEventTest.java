@@ -86,6 +86,30 @@ class AccountControllerRealtimeEventTest {
         verify(eventPublisher).publishEvent(new AccountStatusChangedEvent(TARGET_ID));
     }
 
+    /**
+     * Branch/role reassignment (AccountController#update) bakes both into the
+     * JWT's claims same as status/password do - without this, an already
+     * logged-in account keeps acting under its old branch/role for the rest
+     * of its token's lifetime instead of being forced to re-login immediately.
+     */
+    @Test
+    void reassigningBranchOrRolePublishesAnAccountStatusChangedEventForThatAccount() {
+        when(authentication.getDetails()).thenReturn(claims);
+        when(jwtService.extractAccountId(claims)).thenReturn(CALLER_ID);
+        when(accountRepository.findById(TARGET_ID)).thenReturn(Optional.of(targetAccount()));
+        Branch masinag = Branch.builder().id(2L).code("MASINAG").name("Masinag Branch").build();
+        when(branchRepository.findByCode("MASINAG")).thenReturn(Optional.of(masinag));
+        when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        controller.update(
+            TARGET_ID, new UpdateAccountRequest("Target User", Role.EMPLOYEE, "MASINAG"), authentication);
+
+        ArgumentCaptor<Account> saved = ArgumentCaptor.forClass(Account.class);
+        verify(accountRepository).save(saved.capture());
+        assertThat(saved.getValue().getTokenVersion()).isEqualTo(1);
+        verify(eventPublisher).publishEvent(new AccountStatusChangedEvent(TARGET_ID));
+    }
+
     /** Guards the guard: a rejected self-deactivation must never reach the event publish - it should fail before that point, same as it fails before the token_version bump. */
     @Test
     void aRejectedSelfDeactivationNeverPublishesAnEvent() {

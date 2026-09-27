@@ -161,8 +161,15 @@ public class AccountController {
         account.setFullName(request.fullName());
         account.setRole(request.role());
         account.setBranch(branch);
+        // Same reasoning as updateStatus/resetPassword: role/branch are baked
+        // into the JWT's claims, so an already-issued token must be rejected
+        // immediately or the account keeps acting under its old branch/role
+        // for the rest of that token's lifetime (up to 8h) until it happens
+        // to log out and back in.
+        account.setTokenVersion(account.getTokenVersion() + 1);
         account.setUpdatedAt(Instant.now());
         account = accountRepository.save(account);
+        eventPublisher.publishEvent(new AccountStatusChangedEvent(account.getId()));
 
         activityLogService.record(authentication, ActionType.UPDATE, "ACCOUNT", String.valueOf(account.getId()),
             account.getBranch().getId(),
