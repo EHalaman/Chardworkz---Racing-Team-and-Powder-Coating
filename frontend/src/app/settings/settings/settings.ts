@@ -108,6 +108,10 @@ export class Settings implements OnInit {
       this.passwordError.set('New passwords do not match.');
       return;
     }
+    if (newPassword.length < 8) {
+      this.passwordError.set('New password must be at least 8 characters.');
+      return;
+    }
     this.savingPassword.set(true);
     this.accountsService.changePassword(currentPassword, newPassword).subscribe({
       next: () => {
