@@ -161,8 +161,7 @@ public class AccountController {
         account.setFullName(request.fullName());
         account.setRole(request.role());
         account.setBranch(branch);
-        account.setUpdatedAt(Instant.now());
-        account = accountRepository.save(account);
+        account = invalidateSessions(account);
 
         activityLogService.record(authentication, ActionType.UPDATE, "ACCOUNT", String.valueOf(account.getId()),
             account.getBranch().getId(),
@@ -198,13 +197,7 @@ public class AccountController {
         // session already open with the old password to re-authenticate,
         // since a forgotten/compromised password reset should not leave a
         // stale token still valid.
-        account.setTokenVersion(account.getTokenVersion() + 1);
-        account.setUpdatedAt(Instant.now());
-        accountRepository.save(account);
-        // Closes this account's already-open SSE stream(s) too - token_version
-        // alone only rejects its *next* REST request (see realtime-sales-sync-spec's
-        // Ticket 4 interaction note).
-        eventPublisher.publishEvent(new AccountStatusChangedEvent(account.getId()));
+        account = invalidateSessions(account);
 
         activityLogService.record(authentication, ActionType.UPDATE, "ACCOUNT", String.valueOf(account.getId()),
             account.getBranch().getId(), "Reset password for account \"" + account.getUsername() + "\"");
@@ -226,17 +219,31 @@ public class AccountController {
         // Invalidates any token already issued to this account (JwtAuthenticationFilter
         // checks this on every request) so a deactivation takes effect immediately
         // instead of waiting out the token's remaining lifetime.
-        account.setTokenVersion(account.getTokenVersion() + 1);
-        account.setUpdatedAt(Instant.now());
-        account = accountRepository.save(account);
-        // Same reasoning as resetPassword above - closes any open SSE stream
-        // immediately rather than leaving it open until it naturally times out.
-        eventPublisher.publishEvent(new AccountStatusChangedEvent(account.getId()));
+        account = invalidateSessions(account);
 
         activityLogService.record(authentication, ActionType.UPDATE, "ACCOUNT", String.valueOf(account.getId()),
             account.getBranch().getId(),
             (request.active() ? "Activated" : "Deactivated") + " account \"" + account.getUsername() + "\"");
 
         return AccountSummaryResponse.from(account);
+    }
+
+    /**
+     * Bumps token_version, persists, and publishes AccountStatusChangedEvent -
+     * the sequence every mutation of a JWT-baked field (branch, role, active,
+     * password) must run so an already-issued token for this account is
+     * rejected on its very next request (JwtAuthenticationFilter) and any open
+     * SSE stream is force-closed (see AccountStatusChangedEvent's javadoc),
+     * instead of the stale claim staying valid for the rest of the token's
+     * lifetime. Centralized here after update()/resetPassword()/updateStatus()
+     * were found duplicating this exact sequence by hand - a future caller
+     * that forgets to invoke this is the one thing this helper can't prevent.
+     */
+    private Account invalidateSessions(Account account) {
+        account.setTokenVersion(account.getTokenVersion() + 1);
+        account.setUpdatedAt(Instant.now());
+        Account saved = accountRepository.save(account);
+        eventPublisher.publishEvent(new AccountStatusChangedEvent(saved.getId()));
+        return saved;
     }
 }
