@@ -59,6 +59,10 @@ export class Roles implements OnInit {
   }
 
   createAccount(username: string, password: string, fullName: string): void {
+    if (password.length < 8) {
+      this.errorMessage.set('Password must be at least 8 characters.');
+      return;
+    }
     this.errorMessage.set(null);
     this.submitting.set(true);
     this.accountsService
@@ -81,7 +85,7 @@ export class Roles implements OnInit {
           this.errorMessage.set(
             error.status === 409
               ? 'That username is already taken.'
-              : 'Could not create the account.',
+              : backendErrorMessage(error, 'Could not create the account.'),
           );
         },
       });
