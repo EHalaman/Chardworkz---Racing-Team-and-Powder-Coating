@@ -94,13 +94,14 @@ public class DashboardController {
         List<Product> stockedProducts = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
         Map<Long, BigDecimal> latestCosts =
             productCostService.latestKnownCosts(stockedProducts.stream().map(Product::getId).toList());
+        Map<String, StockLevel> stockLevelsByKey = batchStockLevelsByKey(branches);
 
         BigDecimal totalStockValue = BigDecimal.ZERO;
         BigDecimal totalStockValueAtCost = BigDecimal.ZERO;
         int lowStockCount = 0;
         for (Product product : stockedProducts) {
             for (Branch branch : branches) {
-                StockLevel stockLevel = findStockLevel(product, branch);
+                StockLevel stockLevel = findStockLevel(stockLevelsByKey, product, branch);
                 int quantity = stockLevel != null ? stockLevel.getQuantity() : 0;
                 int reorderThreshold = stockLevel != null ? stockLevel.getReorderThreshold() : 0;
                 totalStockValue = totalStockValue.add(product.getUnitPrice().multiply(BigDecimal.valueOf(quantity)));
@@ -299,6 +300,7 @@ public class DashboardController {
         @RequestParam(required = false) String branchCode, Authentication authentication) {
         List<Branch> branches = resolveBranches(authentication, branchCode);
         List<Product> stockedProducts = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
+        Map<String, StockLevel> stockLevelsByKey = batchStockLevelsByKey(branches);
 
         ZoneId zone = ZoneId.systemDefault();
         Instant runRateFrom = LocalDate.now(zone).minusMonths(RUN_RATE_MONTHS).atStartOfDay(zone).toInstant();
@@ -307,7 +309,7 @@ public class DashboardController {
         List<DashboardAlertResponse> alerts = new ArrayList<>();
         for (Product product : stockedProducts) {
             for (Branch branch : branches) {
-                StockLevel stockLevel = findStockLevel(product, branch);
+                StockLevel stockLevel = findStockLevel(stockLevelsByKey, product, branch);
                 int quantity = stockLevel != null ? stockLevel.getQuantity() : 0;
                 int reorderThreshold = stockLevel != null ? stockLevel.getReorderThreshold() : 0;
                 if (quantity > reorderThreshold) {
@@ -528,6 +530,7 @@ public class DashboardController {
         List<Product> stockedProducts = productRepository.findByActiveTrueAndCategoryNot(Category.SERVICES);
         Map<Long, BigDecimal> costs =
             productCostService.latestKnownCosts(stockedProducts.stream().map(Product::getId).toList());
+        Map<String, StockLevel> stockLevelsByKey = batchStockLevelsByKey(branches);
 
         BigDecimal totalValue = BigDecimal.ZERO;
         int count = 0;
@@ -537,7 +540,7 @@ public class DashboardController {
                 if (product.getCreatedAt().isAfter(cutoff) || soldRecently.contains(product.getId())) {
                     continue;
                 }
-                StockLevel stockLevel = findStockLevel(product, branch);
+                StockLevel stockLevel = findStockLevel(stockLevelsByKey, product, branch);
                 int quantity = stockLevel != null ? stockLevel.getQuantity() : 0;
                 if (quantity == 0) {
                     continue;
@@ -558,8 +561,29 @@ public class DashboardController {
             : saleRepository.findBySoldAtBetweenOrderBySoldAtDesc(from, to);
     }
 
-    private StockLevel findStockLevel(Product product, Branch branch) {
-        return stockLevelRepository.findByProductIdAndBranchId(product.getId(), branch.getId()).orElse(null);
+    /**
+     * Every stock_level row across the given branches, fetched once per
+     * request instead of one findByProductIdAndBranchId query per
+     * product-times-branch pair inside summary()/alerts()/computeDeadStock()'s
+     * loops - a real N+1 that scaled with catalog size, not just this
+     * controller's usual documented in-memory-aggregation tradeoff (DEC-033).
+     */
+    private Map<String, StockLevel> batchStockLevelsByKey(List<Branch> branches) {
+        Map<String, StockLevel> byKey = new HashMap<>();
+        for (Branch branch : branches) {
+            for (StockLevel stockLevel : stockLevelRepository.findByBranchId(branch.getId())) {
+                byKey.put(stockLevelKey(stockLevel.getProduct().getId(), branch.getId()), stockLevel);
+            }
+        }
+        return byKey;
+    }
+
+    private StockLevel findStockLevel(Map<String, StockLevel> stockLevelsByKey, Product product, Branch branch) {
+        return stockLevelsByKey.get(stockLevelKey(product.getId(), branch.getId()));
+    }
+
+    private String stockLevelKey(Long productId, Long branchId) {
+        return productId + ":" + branchId;
     }
 
     private List<Branch> resolveBranches(Authentication authentication, String branchCode) {

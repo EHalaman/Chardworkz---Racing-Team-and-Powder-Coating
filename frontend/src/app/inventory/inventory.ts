@@ -81,6 +81,25 @@ export interface InventoryImportCommitResult {
   skippedCount: number;
 }
 
+/**
+ * Singleton-service-backed cache of the last-loaded inventory list per
+ * branch, so switching tabs away from and back to Inventory shows the last-
+ * known list immediately instead of an empty table while a fresh fetch
+ * runs - same stale-while-revalidate pattern as DashboardStore.
+ */
+@Injectable({ providedIn: 'root' })
+export class InventoryStore {
+  private readonly itemsByBranch = new Map<string, InventoryItem[]>();
+
+  get(branchCode: string | null | undefined): InventoryItem[] | null {
+    return this.itemsByBranch.get(branchCode ?? 'ALL') ?? null;
+  }
+
+  set(branchCode: string | null | undefined, items: InventoryItem[]): void {
+    this.itemsByBranch.set(branchCode ?? 'ALL', items);
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
   constructor(private http: HttpClient) {}

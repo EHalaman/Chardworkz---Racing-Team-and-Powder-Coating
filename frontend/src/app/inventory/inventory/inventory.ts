@@ -16,6 +16,7 @@ import {
   InventoryImportPreview,
   InventoryItem,
   InventoryService,
+  InventoryStore,
   ReceiverSummary,
   StockReceipt,
 } from '../inventory';
@@ -88,6 +89,7 @@ export class Inventory implements OnInit, OnDestroy {
 
   constructor(
     private inventoryService: InventoryService,
+    private inventoryStore: InventoryStore,
     readonly auth: AuthService,
     private route: ActivatedRoute,
   ) {}
@@ -505,10 +507,22 @@ export class Inventory implements OnInit, OnDestroy {
   }
 
   private loadInventory(): void {
-    this.inventoryService.list(this.selectedBranch()).subscribe({
+    const branchCode = this.selectedBranch();
+
+    // Stale-while-revalidate, same pattern as DashboardStore: a previously-
+    // visited branch's list shows immediately while the fetch below
+    // refreshes it, instead of an empty table flash.
+    const cached = this.inventoryStore.get(branchCode);
+    if (cached) {
+      this.items.set(cached);
+      this.applyRestockSelection();
+    }
+
+    this.inventoryService.list(branchCode).subscribe({
       next: (items) => {
         this.items.set(items);
         this.applyRestockSelection();
+        this.inventoryStore.set(branchCode, items);
       },
       error: () => this.errorMessage.set('Could not load inventory.'),
     });
