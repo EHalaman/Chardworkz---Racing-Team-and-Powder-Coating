@@ -14,7 +14,27 @@ interface CartLine {
   quantity: number;
   /** Set only when this line came from a package selection (DEC-084) - null for a plain individually-added line. */
   packageId: number | null;
+  /**
+   * Unique per add-to-cart action (DEC-087, crypto.randomUUID()), distinct
+   * from packageId (the package template's own id). Lets the same package be
+   * added to the cart more than once without its lines/removed-component
+   * state getting mixed together, and is what removePackageGroup/purge key
+   * off of - packageId alone can't tell two separately-added instances of
+   * "Engine Upgrade 206 CC Fi Package" apart.
+   */
+  packageInstanceId: string | null;
   packageName: string | null;
+  /** True only for a package's locked labor/service line (PackageComponent.required) - the cart never renders quantity or remove controls for one; the whole package must be removed instead (see removePackageGroup). Always false for a plain or optional-part line. */
+  required: boolean;
+}
+
+/** One package component the cashier excluded (pre-add drawer or post-add cart removal), tied to the instance it came from so it can be purged when that whole package is removed, or restored via Re-add. */
+interface ExcludedPackageComponent {
+  packageInstanceId: string;
+  productId: number;
+  productName: string;
+  unitPrice: number;
+  quantity: number;
 }
 
 type PaymentMethod = 'CASH' | 'GCASH' | 'EWALLET_OTHER';
@@ -40,8 +60,8 @@ export class Register implements OnInit, OnDestroy {
   readonly cart = signal<CartLine[]>([]);
   /** Free-text notes the cashier typed directly into the checkout drawer. */
   readonly cashierRemarks = signal('');
-  /** Auto-generated per excluded package component (see addPackageToCart) - kept separate from cashierRemarks so a cashier editing their own note can never accidentally erase one of these. */
-  readonly autoExclusionRemarks = signal<string[]>([]);
+  /** Auto-generated per excluded package component (see addPackageToCart/removeLine) - kept separate from cashierRemarks so a cashier editing their own note can never accidentally erase one of these. Rendered/formatted via formattedExclusionsBlock, not stored as pre-formatted text, so purging (removePackageGroup) and Re-add (reAddComponent) can operate on structured entries instead of string-matching. */
+  readonly excludedComponents = signal<ExcludedPackageComponent[]>([]);
   readonly paymentMethod = signal<PaymentMethod>('CASH');
   readonly successMessage = signal<string | null>(null);
   readonly loadError = signal<string | null>(null);
@@ -54,8 +74,6 @@ export class Register implements OnInit, OnDestroy {
   readonly packageExclusions = signal<Set<number>>(new Set());
 
   readonly activeReceipt = signal<SaleReceipt | null>(null);
-  readonly receiptTab = signal<'customer' | 'audit'>('customer');
-  readonly isReceiptClosing = signal(false);
   readonly isDrawerOpen = signal(false);
   readonly isDrawerMounted = signal(false);
   readonly isToastLeaving = signal(false);
@@ -229,52 +247,9 @@ export class Register implements OnInit, OnDestroy {
     );
   }
 
-  /** Resets isReceiptClosing in case a close's pending timeout (see closeReceipt()) hasn't fired yet - otherwise this new receipt would render mid-exit-animation and then get wrongly dismissed when that stale timeout does fire. */
+  /** The shared app-receipt-modal (DEC-087) resets its own tab/close-animation state whenever its [receipt] input changes, so a reprint while one is already open just needs a plain set() here. */
   reprint(sale: SaleReceipt): void {
-    this.isReceiptClosing.set(false);
-    this.receiptTab.set('customer');
     this.activeReceipt.set(sale);
-  }
-
-  /** Groups a receipt's lines by packageName for the Customer tab (DEC-084) - a null packageName means a plain individually-sold line, rendered on its own. */
-  groupedReceiptLines(
-    receipt: SaleReceipt,
-  ): { packageName: string | null; lines: SaleReceipt['lines']; total: number }[] {
-    const groups: { packageName: string | null; lines: SaleReceipt['lines']; total: number }[] = [];
-    for (const line of receipt.lines) {
-      let group = groups.find((g) => g.packageName === line.packageName);
-      if (!group) {
-        group = { packageName: line.packageName, lines: [], total: 0 };
-        groups.push(group);
-      }
-      group.lines.push(line);
-      group.total += line.lineTotal;
-    }
-    return groups;
-  }
-
-  /**
-   * Same delayed-unmount trick as toggleDrawer(), keyed off activeReceipt
-   * itself instead of a separate mounted flag since it already doubles as
-   * one. The isReceiptClosing() re-check guards the same close-then-reopen
-   * race toggleDrawer() has: without it, closing then immediately reprinting
-   * another sale within 180ms would have this stale callback null out the
-   * newly reprinted receipt instead of the one that was actually closed.
-   */
-  closeReceipt(): void {
-    this.isReceiptClosing.set(true);
-    setTimeout(() => {
-      if (this.isReceiptClosing()) {
-        this.activeReceipt.set(null);
-        this.isReceiptClosing.set(false);
-      }
-    }, 180);
-  }
-
-  /** Always prints the Customer tab regardless of which tab is on screen - only that tab carries the `.print-area` class (styles.css). The setTimeout lets Angular re-render onto the customer tab before the print dialog actually captures the page. */
-  printReceipt(): void {
-    this.receiptTab.set('customer');
-    setTimeout(() => window.print(), 0);
   }
 
   get filteredProducts(): ProductSummary[] {
@@ -291,65 +266,197 @@ export class Register implements OnInit, OnDestroy {
     return this.cart().reduce((sum, line) => sum + line.product.unitPrice * line.quantity, 0);
   }
 
-  /** What actually gets submitted and printed - the cashier's own note first, then every auto-generated exclusion note, one per line. */
+  /**
+   * Compact vertical "Excluded:" block, one per package instance that has
+   * any excluded components right now - replaces the old one-bullet-per-note
+   * flat list, which accumulated duplicate/stale entries across repeated
+   * add/customize/remove/re-add cycles on the same package (never purged
+   * until the whole cart was cleared). padEnd on the name column lines up
+   * cleanly since the remarks block renders in a monospace font
+   * (receipt-modal.html, register.html).
+   */
+  get formattedExclusionsBlock(): string {
+    const byInstance = new Map<string, ExcludedPackageComponent[]>();
+    for (const entry of this.excludedComponents()) {
+      const list = byInstance.get(entry.packageInstanceId) ?? [];
+      list.push(entry);
+      byInstance.set(entry.packageInstanceId, list);
+    }
+    if (byInstance.size === 0) {
+      return '';
+    }
+    const nameWidth = Math.max(...this.excludedComponents().map((e) => e.productName.length));
+    const blocks: string[] = [];
+    for (const entries of byInstance.values()) {
+      const rows = entries.map(
+        (e) =>
+          `    ${e.productName.padEnd(nameWidth)} | ${e.quantity} pcs | ₱${e.unitPrice.toFixed(2)}`,
+      );
+      blocks.push(['Excluded:', ...rows].join('\n'));
+    }
+    return blocks.join('\n\n');
+  }
+
+  /** What actually gets submitted and printed - the cashier's own note first, then the compact exclusions block. */
   get combinedRemarks(): string {
-    return [this.cashierRemarks().trim(), ...this.autoExclusionRemarks()]
+    return [this.cashierRemarks().trim(), this.formattedExclusionsBlock]
       .filter((r) => r)
-      .join('\n');
+      .join('\n\n');
   }
 
   addToCart(product: ProductSummary): void {
     this.cart.update((lines) => {
-      const existing = lines.find((l) => l.product.id === product.id && l.packageId === null);
+      const existing = lines.find(
+        (l) => l.product.id === product.id && l.packageInstanceId === null,
+      );
       if (existing) {
         return lines.map((l) => (l === existing ? { ...l, quantity: l.quantity + 1 } : l));
       }
-      return [...lines, { product, quantity: 1, packageId: null, packageName: null }];
+      return [
+        ...lines,
+        {
+          product,
+          quantity: 1,
+          packageId: null,
+          packageInstanceId: null,
+          packageName: null,
+          required: false,
+        },
+      ];
     });
   }
 
-  adjustQuantity(productId: number, delta: number, packageId: number | null = null): void {
+  /**
+   * No-ops for a required (locked labor) line - the template hides its +/-
+   * controls entirely, this is defense in depth against a stale click.
+   * Decrementing an optional package line down to 0 routes through
+   * removeLine() rather than just filtering it out here, so that path
+   * records the same exclusion entry a click on ✕ would - previously it
+   * silently dropped the line with no note, an inconsistency /code-review
+   * flagged in the prior session.
+   */
+  adjustQuantity(productId: number, delta: number, packageInstanceId: string | null = null): void {
+    const line = this.cart().find(
+      (l) => l.product.id === productId && l.packageInstanceId === packageInstanceId,
+    );
+    if (!line || line.required) {
+      return;
+    }
+    if (line.quantity + delta <= 0) {
+      this.removeLine(productId, packageInstanceId);
+      return;
+    }
     this.cart.update((lines) =>
-      lines
-        .map((l) =>
-          l.product.id === productId && l.packageId === packageId
-            ? { ...l, quantity: l.quantity + delta }
-            : l,
-        )
-        .filter((l) => l.quantity > 0),
+      lines.map((l) =>
+        l.product.id === productId && l.packageInstanceId === packageInstanceId
+          ? { ...l, quantity: l.quantity + delta }
+          : l,
+      ),
     );
   }
 
   /**
-   * Removing a line that came from a package (packageId set) is a distinct
-   * moment from unchecking a component in the pre-add customization drawer
-   * (addPackageToCart's own exclusion notes) - this cashier already committed
-   * the component to the cart, then changed their mind, so it gets its own
-   * auto-note here too rather than vanishing from the total with no audit
-   * trail of why a package's total came in lower than its listed price.
+   * A required (locked labor) line can never be removed this way - the
+   * template hides its remove control entirely (DEC-087 Requirement 2); this
+   * is defense in depth. Removing an optional package component records an
+   * ExcludedPackageComponent tied to its instance, so the printable receipt
+   * and audit trail both record why the total came in lower than listed, and
+   * so it can be purged (removePackageGroup) or undone (reAddComponent).
    */
-  removeLine(productId: number, packageId: number | null = null): void {
+  removeLine(productId: number, packageInstanceId: string | null = null): void {
     const removedLine = this.cart().find(
-      (l) => l.product.id === productId && l.packageId === packageId,
+      (l) => l.product.id === productId && l.packageInstanceId === packageInstanceId,
     );
+    if (!removedLine || removedLine.required) {
+      return;
+    }
     this.cart.update((lines) =>
-      lines.filter((l) => !(l.product.id === productId && l.packageId === packageId)),
+      lines.filter(
+        (l) => !(l.product.id === productId && l.packageInstanceId === packageInstanceId),
+      ),
     );
-    if (removedLine && removedLine.packageId !== null) {
-      const amount = removedLine.product.unitPrice * removedLine.quantity;
-      const note = `Excluded: ${removedLine.product.name} (-₱${amount.toFixed(2)} - Removed from ${removedLine.packageName})`;
-      this.autoExclusionRemarks.update((current) => [...current, note]);
+    if (removedLine.packageInstanceId !== null) {
+      this.excludedComponents.update((current) => [
+        ...current,
+        {
+          packageInstanceId: removedLine.packageInstanceId!,
+          productId: removedLine.product.id,
+          productName: removedLine.product.name,
+          unitPrice: removedLine.product.unitPrice,
+          quantity: removedLine.quantity,
+        },
+      ]);
     }
   }
 
-  /** Groups cart() by packageId for nested rendering (register.html) - a null packageId is one group of standalone add-on lines, each package its own group, in first-seen order. Mirrors groupedReceiptLines()'s exact grouping logic, applied to the live cart instead of a completed receipt. */
-  get groupedCart(): { packageId: number | null; packageName: string | null; lines: CartLine[] }[] {
-    const groups: { packageId: number | null; packageName: string | null; lines: CartLine[] }[] =
-      [];
+  /** Restores a previously-excluded component back into the cart at its original quantity, recalculating the total, and removes it from the exclusions list/remarks block. */
+  reAddComponent(entry: ExcludedPackageComponent): void {
+    const anchor = this.cart().find((l) => l.packageInstanceId === entry.packageInstanceId);
+    const product = this.productFor(entry.productId);
+    if (!anchor || !product) {
+      return;
+    }
+    this.cart.update((lines) => [
+      ...lines,
+      {
+        product,
+        quantity: entry.quantity,
+        packageId: anchor.packageId,
+        packageInstanceId: anchor.packageInstanceId,
+        packageName: anchor.packageName,
+        required: false,
+      },
+    ]);
+    this.excludedComponents.update((current) =>
+      current.filter(
+        (e) =>
+          !(e.packageInstanceId === entry.packageInstanceId && e.productId === entry.productId),
+      ),
+    );
+  }
+
+  /** Every excluded-but-not-yet-restored component for one package instance - backs the inline "+ Re-add" chips in its cart container. */
+  excludedComponentsFor(packageInstanceId: string): ExcludedPackageComponent[] {
+    return this.excludedComponents().filter((e) => e.packageInstanceId === packageInstanceId);
+  }
+
+  /**
+   * Removes an entire package's lines from the cart in one action - the only
+   * way to remove its labor line, since individual removal is locked - and
+   * purges every exclusion entry tied to that instance so the remarks block
+   * never carries stale notes for a package that's no longer in the cart.
+   * Re-adding the same package afterward generates a fresh instance id with
+   * a completely clean exclusions state (DEC-087 Requirement 2).
+   */
+  removePackageGroup(packageInstanceId: string): void {
+    this.cart.update((lines) => lines.filter((l) => l.packageInstanceId !== packageInstanceId));
+    this.excludedComponents.update((current) =>
+      current.filter((e) => e.packageInstanceId !== packageInstanceId),
+    );
+  }
+
+  /** Groups cart() by packageInstanceId for nested rendering (register.html) - null is one group of standalone add-on lines, each package instance its own group, in first-seen order. */
+  get groupedCart(): {
+    packageInstanceId: string | null;
+    packageId: number | null;
+    packageName: string | null;
+    lines: CartLine[];
+  }[] {
+    const groups: {
+      packageInstanceId: string | null;
+      packageId: number | null;
+      packageName: string | null;
+      lines: CartLine[];
+    }[] = [];
     for (const line of this.cart()) {
-      let group = groups.find((g) => g.packageId === line.packageId);
+      let group = groups.find((g) => g.packageInstanceId === line.packageInstanceId);
       if (!group) {
-        group = { packageId: line.packageId, packageName: line.packageName, lines: [] };
+        group = {
+          packageInstanceId: line.packageInstanceId,
+          packageId: line.packageId,
+          packageName: line.packageName,
+          lines: [],
+        };
         groups.push(group);
       }
       group.lines.push(line);
@@ -360,7 +467,7 @@ export class Register implements OnInit, OnDestroy {
   clearCart(): void {
     this.cart.set([]);
     this.cashierRemarks.set('');
-    this.autoExclusionRemarks.set([]);
+    this.excludedComponents.set([]);
   }
 
   /** productSummary lookup for a package component - the drawer needs live stock/active data the package endpoint deliberately doesn't duplicate (see PackageResponse). */
@@ -418,23 +525,34 @@ export class Register implements OnInit, OnDestroy {
   }
 
   /**
-   * Adds every non-excluded component as its own cart line (packageId-tagged
-   * so the receipt can group them - see completeSale()), then auto-appends a
-   * remark for each excluded component so the printable receipt and the
-   * audit trail both record what the customer supplied themselves.
+   * Adds every non-excluded component as its own cart line, tagged with a
+   * fresh packageInstanceId (DEC-087) so this add is tracked as its own
+   * package instance in the cart - re-adding the same package later gets its
+   * own instance id and a completely clean exclusions state, rather than
+   * inheriting whatever this instance's remarks/removals were. Excluded
+   * components are recorded the same way a post-add cart removal is (see
+   * removeLine), so both moments feed the same compact remarks block.
    */
   addPackageToCart(): void {
     const pkg = this.activePackage();
     if (!pkg) {
       return;
     }
+    const instanceId = crypto.randomUUID();
     const excluded = this.packageExclusions();
     const included = pkg.components.filter((c) => !excluded.has(c.productId));
     const newLines: CartLine[] = included
       .map((c): CartLine | null => {
         const product = this.productFor(c.productId);
         return product
-          ? { product, quantity: c.defaultQuantity, packageId: pkg.id, packageName: pkg.name }
+          ? {
+              product,
+              quantity: c.defaultQuantity,
+              packageId: pkg.id,
+              packageInstanceId: instanceId,
+              packageName: pkg.name,
+              required: c.required,
+            }
           : null;
       })
       .filter((l): l is CartLine => l !== null);
@@ -442,11 +560,14 @@ export class Register implements OnInit, OnDestroy {
 
     const excludedComponents = pkg.components.filter((c) => excluded.has(c.productId));
     if (excludedComponents.length > 0) {
-      const notes = excludedComponents.map(
-        (c) =>
-          `Excluded: ${c.productName} (-₱${(c.unitPrice * c.defaultQuantity).toFixed(2)} - Customer provided own part)`,
-      );
-      this.autoExclusionRemarks.update((current) => [...current, ...notes]);
+      const entries: ExcludedPackageComponent[] = excludedComponents.map((c) => ({
+        packageInstanceId: instanceId,
+        productId: c.productId,
+        productName: c.productName,
+        unitPrice: c.unitPrice,
+        quantity: c.defaultQuantity,
+      }));
+      this.excludedComponents.update((current) => [...current, ...entries]);
     }
 
     this.closePackageDrawer();
@@ -528,7 +649,6 @@ export class Register implements OnInit, OnDestroy {
       })),
     };
 
-    this.receiptTab.set('customer');
     this.activeReceipt.set(receipt);
 
     // Same instant-feedback reasoning as the receipt above: enqueueSale()

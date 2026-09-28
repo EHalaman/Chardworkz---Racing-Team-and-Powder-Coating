@@ -416,9 +416,12 @@
                   (change)="togglePartSelection(part.id)"
                   class="h-3.5 w-3.5 shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <span class="min-w-0 truncate text-gray-900 dark:text-gray-100">{{
-                  part.name
-                }}</span>
+                <span class="min-w-0 truncate text-gray-900 dark:text-gray-100"
+                  >{{ part.name }}
+                  <span *ngIf="!part.active" class="text-gray-400 dark:text-gray-500"
+                    >(inactive)</span
+                  ></span
+                >
               </span>
               <span class="shrink-0 text-gray-500 dark:text-gray-400"
                 >₱{{ part.unitPrice | number: '1.2-2' }}</span

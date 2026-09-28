@@ -159,7 +159,7 @@
     <div class="dashboard-card flex flex-col">
       <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Cart</h2>
 
-      <!-- Shared line-row template (qty controls + remove) - reused inside and outside package groups so only the ADD-ON badge/container differs. -->
+      <!-- Shared line-row template (qty controls + remove) - reused inside and outside package groups so only the ADD-ON badge/container/lock state differs. A required line (the package's labor) never renders quantity or remove controls at all - the whole package must be removed instead (DEC-087). -->
       <ng-template #cartLineRow let-line="line" let-isAddOn="isAddOn">
         <div class="flex items-center justify-between gap-2 py-2">
           <div class="min-w-0">
@@ -175,10 +175,10 @@
               ₱{{ line.product.unitPrice.toFixed(2) }} each
             </p>
           </div>
-          <div class="flex shrink-0 items-center gap-2">
+          <div *ngIf="!line.required; else lockedLine" class="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              (click)="adjustQuantity(line.product.id, -1, line.packageId)"
+              (click)="adjustQuantity(line.product.id, -1, line.packageInstanceId)"
               class="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-transform duration-150 active:scale-90 dark:border-slate-600 dark:text-gray-300"
             >
               −
@@ -188,33 +188,47 @@
             }}</span>
             <button
               type="button"
-              (click)="adjustQuantity(line.product.id, 1, line.packageId)"
+              (click)="adjustQuantity(line.product.id, 1, line.packageInstanceId)"
               class="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-transform duration-150 active:scale-90 dark:border-slate-600 dark:text-gray-300"
             >
               +
             </button>
             <button
               type="button"
-              (click)="removeLine(line.product.id, line.packageId)"
+              (click)="removeLine(line.product.id, line.packageInstanceId)"
               aria-label="Remove"
               class="pl-1 text-danger transition-transform duration-150 active:scale-90"
             >
               ✕
             </button>
           </div>
+          <ng-template #lockedLine>
+            <span class="shrink-0 text-xs font-normal text-gray-400 dark:text-gray-500"
+              >{{ line.quantity }} · locked</span
+            >
+          </ng-template>
         </div>
       </ng-template>
 
       <div class="mt-3 flex-1 space-y-2 overflow-y-auto overscroll-contain">
         <ng-container *ngFor="let group of groupedCart">
-          <!-- Package group: tinted, left-bordered container with the package name as a header - distinct from a standalone add-on. -->
+          <!-- Package group: tinted, left-bordered container with the package name as a header plus a Remove-Package control (the only way to remove its locked labor line) and, if any part was excluded, an inline Re-add chip row. -->
           <div
             *ngIf="group.packageId !== null"
             class="rounded-lg border-l-4 border-emerald-500 bg-emerald-50/40 px-2 dark:border-emerald-500 dark:bg-emerald-500/10"
           >
-            <p class="pt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-              {{ group.packageName }}
-            </p>
+            <div class="flex items-center justify-between gap-2 pt-2">
+              <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                {{ group.packageName }}
+              </p>
+              <button
+                type="button"
+                (click)="removePackageGroup(group.packageInstanceId!)"
+                class="shrink-0 text-xs font-medium text-danger transition-transform duration-150 active:scale-95"
+              >
+                ✕ Remove Package
+              </button>
+            </div>
             <div
               *ngFor="let line of group.lines; let last = last"
               [class.border-b]="!last"
@@ -223,6 +237,20 @@
               <ng-container
                 *ngTemplateOutlet="cartLineRow; context: { line: line, isAddOn: false }"
               ></ng-container>
+            </div>
+
+            <div
+              *ngIf="excludedComponentsFor(group.packageInstanceId!).length > 0"
+              class="flex flex-wrap gap-1.5 border-t border-emerald-500/20 py-2"
+            >
+              <button
+                *ngFor="let excluded of excludedComponentsFor(group.packageInstanceId!)"
+                type="button"
+                (click)="reAddComponent(excluded)"
+                class="rounded-full border border-emerald-500/40 bg-surface px-2 py-1 text-[11px] font-medium text-emerald-700 transition-transform duration-150 active:scale-95 dark:bg-slate-800 dark:text-emerald-400"
+              >
+                + Re-add {{ excluded.productName }}
+              </button>
             </div>
           </div>
 
@@ -268,12 +296,10 @@
           ></textarea>
         </div>
 
-        <ul
-          *ngIf="autoExclusionRemarks().length > 0"
-          class="list-disc space-y-0.5 rounded-lg bg-amber-50 px-3 py-2 pl-7 text-xs font-normal text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
-        >
-          <li *ngFor="let note of autoExclusionRemarks()">{{ note }}</li>
-        </ul>
+        <pre
+          *ngIf="formattedExclusionsBlock"
+          class="whitespace-pre-wrap rounded-lg bg-amber-50 px-3 py-2 font-mono text-xs font-normal text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+          >{{ formattedExclusionsBlock }}</pre>
 
         <input
           #customerName
@@ -566,209 +592,9 @@
     </div>
   </div>
 
-  <!-- Printable receipt modal -->
-  <div
+  <app-receipt-modal
     *ngIf="activeReceipt() as receipt"
-    [class.animate-fade-in]="!isReceiptClosing()"
-    [class.animate-fade-out]="isReceiptClosing()"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-  >
-    <div
-      [class.animate-pop-in]="!isReceiptClosing()"
-      [class.animate-pop-out]="isReceiptClosing()"
-      class="w-full max-w-sm rounded-2xl bg-surface shadow-xl dark:bg-slate-800"
-    >
-      <!-- Dual-tab: Customer Receipt (print-area, thermal-printer-friendly) / Sales Audit Breakdown (screen-only, full itemization for reconciliation) -->
-      <div class="flex border-b border-gray-200 dark:border-slate-700">
-        <button
-          type="button"
-          (click)="receiptTab.set('customer')"
-          [class.text-primary]="receiptTab() === 'customer'"
-          [class.border-primary]="receiptTab() === 'customer'"
-          [class.text-gray-500]="receiptTab() !== 'customer'"
-          [class.border-transparent]="receiptTab() !== 'customer'"
-          class="flex-1 border-b-2 px-4 py-2.5 text-xs font-semibold transition-colors dark:text-gray-400"
-        >
-          Customer Receipt
-        </button>
-        <button
-          type="button"
-          (click)="receiptTab.set('audit')"
-          [class.text-primary]="receiptTab() === 'audit'"
-          [class.border-primary]="receiptTab() === 'audit'"
-          [class.text-gray-500]="receiptTab() !== 'audit'"
-          [class.border-transparent]="receiptTab() !== 'audit'"
-          class="flex-1 border-b-2 px-4 py-2.5 text-xs font-semibold transition-colors dark:text-gray-400"
-        >
-          Sales Audit Breakdown
-        </button>
-      </div>
-
-      <!-- Tab 1: Customer Receipt - printable, package components collapsed under one heading with no sub-prices -->
-      <div
-        *ngIf="receiptTab() === 'customer'"
-        class="print-area p-6 text-gray-900 dark:text-gray-100"
-      >
-        <div class="text-center">
-          <p class="text-sm font-bold">ChardWorkz</p>
-          <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
-            {{ receipt.branchName }}
-          </p>
-        </div>
-        <div class="mt-3 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600">
-          <p><span class="font-medium">Transaction:</span> {{ receipt.transactionNumber }}</p>
-          <p><span class="font-medium">Date:</span> {{ receipt.soldAt | date: 'medium' }}</p>
-          <p><span class="font-medium">Cashier:</span> {{ receipt.employeeName }}</p>
-          <p>
-            <span class="font-medium">Customer:</span>
-            {{ receipt.customerName || 'Walk-in Customer' }}
-          </p>
-          <p *ngIf="receipt.customerPhone">
-            <span class="font-medium">Phone:</span> {{ receipt.customerPhone }}
-          </p>
-          <p *ngIf="receipt.customerEmail">
-            <span class="font-medium">Email:</span> {{ receipt.customerEmail }}
-          </p>
-        </div>
-
-        <div
-          class="mt-3 space-y-2 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
-        >
-          <div *ngFor="let group of groupedReceiptLines(receipt)">
-            <!-- Package group: headline + net total on one row, components as a vertical bulleted list with no individual prices -->
-            <div *ngIf="group.packageName as pkgName; else plainLines">
-              <div class="flex justify-between gap-2">
-                <p class="truncate font-medium">{{ pkgName }}</p>
-                <p class="shrink-0 font-medium">₱{{ group.total | number: '1.2-2' }}</p>
-              </div>
-              <ul class="mt-1 space-y-0.5 pl-3 text-gray-500 dark:text-gray-400">
-                <li *ngFor="let line of group.lines">
-                  • {{ line.productName }}{{ line.quantity > 1 ? ' ×' + line.quantity : '' }}
-                  <span *ngIf="line.category === 'SERVICES'">(Labor)</span>
-                </li>
-              </ul>
-            </div>
-            <ng-template #plainLines>
-              <div *ngFor="let line of group.lines" class="flex justify-between gap-2">
-                <div class="min-w-0">
-                  <p class="truncate font-medium">
-                    {{ line.productName }}
-                    <span
-                      *ngIf="line.category === 'SERVICES'"
-                      class="font-normal text-gray-500 dark:text-gray-400"
-                      >(service)</span
-                    >
-                  </p>
-                  <p class="text-gray-500 dark:text-gray-400">
-                    {{ line.quantity }} × ₱{{ line.unitPrice | number: '1.2-2' }}
-                  </p>
-                </div>
-                <p class="shrink-0 font-medium">₱{{ line.lineTotal | number: '1.2-2' }}</p>
-              </div>
-            </ng-template>
-          </div>
-        </div>
-
-        <p
-          *ngIf="receipt.remarks"
-          class="mt-3 border-t border-dashed border-gray-300 pt-3 text-xs text-gray-500 dark:border-slate-600 dark:text-gray-400"
-        >
-          <span class="font-medium text-gray-700 dark:text-gray-300">Remarks:</span>
-          {{ receipt.remarks }}
-        </p>
-
-        <div
-          class="mt-3 space-y-1 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
-        >
-          <div class="flex justify-between">
-            <span>Subtotal</span>
-            <span>₱{{ receipt.subtotal | number: '1.2-2' }}</span>
-          </div>
-          <div class="flex justify-between text-sm font-bold">
-            <span>Total</span>
-            <span>₱{{ receipt.total | number: '1.2-2' }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Payment</span>
-            <span
-              >{{ receipt.paymentMethod
-              }}<span *ngIf="receipt.paymentReference">
-                · Ref {{ receipt.paymentReference }}</span
-              ></span
-            >
-          </div>
-        </div>
-
-        <p
-          class="mt-3 border-t border-dashed border-gray-300 pt-3 text-center text-xs text-gray-500 dark:border-slate-600 dark:text-gray-400"
-        >
-          Thank you!
-        </p>
-      </div>
-
-      <!-- Tab 2: Sales Audit Breakdown - screen-only, full itemization for margin/reconciliation, every line shown individually regardless of package -->
-      <div *ngIf="receiptTab() === 'audit'" class="p-6 text-gray-900 dark:text-gray-100">
-        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-          {{ receipt.transactionNumber }} · {{ receipt.soldAt | date: 'medium' }}
-        </p>
-
-        <div
-          class="mt-3 space-y-1 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
-        >
-          <div *ngFor="let line of receipt.lines" class="flex justify-between gap-2">
-            <div class="min-w-0">
-              <p class="truncate font-medium">
-                {{ line.productName }}
-                <span *ngIf="line.packageName" class="font-normal text-primary"
-                  >({{ line.packageName }})</span
-                >
-              </p>
-              <p class="text-gray-500 dark:text-gray-400">
-                {{ line.quantity }} × ₱{{ line.unitPrice | number: '1.2-2' }} · {{ line.category }}
-              </p>
-            </div>
-            <p class="shrink-0 font-medium">₱{{ line.lineTotal | number: '1.2-2' }}</p>
-          </div>
-        </div>
-
-        <p
-          *ngIf="receipt.remarks"
-          class="mt-3 border-t border-dashed border-gray-300 pt-3 text-xs text-gray-500 dark:border-slate-600 dark:text-gray-400"
-        >
-          <span class="font-medium text-gray-700 dark:text-gray-300">Remarks:</span>
-          {{ receipt.remarks }}
-        </p>
-
-        <div
-          class="mt-3 space-y-1 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
-        >
-          <div class="flex justify-between">
-            <span>Subtotal</span>
-            <span>₱{{ receipt.subtotal | number: '1.2-2' }}</span>
-          </div>
-          <div class="flex justify-between text-sm font-bold">
-            <span>Total Revenue</span>
-            <span>₱{{ receipt.total | number: '1.2-2' }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex gap-2 border-t border-gray-200 p-4 dark:border-slate-700">
-        <button
-          type="button"
-          (click)="closeReceipt()"
-          class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors transition-transform duration-150 hover:bg-nav-bg active:scale-[0.97] dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
-        >
-          Close
-        </button>
-        <button
-          type="button"
-          (click)="printReceipt()"
-          class="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors transition-transform duration-150 hover:bg-primary-hover active:scale-[0.97]"
-        >
-          Print
-        </button>
-      </div>
-    </div>
-  </div>
+    [receipt]="receipt"
+    (closed)="activeReceipt.set(null)"
+  ></app-receipt-modal>
 </div>

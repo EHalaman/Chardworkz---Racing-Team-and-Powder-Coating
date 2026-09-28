@@ -108,14 +108,31 @@ export class Products implements OnInit {
     );
   }
 
-  /** SERVICES-category products for the package builder's Labor dropdown - the same single-labor-line convention DEC-084's two seed packages already use. */
+  /**
+   * SERVICES-category products for the package builder's Labor dropdown -
+   * the same single-labor-line convention DEC-084's two seed packages
+   * already use. Also includes the currently-selected labor product even if
+   * it's since been deactivated, so editing a package built around a now-
+   * inactive service still shows/lets you change it instead of the
+   * combobox silently blanking (flagged by /code-review).
+   */
   get laborOptions(): ProductSummary[] {
-    return this.products().filter((p) => p.active && p.category === 'SERVICES');
+    return this.products().filter(
+      (p) => p.category === 'SERVICES' && (p.active || p.id === this.packageLaborProductId()),
+    );
   }
 
-  /** Physical (non-SERVICES) products for the package builder's parts multi-select. */
+  /**
+   * Physical (non-SERVICES) products for the package builder's parts
+   * multi-select. Also includes any already-checked part even if it's since
+   * been deactivated, so editing a package containing a discontinued part
+   * still shows its checkbox instead of hiding it entirely while it stays
+   * silently selected (flagged by /code-review).
+   */
   get partOptions(): ProductSummary[] {
-    return this.products().filter((p) => p.active && p.category !== 'SERVICES');
+    return this.products().filter(
+      (p) => p.category !== 'SERVICES' && (p.active || this.packageSelectedParts().has(p.id)),
+    );
   }
 
   /** partOptions narrowed by the sticky search box - filtering never touches packageSelectedParts, so an already-checked part stays checked even while it's filtered out of view. */
@@ -135,6 +152,7 @@ export class Products implements OnInit {
     return this.laborOptions.map((labor) => ({
       id: labor.id,
       label: labor.name,
+      sublabel: labor.active ? undefined : 'inactive',
       meta: `₱${labor.unitPrice.toFixed(2)}`,
     }));
   }

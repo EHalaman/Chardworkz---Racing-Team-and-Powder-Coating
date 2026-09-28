@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -49,10 +50,21 @@ public class PackageController {
         return toResponses(servicePackageRepository.findAll());
     }
 
+    /**
+     * Validates every component's productId (throwing 400 for any unknown
+     * one) before persisting anything - previously the package row saved
+     * first, so a bad productId left a permanent orphan, zero-component
+     * package in the DB alongside the 400 response (flagged by
+     * /code-review). {@code @Transactional} is still added as a second
+     * safety net against any other mid-method failure.
+     */
     @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @PostMapping
+    @Transactional
     public ResponseEntity<PackageResponse> create(
         @Valid @RequestBody CreatePackageRequest request, Authentication authentication) {
+        Map<Long, Product> productsById = resolveComponentProducts(request.components());
+
         Instant now = Instant.now();
         ServicePackage servicePackage = servicePackageRepository.save(ServicePackage.builder()
             .name(request.name())
@@ -63,26 +75,7 @@ public class PackageController {
             .updatedAt(now)
             .build());
 
-        List<Long> productIds = request.components().stream()
-            .map(CreatePackageRequest.PackageComponentRequest::productId).toList();
-        Map<Long, Product> productsById = productRepository.findAllById(productIds).stream()
-            .collect(Collectors.toMap(Product::getId, p -> p));
-
-        List<PackageItem> items = request.components().stream()
-            .map(component -> {
-                Product product = productsById.get(component.productId());
-                if (product == null) {
-                    throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Unknown product " + component.productId());
-                }
-                return PackageItem.builder()
-                    .servicePackage(servicePackage)
-                    .product(product)
-                    .required(component.required())
-                    .defaultQuantity(component.quantity())
-                    .build();
-            })
-            .toList();
+        List<PackageItem> items = buildItems(servicePackage, request.components(), productsById);
         packageItemRepository.saveAll(items);
 
         activityLogService.record(authentication, ActionType.CREATE, "PACKAGE",
@@ -99,12 +92,22 @@ public class PackageController {
      * so a completed sale's receipt and audit breakdown stay frozen exactly as
      * they were at the moment of sale regardless of what this edits.
      */
+    /**
+     * Validates every component's productId before deleting the package's
+     * existing components - previously deleteAll() ran first, so one bad
+     * productId in the request permanently wiped a real package down to zero
+     * components with no rollback (flagged by /code-review).
+     * {@code @Transactional} is still added as a second safety net against
+     * any other mid-method failure.
+     */
     @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @PutMapping("/{id}")
+    @Transactional
     public PackageResponse update(
         @PathVariable Long id, @Valid @RequestBody CreatePackageRequest request, Authentication authentication) {
         ServicePackage servicePackage = servicePackageRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Package not found"));
+        Map<Long, Product> productsById = resolveComponentProducts(request.components());
 
         servicePackage.setName(request.name());
         servicePackage.setDescription(request.description());
@@ -114,33 +117,43 @@ public class PackageController {
 
         packageItemRepository.deleteAll(packageItemRepository.findByServicePackage_IdIn(List.of(id)));
 
-        List<Long> productIds = request.components().stream()
-            .map(CreatePackageRequest.PackageComponentRequest::productId).toList();
-        Map<Long, Product> productsById = productRepository.findAllById(productIds).stream()
-            .collect(Collectors.toMap(Product::getId, p -> p));
-
-        ServicePackage finalServicePackage = servicePackage;
-        List<PackageItem> items = request.components().stream()
-            .map(component -> {
-                Product product = productsById.get(component.productId());
-                if (product == null) {
-                    throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Unknown product " + component.productId());
-                }
-                return PackageItem.builder()
-                    .servicePackage(finalServicePackage)
-                    .product(product)
-                    .required(component.required())
-                    .defaultQuantity(component.quantity())
-                    .build();
-            })
-            .toList();
+        List<PackageItem> items = buildItems(servicePackage, request.components(), productsById);
         packageItemRepository.saveAll(items);
 
         activityLogService.record(authentication, ActionType.UPDATE, "PACKAGE",
             String.valueOf(servicePackage.getId()), null, "Edited package \"" + servicePackage.getName() + "\"");
 
         return toResponse(servicePackage, items);
+    }
+
+    /** Shared by create()/update(): resolves every component's productId, throwing 400 for the first unknown one, before any mutation happens. */
+    private Map<Long, Product> resolveComponentProducts(
+        List<CreatePackageRequest.PackageComponentRequest> components) {
+        List<Long> productIds = components.stream()
+            .map(CreatePackageRequest.PackageComponentRequest::productId).toList();
+        Map<Long, Product> productsById = productRepository.findAllById(productIds).stream()
+            .collect(Collectors.toMap(Product::getId, p -> p));
+        for (Long productId : productIds) {
+            if (!productsById.containsKey(productId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown product " + productId);
+            }
+        }
+        return productsById;
+    }
+
+    /** Shared by create()/update() - assumes every component's productId already resolved via resolveComponentProducts(). */
+    private List<PackageItem> buildItems(
+        ServicePackage servicePackage,
+        List<CreatePackageRequest.PackageComponentRequest> components,
+        Map<Long, Product> productsById) {
+        return components.stream()
+            .map(component -> PackageItem.builder()
+                .servicePackage(servicePackage)
+                .product(productsById.get(component.productId()))
+                .required(component.required())
+                .defaultQuantity(component.quantity())
+                .build())
+            .toList();
     }
 
     @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")

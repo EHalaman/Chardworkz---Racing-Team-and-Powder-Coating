@@ -102,8 +102,19 @@ public class SaleService {
                 ? null
                 : costsByProductId.get(product.getId());
 
-            ServicePackage servicePackage =
-                lineRequest.packageId() != null ? packagesById.get(lineRequest.packageId()) : null;
+            ServicePackage servicePackage = null;
+            if (lineRequest.packageId() != null) {
+                servicePackage = packagesById.get(lineRequest.packageId());
+                if (servicePackage == null) {
+                    // A stale/deleted packageId (e.g. a queued offline sale synced
+                    // after the package it referenced was removed) must not silently
+                    // record as a plain line and lose the package association from
+                    // the audit trail - matches the product lookup above, which
+                    // already rejects an unknown productId the same way.
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Unknown package " + lineRequest.packageId());
+                }
+            }
             lines.add(SaleLine.builder()
                 .sale(sale)
                 .product(product)

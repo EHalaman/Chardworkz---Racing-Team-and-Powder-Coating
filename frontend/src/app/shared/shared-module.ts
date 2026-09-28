@@ -7,6 +7,7 @@ import { FloatingNavRail } from './floating-nav-rail/floating-nav-rail';
 import { DateRangePicker } from './date-range-picker/date-range-picker';
 import { PasswordInput } from './password-input/password-input';
 import { SearchableCombobox } from './searchable-combobox/searchable-combobox';
+import { ReceiptModal } from './receipt-modal/receipt-modal';
 
 @NgModule({
   declarations: [
@@ -16,6 +17,7 @@ import { SearchableCombobox } from './searchable-combobox/searchable-combobox';
     DateRangePicker,
     PasswordInput,
     SearchableCombobox,
+    ReceiptModal,
   ],
   imports: [CommonModule, LucideHouse, LucideWrench, LucidePackage, LucideMail],
   exports: [
@@ -25,6 +27,7 @@ import { SearchableCombobox } from './searchable-combobox/searchable-combobox';
     DateRangePicker,
     PasswordInput,
     SearchableCombobox,
+    ReceiptModal,
   ],
 })
 export class SharedModule {}

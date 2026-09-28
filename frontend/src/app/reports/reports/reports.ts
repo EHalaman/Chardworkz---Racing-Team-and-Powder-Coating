@@ -56,7 +56,6 @@ export class Reports implements OnInit, OnDestroy {
   readonly recentSalesPage = signal(1);
 
   readonly activeReceipt = signal<SaleReceipt | null>(null);
-  readonly isReceiptClosing = signal(false);
   readonly receiptError = signal<string | null>(null);
 
   readonly exporting = signal(false);
@@ -225,31 +224,13 @@ export class Reports implements OnInit, OnDestroy {
     this.runSearch();
   }
 
-  /** This page is already Owner/Manager-only via the route guard (see Layout.ALL_NAV_ITEMS) - no extra per-role check needed here for who can open a receipt. */
+  /** This page is already Owner/Manager-only via the route guard (see Layout.ALL_NAV_ITEMS) - no extra per-role check needed here for who can open a receipt. The shared app-receipt-modal (DEC-087) owns its own close animation and print behavior now. */
   openReceipt(saleId: string): void {
     this.receiptError.set(null);
     this.salesService.receipt(saleId).subscribe({
-      next: (receipt) => {
-        this.isReceiptClosing.set(false);
-        this.activeReceipt.set(receipt);
-      },
+      next: (receipt) => this.activeReceipt.set(receipt),
       error: () => this.receiptError.set('Could not load that transaction.'),
     });
-  }
-
-  /** Same delayed-unmount + close-then-reopen guard as Register's receipt modal (see register.ts) - keeps the pop-out animation from being cut short, and a stale close timeout from dismissing a receipt opened right after it. */
-  closeReceipt(): void {
-    this.isReceiptClosing.set(true);
-    setTimeout(() => {
-      if (this.isReceiptClosing()) {
-        this.activeReceipt.set(null);
-        this.isReceiptClosing.set(false);
-      }
-    }, 180);
-  }
-
-  printReceipt(): void {
-    window.print();
   }
 
   /** Downloads the full, uncapped date/branch-filtered dataset as .xlsx - a binary blob response, not JSON, so it's triggered via a temporary object-URL anchor rather than routed through the app's normal HttpClient JSON flow. */
