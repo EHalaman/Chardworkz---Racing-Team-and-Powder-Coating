@@ -4,6 +4,8 @@ import com.chardworkz.backend.account.Account;
 import com.chardworkz.backend.account.AccountRepository;
 import com.chardworkz.backend.branch.Branch;
 import com.chardworkz.backend.branch.BranchRepository;
+import com.chardworkz.backend.bundle.ServicePackage;
+import com.chardworkz.backend.bundle.ServicePackageRepository;
 import com.chardworkz.backend.catalog.Category;
 import com.chardworkz.backend.catalog.Product;
 import com.chardworkz.backend.catalog.ProductCostService;
@@ -40,6 +42,7 @@ public class SaleService {
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
     private final ProductCostService productCostService;
+    private final ServicePackageRepository servicePackageRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -65,6 +68,7 @@ public class SaleService {
             .customerName(request.customerName())
             .customerPhone(request.customerPhone())
             .customerEmail(request.customerEmail())
+            .remarks(request.remarks())
             .soldAt(request.soldAt())
             .syncedAt(Instant.now())
             .subtotal(BigDecimal.ZERO)
@@ -73,6 +77,13 @@ public class SaleService {
 
         Map<Long, BigDecimal> costsByProductId = productCostService.latestKnownCosts(
             request.lines().stream().map(CreateSaleLineRequest::productId).distinct().toList());
+
+        List<Long> packageIds = request.lines().stream()
+            .map(CreateSaleLineRequest::packageId).filter(java.util.Objects::nonNull).distinct().toList();
+        Map<Long, ServicePackage> packagesById = packageIds.isEmpty()
+            ? Map.of()
+            : servicePackageRepository.findAllById(packageIds).stream()
+                .collect(java.util.stream.Collectors.toMap(ServicePackage::getId, sp -> sp));
 
         BigDecimal subtotal = BigDecimal.ZERO;
         List<SaleLine> lines = new ArrayList<>();
@@ -91,9 +102,13 @@ public class SaleService {
                 ? null
                 : costsByProductId.get(product.getId());
 
+            ServicePackage servicePackage =
+                lineRequest.packageId() != null ? packagesById.get(lineRequest.packageId()) : null;
             lines.add(SaleLine.builder()
                 .sale(sale)
                 .product(product)
+                .servicePackage(servicePackage)
+                .packageName(servicePackage != null ? servicePackage.getName() : null)
                 .quantity(lineRequest.quantity())
                 .unitPrice(lineRequest.unitPrice())
                 .lineTotal(lineTotal)

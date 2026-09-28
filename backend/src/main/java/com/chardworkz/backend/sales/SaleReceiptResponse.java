@@ -28,10 +28,18 @@ public record SaleReceiptResponse(
     Instant soldAt,
     String paymentMethod,
     String paymentReference,
+    String remarks,
     BigDecimal subtotal,
     BigDecimal total,
     List<ReceiptLine> lines) {
 
+    /** {@code packageId}/{@code packageName} are null for a plain individually-added line - only set for a line that came from a package selection (migration V24), so the printable receipt's Customer tab can group them. */
     public record ReceiptLine(
-        String productName, Category category, int quantity, BigDecimal unitPrice, BigDecimal lineTotal) {}
+        String productName,
+        Category category,
+        int quantity,
+        BigDecimal unitPrice,
+        BigDecimal lineTotal,
+        Long packageId,
+        String packageName) {}
 }

@@ -10,6 +10,9 @@ export interface ReceiptLine {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  /** Set only when this line came from a package selection (DEC-084) - null for a plain individually-added line. */
+  packageId: number | null;
+  packageName: string | null;
 }
 
 export interface SaleReceipt {
@@ -23,6 +26,7 @@ export interface SaleReceipt {
   soldAt: string;
   paymentMethod: string;
   paymentReference: string | null;
+  remarks: string | null;
   subtotal: number;
   total: number;
   lines: ReceiptLine[];

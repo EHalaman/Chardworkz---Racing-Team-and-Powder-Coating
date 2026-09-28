@@ -10,6 +10,8 @@ export interface QueuedSaleLine {
   productId: number;
   quantity: number;
   unitPrice: number;
+  /** Set only when this line came from a package selection (DEC-084) - null for a plain individually-added line. */
+  packageId?: number | null;
 }
 
 export interface NewSalePayload {
@@ -18,6 +20,7 @@ export interface NewSalePayload {
   customerName?: string | null;
   customerPhone?: string | null;
   customerEmail?: string | null;
+  remarks?: string | null;
   lines: QueuedSaleLine[];
 }
 
@@ -147,6 +150,7 @@ export class OfflineSaleQueueService {
           customerName: sale.customerName ?? null,
           customerPhone: sale.customerPhone ?? null,
           customerEmail: sale.customerEmail ?? null,
+          remarks: sale.remarks ?? null,
           soldAt: sale.soldAt,
           lines: sale.lines,
         }),

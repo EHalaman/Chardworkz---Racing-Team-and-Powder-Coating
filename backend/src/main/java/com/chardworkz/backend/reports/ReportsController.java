@@ -275,6 +275,7 @@ public class ReportsController {
             sale.getSoldAt(),
             sale.getPaymentMethod().name(),
             sale.getPaymentReference(),
+            sale.getRemarks(),
             sale.getSubtotal(),
             sale.getTotal(),
             lines.stream()
@@ -283,7 +284,13 @@ public class ReportsController {
                     line.getProduct().getCategory(),
                     line.getQuantity(),
                     line.getUnitPrice(),
-                    line.getLineTotal()))
+                    line.getLineTotal(),
+                    line.getServicePackage() != null ? line.getServicePackage().getId() : null,
+                    // package_name is snapshotted at sale time (V26) - falls back to a
+                    // live join only for rows the migration's backfill couldn't reach.
+                    line.getPackageName() != null
+                        ? line.getPackageName()
+                        : line.getServicePackage() != null ? line.getServicePackage().getName() : null))
                 .toList());
     }
 

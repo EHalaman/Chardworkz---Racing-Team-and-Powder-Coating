@@ -2,9 +2,12 @@ import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../core/auth';
 import { PermissionFlag, PermissionsService } from '../../core/permissions';
+import { PackageRequest, PackagesService, ServicePackage } from '../../register/packages';
+import { ComboboxOption } from '../../shared/searchable-combobox/searchable-combobox';
 import { ProductCategory, ProductRequest, ProductsService, ProductSummary } from '../products';
 
 type SortOption = 'DATE_NEWEST' | 'DATE_OLDEST' | 'PRICE_HIGH' | 'PRICE_LOW';
+type FormMode = 'PRODUCT' | 'PACKAGE';
 
 const PAGE_SIZE = 10;
 
@@ -33,6 +36,22 @@ export class Products implements OnInit {
    * to spot in a list that's sorted/filtered, not just appended at the end. */
   readonly justCreatedId = signal<number | null>(null);
 
+  /** DEC-085: "New product" panel toggle - Single Product (existing form, unchanged) vs Service Package (new builder below). */
+  readonly formMode = signal<FormMode>('PRODUCT');
+  readonly packages = signal<ServicePackage[]>([]);
+  readonly packageSubmitting = signal(false);
+  readonly packageErrorMessage = signal<string | null>(null);
+  readonly packageLaborProductId = signal<number | null>(null);
+  /** productIds of physical parts checked into the package being built. */
+  readonly packageSelectedParts = signal<Set<number>>(new Set());
+  /** Filters partOptions below the sticky search box - doesn't touch packageSelectedParts, so filtering never unchecks anything already picked. */
+  readonly partsSearchTerm = signal('');
+  /** Non-null while editing an existing package (drawer pre-populated, submit calls PUT instead of POST) - see startEditPackage/cancelPackageEdit. */
+  readonly editingPackageId = signal<number | null>(null);
+  readonly packageNameDraft = signal('');
+  readonly packageDescriptionDraft = signal('');
+  readonly packageBasePriceDraft = signal('');
+
   readonly categoryOptions: { value: ProductCategory; label: string }[] = [
     { value: 'CARB', label: 'Carb' },
     { value: 'FI', label: 'FI' },
@@ -49,6 +68,7 @@ export class Products implements OnInit {
 
   constructor(
     private productsService: ProductsService,
+    private packagesService: PackagesService,
     private permissionsService: PermissionsService,
     readonly auth: AuthService,
     route: ActivatedRoute,
@@ -66,6 +86,14 @@ export class Products implements OnInit {
         // were disabled - fails closed, not open.
       },
     });
+    if (!this.archived) {
+      this.packagesService.adminList().subscribe({
+        next: (packages) => this.packages.set(packages),
+        error: () => {
+          // Non-fatal: plain product management must keep working even if this fetch fails.
+        },
+      });
+    }
   }
 
   get isOwner(): boolean {
@@ -78,6 +106,162 @@ export class Products implements OnInit {
       this.isOwner ||
       this.permissionsService.hasPermission(this.permissions(), 'MANAGER_MANAGE_PRODUCTS')
     );
+  }
+
+  /** SERVICES-category products for the package builder's Labor dropdown - the same single-labor-line convention DEC-084's two seed packages already use. */
+  get laborOptions(): ProductSummary[] {
+    return this.products().filter((p) => p.active && p.category === 'SERVICES');
+  }
+
+  /** Physical (non-SERVICES) products for the package builder's parts multi-select. */
+  get partOptions(): ProductSummary[] {
+    return this.products().filter((p) => p.active && p.category !== 'SERVICES');
+  }
+
+  /** partOptions narrowed by the sticky search box - filtering never touches packageSelectedParts, so an already-checked part stays checked even while it's filtered out of view. */
+  get filteredPartOptions(): ProductSummary[] {
+    const term = this.partsSearchTerm().trim().toLowerCase();
+    if (!term) {
+      return this.partOptions;
+    }
+    return this.partOptions.filter(
+      (p) =>
+        p.name.toLowerCase().includes(term) || (p.oemPartNo ?? '').toLowerCase().includes(term),
+    );
+  }
+
+  /** laborOptions reshaped for <app-searchable-combobox> (DEC-086) - replaces the native <select> that made typing to filter a long labor list impossible. */
+  get laborComboboxOptions(): ComboboxOption[] {
+    return this.laborOptions.map((labor) => ({
+      id: labor.id,
+      label: labor.name,
+      meta: `₱${labor.unitPrice.toFixed(2)}`,
+    }));
+  }
+
+  togglePartSelection(productId: number): void {
+    this.packageSelectedParts.update((selected) => {
+      const next = new Set(selected);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  }
+
+  isPartSelected(productId: number): boolean {
+    return this.packageSelectedParts().has(productId);
+  }
+
+  /** Sum of the labor line (if chosen) plus every selected part - the "Sum of parts" side of the savings calculator. */
+  get packageComponentsSum(): number {
+    const labor = this.products().find((p) => p.id === this.packageLaborProductId());
+    const laborTotal = labor ? labor.unitPrice : 0;
+    const partsTotal = this.products()
+      .filter((p) => this.packageSelectedParts().has(p.id))
+      .reduce((sum, p) => sum + p.unitPrice, 0);
+    return laborTotal + partsTotal;
+  }
+
+  /** Prefills the same builder drawer used for Create - the drawer's own submit button calls submitPackage() either way, branching on editingPackageId(). */
+  startEditPackage(pkg: ServicePackage): void {
+    this.formMode.set('PACKAGE');
+    this.packageErrorMessage.set(null);
+    this.editingPackageId.set(pkg.id);
+    this.packageNameDraft.set(pkg.name);
+    this.packageDescriptionDraft.set(pkg.description ?? '');
+    this.packageBasePriceDraft.set(pkg.basePrice !== null ? String(pkg.basePrice) : '');
+    const labor = pkg.components.find((c) => c.required);
+    this.packageLaborProductId.set(labor ? labor.productId : null);
+    this.packageSelectedParts.set(
+      new Set(pkg.components.filter((c) => !c.required).map((c) => c.productId)),
+    );
+    this.partsSearchTerm.set('');
+  }
+
+  cancelPackageEdit(): void {
+    this.editingPackageId.set(null);
+    this.packageNameDraft.set('');
+    this.packageDescriptionDraft.set('');
+    this.packageBasePriceDraft.set('');
+    this.packageLaborProductId.set(null);
+    this.packageSelectedParts.set(new Set());
+    this.partsSearchTerm.set('');
+    this.packageErrorMessage.set(null);
+  }
+
+  submitPackage(name: string, description: string, basePrice: string): void {
+    const trimmedName = name.trim();
+    const components: PackageRequest['components'] = [];
+    const laborId = this.packageLaborProductId();
+    if (laborId !== null) {
+      components.push({ productId: laborId, quantity: 1, required: true });
+    }
+    for (const productId of this.packageSelectedParts()) {
+      components.push({ productId, quantity: 1, required: false });
+    }
+
+    if (!trimmedName || components.length === 0) {
+      this.packageErrorMessage.set('Enter a name and pick at least one labor line or part.');
+      return;
+    }
+    const trimmedBasePrice = basePrice.trim();
+    const parsedBasePrice = trimmedBasePrice ? Number(trimmedBasePrice) : null;
+    if (parsedBasePrice !== null && (!Number.isFinite(parsedBasePrice) || parsedBasePrice < 0)) {
+      this.packageErrorMessage.set(
+        'Base price must be a valid non-negative number, or left blank.',
+      );
+      return;
+    }
+
+    const request: PackageRequest = {
+      name: trimmedName,
+      description: description.trim() || null,
+      basePrice: parsedBasePrice,
+      components,
+    };
+    const editingId = this.editingPackageId();
+
+    this.packageErrorMessage.set(null);
+    this.packageSubmitting.set(true);
+    const request$ =
+      editingId !== null
+        ? this.packagesService.update(editingId, request)
+        : this.packagesService.create(request);
+    request$.subscribe({
+      next: (pkg) => {
+        this.packageSubmitting.set(false);
+        this.packages.update((packages) =>
+          editingId !== null
+            ? packages.map((p) => (p.id === pkg.id ? pkg : p))
+            : [pkg, ...packages],
+        );
+        this.successMessage.set(
+          editingId !== null ? `"${pkg.name}" updated.` : `"${pkg.name}" added.`,
+        );
+        setTimeout(() => this.successMessage.set(null), 3000);
+        this.cancelPackageEdit();
+      },
+      error: () => {
+        this.packageSubmitting.set(false);
+        this.packageErrorMessage.set(
+          editingId !== null ? 'Could not update that package.' : 'Could not add that package.',
+        );
+      },
+    });
+  }
+
+  togglePackageActive(pkg: ServicePackage): void {
+    this.packageErrorMessage.set(null);
+    this.packagesService.setActive(pkg.id, !pkg.active).subscribe({
+      next: (updated) =>
+        this.packages.update((packages) =>
+          packages.map((p) => (p.id === updated.id ? updated : p)),
+        ),
+      error: () => this.packageErrorMessage.set('Could not update that package.'),
+    });
   }
 
   get filteredProducts(): ProductSummary[] {

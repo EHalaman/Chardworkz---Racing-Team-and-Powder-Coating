@@ -6,10 +6,25 @@ import { Placeholder } from './placeholder/placeholder';
 import { FloatingNavRail } from './floating-nav-rail/floating-nav-rail';
 import { DateRangePicker } from './date-range-picker/date-range-picker';
 import { PasswordInput } from './password-input/password-input';
+import { SearchableCombobox } from './searchable-combobox/searchable-combobox';
 
 @NgModule({
-  declarations: [Placeholder, BlueprintHotspot, FloatingNavRail, DateRangePicker, PasswordInput],
+  declarations: [
+    Placeholder,
+    BlueprintHotspot,
+    FloatingNavRail,
+    DateRangePicker,
+    PasswordInput,
+    SearchableCombobox,
+  ],
   imports: [CommonModule, LucideHouse, LucideWrench, LucidePackage, LucideMail],
-  exports: [Placeholder, BlueprintHotspot, FloatingNavRail, DateRangePicker, PasswordInput],
+  exports: [
+    Placeholder,
+    BlueprintHotspot,
+    FloatingNavRail,
+    DateRangePicker,
+    PasswordInput,
+    SearchableCombobox,
+  ],
 })
 export class SharedModule {}

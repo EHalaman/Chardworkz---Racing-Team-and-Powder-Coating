@@ -5,12 +5,16 @@ import { SalesEventsService } from '../../core/sales-events';
 import { formatPHMobileAsTyped, isValidPHMobileNumber } from '../../core/utils/ph-phone.util';
 import { OfflineSaleQueueService } from '../../offline-sales/offline-sale-queue';
 import { ProductsService, ProductSummary } from '../../products/products';
+import { PackageComponent, PackagesService, ServicePackage } from '../packages';
 import { SaleReceipt, SalesService } from '../sales';
 import { ShiftSummary, ShiftSummaryService } from '../shift-summary';
 
 interface CartLine {
   product: ProductSummary;
   quantity: number;
+  /** Set only when this line came from a package selection (DEC-084) - null for a plain individually-added line. */
+  packageId: number | null;
+  packageName: string | null;
 }
 
 type PaymentMethod = 'CASH' | 'GCASH' | 'EWALLET_OTHER';
@@ -34,12 +38,23 @@ export class Register implements OnInit, OnDestroy {
   readonly products = signal<ProductSummary[]>([]);
   readonly searchTerm = signal('');
   readonly cart = signal<CartLine[]>([]);
+  /** Free-text notes the cashier typed directly into the checkout drawer. */
+  readonly cashierRemarks = signal('');
+  /** Auto-generated per excluded package component (see addPackageToCart) - kept separate from cashierRemarks so a cashier editing their own note can never accidentally erase one of these. */
+  readonly autoExclusionRemarks = signal<string[]>([]);
   readonly paymentMethod = signal<PaymentMethod>('CASH');
   readonly successMessage = signal<string | null>(null);
   readonly loadError = signal<string | null>(null);
   readonly shiftSummary = signal<ShiftSummary | null>(null);
 
+  readonly packages = signal<ServicePackage[]>([]);
+  /** The package currently open in the customization drawer, or null when it's closed. */
+  readonly activePackage = signal<ServicePackage | null>(null);
+  /** productIds the cashier has unchecked for the package currently open in the drawer. */
+  readonly packageExclusions = signal<Set<number>>(new Set());
+
   readonly activeReceipt = signal<SaleReceipt | null>(null);
+  readonly receiptTab = signal<'customer' | 'audit'>('customer');
   readonly isReceiptClosing = signal(false);
   readonly isDrawerOpen = signal(false);
   readonly isDrawerMounted = signal(false);
@@ -61,6 +76,7 @@ export class Register implements OnInit, OnDestroy {
 
   constructor(
     private productsService: ProductsService,
+    private packagesService: PackagesService,
     private queue: OfflineSaleQueueService,
     private shiftSummaryService: ShiftSummaryService,
     private salesService: SalesService,
@@ -88,6 +104,12 @@ export class Register implements OnInit, OnDestroy {
       // Client-side search below still works against whatever loaded before
       // a connectivity drop - only the initial fetch can fail like this.
       error: () => this.loadError.set('Could not load products. Check your connection and reload.'),
+    });
+    this.packagesService.list().subscribe({
+      next: (packages) => this.packages.set(packages),
+      // Non-fatal: packages are a DEC-084 add-on, plain product sales must
+      // keep working even if this fetch fails.
+      error: () => this.packages.set([]),
     });
     this.loadShiftSummary();
     this.loadRecentTransactions();
@@ -210,7 +232,25 @@ export class Register implements OnInit, OnDestroy {
   /** Resets isReceiptClosing in case a close's pending timeout (see closeReceipt()) hasn't fired yet - otherwise this new receipt would render mid-exit-animation and then get wrongly dismissed when that stale timeout does fire. */
   reprint(sale: SaleReceipt): void {
     this.isReceiptClosing.set(false);
+    this.receiptTab.set('customer');
     this.activeReceipt.set(sale);
+  }
+
+  /** Groups a receipt's lines by packageName for the Customer tab (DEC-084) - a null packageName means a plain individually-sold line, rendered on its own. */
+  groupedReceiptLines(
+    receipt: SaleReceipt,
+  ): { packageName: string | null; lines: SaleReceipt['lines']; total: number }[] {
+    const groups: { packageName: string | null; lines: SaleReceipt['lines']; total: number }[] = [];
+    for (const line of receipt.lines) {
+      let group = groups.find((g) => g.packageName === line.packageName);
+      if (!group) {
+        group = { packageName: line.packageName, lines: [], total: 0 };
+        groups.push(group);
+      }
+      group.lines.push(line);
+      group.total += line.lineTotal;
+    }
+    return groups;
   }
 
   /**
@@ -231,8 +271,10 @@ export class Register implements OnInit, OnDestroy {
     }, 180);
   }
 
+  /** Always prints the Customer tab regardless of which tab is on screen - only that tab carries the `.print-area` class (styles.css). The setTimeout lets Angular re-render onto the customer tab before the print dialog actually captures the page. */
   printReceipt(): void {
-    window.print();
+    this.receiptTab.set('customer');
+    setTimeout(() => window.print(), 0);
   }
 
   get filteredProducts(): ProductSummary[] {
@@ -249,32 +291,165 @@ export class Register implements OnInit, OnDestroy {
     return this.cart().reduce((sum, line) => sum + line.product.unitPrice * line.quantity, 0);
   }
 
+  /** What actually gets submitted and printed - the cashier's own note first, then every auto-generated exclusion note, one per line. */
+  get combinedRemarks(): string {
+    return [this.cashierRemarks().trim(), ...this.autoExclusionRemarks()]
+      .filter((r) => r)
+      .join('\n');
+  }
+
   addToCart(product: ProductSummary): void {
     this.cart.update((lines) => {
-      const existing = lines.find((l) => l.product.id === product.id);
+      const existing = lines.find((l) => l.product.id === product.id && l.packageId === null);
       if (existing) {
-        return lines.map((l) =>
-          l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l,
-        );
+        return lines.map((l) => (l === existing ? { ...l, quantity: l.quantity + 1 } : l));
       }
-      return [...lines, { product, quantity: 1 }];
+      return [...lines, { product, quantity: 1, packageId: null, packageName: null }];
     });
   }
 
-  adjustQuantity(productId: number, delta: number): void {
+  adjustQuantity(productId: number, delta: number, packageId: number | null = null): void {
     this.cart.update((lines) =>
       lines
-        .map((l) => (l.product.id === productId ? { ...l, quantity: l.quantity + delta } : l))
+        .map((l) =>
+          l.product.id === productId && l.packageId === packageId
+            ? { ...l, quantity: l.quantity + delta }
+            : l,
+        )
         .filter((l) => l.quantity > 0),
     );
   }
 
-  removeLine(productId: number): void {
-    this.cart.update((lines) => lines.filter((l) => l.product.id !== productId));
+  /**
+   * Removing a line that came from a package (packageId set) is a distinct
+   * moment from unchecking a component in the pre-add customization drawer
+   * (addPackageToCart's own exclusion notes) - this cashier already committed
+   * the component to the cart, then changed their mind, so it gets its own
+   * auto-note here too rather than vanishing from the total with no audit
+   * trail of why a package's total came in lower than its listed price.
+   */
+  removeLine(productId: number, packageId: number | null = null): void {
+    const removedLine = this.cart().find(
+      (l) => l.product.id === productId && l.packageId === packageId,
+    );
+    this.cart.update((lines) =>
+      lines.filter((l) => !(l.product.id === productId && l.packageId === packageId)),
+    );
+    if (removedLine && removedLine.packageId !== null) {
+      const amount = removedLine.product.unitPrice * removedLine.quantity;
+      const note = `Excluded: ${removedLine.product.name} (-₱${amount.toFixed(2)} - Removed from ${removedLine.packageName})`;
+      this.autoExclusionRemarks.update((current) => [...current, note]);
+    }
+  }
+
+  /** Groups cart() by packageId for nested rendering (register.html) - a null packageId is one group of standalone add-on lines, each package its own group, in first-seen order. Mirrors groupedReceiptLines()'s exact grouping logic, applied to the live cart instead of a completed receipt. */
+  get groupedCart(): { packageId: number | null; packageName: string | null; lines: CartLine[] }[] {
+    const groups: { packageId: number | null; packageName: string | null; lines: CartLine[] }[] =
+      [];
+    for (const line of this.cart()) {
+      let group = groups.find((g) => g.packageId === line.packageId);
+      if (!group) {
+        group = { packageId: line.packageId, packageName: line.packageName, lines: [] };
+        groups.push(group);
+      }
+      group.lines.push(line);
+    }
+    return groups;
   }
 
   clearCart(): void {
     this.cart.set([]);
+    this.cashierRemarks.set('');
+    this.autoExclusionRemarks.set([]);
+  }
+
+  /** productSummary lookup for a package component - the drawer needs live stock/active data the package endpoint deliberately doesn't duplicate (see PackageResponse). */
+  private productFor(productId: number): ProductSummary | undefined {
+    return this.products().find((p) => p.id === productId);
+  }
+
+  openPackageDrawer(pkg: ServicePackage): void {
+    this.activePackage.set(pkg);
+    this.packageExclusions.set(new Set());
+  }
+
+  closePackageDrawer(): void {
+    this.activePackage.set(null);
+    this.packageExclusions.set(new Set());
+  }
+
+  /** Required components can never be toggled off - see PackageComponent.required. */
+  togglePackageComponent(component: PackageComponent): void {
+    if (component.required) {
+      return;
+    }
+    this.packageExclusions.update((excluded) => {
+      const next = new Set(excluded);
+      if (next.has(component.productId)) {
+        next.delete(component.productId);
+      } else {
+        next.add(component.productId);
+      }
+      return next;
+    });
+  }
+
+  isComponentExcluded(productId: number): boolean {
+    return this.packageExclusions().has(productId);
+  }
+
+  /**
+   * Dynamic recalculation: starts from the package's discounted `basePrice`
+   * when the admin set one (DEC-085), else the live sum of components
+   * (DEC-084's original behavior) - either way, every currently-unchecked
+   * component's own line total is subtracted from that starting point.
+   */
+  get packageNetTotal(): number {
+    const pkg = this.activePackage();
+    if (!pkg) {
+      return 0;
+    }
+    const excluded = this.packageExclusions();
+    const startingTotal = pkg.basePrice ?? pkg.defaultTotal;
+    const excludedTotal = pkg.components
+      .filter((c) => excluded.has(c.productId))
+      .reduce((sum, c) => sum + c.unitPrice * c.defaultQuantity, 0);
+    return startingTotal - excludedTotal;
+  }
+
+  /**
+   * Adds every non-excluded component as its own cart line (packageId-tagged
+   * so the receipt can group them - see completeSale()), then auto-appends a
+   * remark for each excluded component so the printable receipt and the
+   * audit trail both record what the customer supplied themselves.
+   */
+  addPackageToCart(): void {
+    const pkg = this.activePackage();
+    if (!pkg) {
+      return;
+    }
+    const excluded = this.packageExclusions();
+    const included = pkg.components.filter((c) => !excluded.has(c.productId));
+    const newLines: CartLine[] = included
+      .map((c): CartLine | null => {
+        const product = this.productFor(c.productId);
+        return product
+          ? { product, quantity: c.defaultQuantity, packageId: pkg.id, packageName: pkg.name }
+          : null;
+      })
+      .filter((l): l is CartLine => l !== null);
+    this.cart.update((lines) => [...lines, ...newLines]);
+
+    const excludedComponents = pkg.components.filter((c) => excluded.has(c.productId));
+    if (excludedComponents.length > 0) {
+      const notes = excludedComponents.map(
+        (c) =>
+          `Excluded: ${c.productName} (-₱${(c.unitPrice * c.defaultQuantity).toFixed(2)} - Customer provided own part)`,
+      );
+      this.autoExclusionRemarks.update((current) => [...current, ...notes]);
+    }
+
+    this.closePackageDrawer();
   }
 
   async completeSale(
@@ -293,6 +468,7 @@ export class Register implements OnInit, OnDestroy {
     const phoneDigits = this.customerPhoneDisplay().replace(/\s/g, '');
     const customerPhone = phoneDigits ? `+63 ${this.customerPhoneDisplay()}` : null;
     const soldAt = new Date().toISOString();
+    const remarks = this.combinedRemarks || null;
 
     const saleId = await this.queue.enqueueSale({
       paymentMethod: this.paymentMethod(),
@@ -300,10 +476,12 @@ export class Register implements OnInit, OnDestroy {
       customerName: trimmedCustomerName,
       customerPhone,
       customerEmail: trimmedCustomerEmail,
+      remarks,
       lines: lines.map((l) => ({
         productId: l.product.id,
         quantity: l.quantity,
         unitPrice: l.product.unitPrice,
+        packageId: l.packageId,
       })),
     });
 
@@ -336,6 +514,7 @@ export class Register implements OnInit, OnDestroy {
       soldAt,
       paymentMethod: this.paymentMethod(),
       paymentReference: paymentReference || null,
+      remarks,
       subtotal: total,
       total,
       lines: lines.map((l) => ({
@@ -344,9 +523,12 @@ export class Register implements OnInit, OnDestroy {
         quantity: l.quantity,
         unitPrice: l.product.unitPrice,
         lineTotal: l.product.unitPrice * l.quantity,
+        packageId: l.packageId,
+        packageName: l.packageName,
       })),
     };
 
+    this.receiptTab.set('customer');
     this.activeReceipt.set(receipt);
 
     // Same instant-feedback reasoning as the receipt above: enqueueSale()

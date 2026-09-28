@@ -91,6 +91,29 @@
 
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
     <div class="dashboard-card">
+      <div *ngIf="packages().length > 0" class="mb-4">
+        <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Packages</h2>
+        <p class="mt-0.5 text-xs font-normal text-gray-500 dark:text-gray-400">
+          Bundled services with default components you can customize per sale.
+        </p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            *ngFor="let pkg of packages()"
+            type="button"
+            (click)="openPackageDrawer(pkg)"
+            class="rounded-lg border border-primary/40 bg-primary-light px-3 py-2 text-left transition-colors transition-transform duration-150 hover:bg-primary/20 active:scale-[0.98] dark:bg-primary/10"
+          >
+            <p class="text-sm font-semibold text-primary">{{ pkg.name }}</p>
+            <p class="text-xs font-normal text-primary/80">
+              ₱{{ (pkg.basePrice ?? pkg.defaultTotal).toFixed(2) }}
+              <span *ngIf="pkg.basePrice !== null" class="line-through opacity-70"
+                >₱{{ pkg.defaultTotal.toFixed(2) }}</span
+              >
+            </p>
+          </button>
+        </div>
+      </div>
+
       <input
         type="text"
         placeholder="Search by name or brand…"
@@ -136,14 +159,17 @@
     <div class="dashboard-card flex flex-col">
       <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Cart</h2>
 
-      <div class="mt-3 flex-1 space-y-2 overflow-y-auto overscroll-contain">
-        <div
-          *ngFor="let line of cart()"
-          class="flex items-center justify-between gap-2 border-b border-gray-100 pb-2 dark:border-slate-700"
-        >
+      <!-- Shared line-row template (qty controls + remove) - reused inside and outside package groups so only the ADD-ON badge/container differs. -->
+      <ng-template #cartLineRow let-line="line" let-isAddOn="isAddOn">
+        <div class="flex items-center justify-between gap-2 py-2">
           <div class="min-w-0">
             <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
               {{ line.product.name }}
+              <span
+                *ngIf="isAddOn"
+                class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-slate-700 dark:text-gray-400"
+                >Add-on</span
+              >
             </p>
             <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
               ₱{{ line.product.unitPrice.toFixed(2) }} each
@@ -152,7 +178,7 @@
           <div class="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              (click)="adjustQuantity(line.product.id, -1)"
+              (click)="adjustQuantity(line.product.id, -1, line.packageId)"
               class="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-transform duration-150 active:scale-90 dark:border-slate-600 dark:text-gray-300"
             >
               −
@@ -162,14 +188,14 @@
             }}</span>
             <button
               type="button"
-              (click)="adjustQuantity(line.product.id, 1)"
+              (click)="adjustQuantity(line.product.id, 1, line.packageId)"
               class="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition-transform duration-150 active:scale-90 dark:border-slate-600 dark:text-gray-300"
             >
               +
             </button>
             <button
               type="button"
-              (click)="removeLine(line.product.id)"
+              (click)="removeLine(line.product.id, line.packageId)"
               aria-label="Remove"
               class="pl-1 text-danger transition-transform duration-150 active:scale-90"
             >
@@ -177,6 +203,41 @@
             </button>
           </div>
         </div>
+      </ng-template>
+
+      <div class="mt-3 flex-1 space-y-2 overflow-y-auto overscroll-contain">
+        <ng-container *ngFor="let group of groupedCart">
+          <!-- Package group: tinted, left-bordered container with the package name as a header - distinct from a standalone add-on. -->
+          <div
+            *ngIf="group.packageId !== null"
+            class="rounded-lg border-l-4 border-emerald-500 bg-emerald-50/40 px-2 dark:border-emerald-500 dark:bg-emerald-500/10"
+          >
+            <p class="pt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              {{ group.packageName }}
+            </p>
+            <div
+              *ngFor="let line of group.lines; let last = last"
+              [class.border-b]="!last"
+              class="border-emerald-500/20"
+            >
+              <ng-container
+                *ngTemplateOutlet="cartLineRow; context: { line: line, isAddOn: false }"
+              ></ng-container>
+            </div>
+          </div>
+
+          <!-- Standalone add-on line(s): outside any package container, tagged with a neutral ADD-ON pill. -->
+          <div *ngIf="group.packageId === null">
+            <div
+              *ngFor="let line of group.lines"
+              class="border-b border-gray-100 dark:border-slate-700"
+            >
+              <ng-container
+                *ngTemplateOutlet="cartLineRow; context: { line: line, isAddOn: true }"
+              ></ng-container>
+            </div>
+          </div>
+        </ng-container>
 
         <p
           *ngIf="cart().length === 0"
@@ -193,6 +254,26 @@
           <span>Total</span>
           <span>₱{{ subtotal.toFixed(2) }}</span>
         </div>
+
+        <div>
+          <label class="text-xs font-medium text-gray-700 dark:text-gray-300"
+            >Transaction remarks / notes (optional)</label
+          >
+          <textarea
+            rows="2"
+            placeholder="Add a note for this sale…"
+            [value]="cashierRemarks()"
+            (input)="cashierRemarks.set($any($event.target).value)"
+            class="mt-1 w-full resize-none rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+          ></textarea>
+        </div>
+
+        <ul
+          *ngIf="autoExclusionRemarks().length > 0"
+          class="list-disc space-y-0.5 rounded-lg bg-amber-50 px-3 py-2 pl-7 text-xs font-normal text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+        >
+          <li *ngFor="let note of autoExclusionRemarks()">{{ note }}</li>
+        </ul>
 
         <input
           #customerName
@@ -418,6 +499,73 @@
     </div>
   </div>
 
+  <!-- Package customization drawer: default components pre-checked, unchecking excludes a customer-provided part and recalculates the net total live -->
+  <div
+    *ngIf="activePackage() as pkg"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+  >
+    <div class="w-full max-w-sm rounded-2xl bg-surface shadow-xl dark:bg-slate-800">
+      <div class="border-b border-gray-200 p-4 dark:border-slate-700">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ pkg.name }}</h2>
+        <p class="mt-0.5 text-xs font-normal text-gray-500 dark:text-gray-400">
+          Uncheck any part the customer already has.
+        </p>
+      </div>
+
+      <div class="max-h-[24rem] space-y-1 overflow-y-auto overscroll-contain p-4">
+        <label
+          *ngFor="let component of pkg.components"
+          class="flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm"
+          [class.opacity-60]="component.required"
+        >
+          <span class="flex items-center gap-2 min-w-0">
+            <input
+              type="checkbox"
+              [checked]="!isComponentExcluded(component.productId)"
+              [disabled]="component.required"
+              (change)="togglePackageComponent(component)"
+              class="h-4 w-4 shrink-0 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span class="min-w-0 truncate text-gray-900 dark:text-gray-100">
+              {{ component.productName }}
+              <span *ngIf="component.required" class="text-xs font-normal text-gray-400"
+                >(labor)</span
+              >
+            </span>
+          </span>
+          <span class="shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400"
+            >₱{{ (component.unitPrice * component.defaultQuantity).toFixed(2) }}</span
+          >
+        </label>
+      </div>
+
+      <div class="space-y-3 border-t border-gray-200 p-4 dark:border-slate-700">
+        <div
+          class="flex items-center justify-between text-sm font-semibold text-gray-900 dark:text-gray-100"
+        >
+          <span>Net Total</span>
+          <span>₱{{ packageNetTotal.toFixed(2) }}</span>
+        </div>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            (click)="closePackageDrawer()"
+            class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors transition-transform duration-150 hover:bg-nav-bg active:scale-[0.97] dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            (click)="addPackageToCart()"
+            class="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors transition-transform duration-150 hover:bg-primary-hover active:scale-[0.97]"
+          >
+            Add to Cart
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Printable receipt modal -->
   <div
     *ngIf="activeReceipt() as receipt"
@@ -430,7 +578,37 @@
       [class.animate-pop-out]="isReceiptClosing()"
       class="w-full max-w-sm rounded-2xl bg-surface shadow-xl dark:bg-slate-800"
     >
-      <div class="print-area p-6 text-gray-900 dark:text-gray-100">
+      <!-- Dual-tab: Customer Receipt (print-area, thermal-printer-friendly) / Sales Audit Breakdown (screen-only, full itemization for reconciliation) -->
+      <div class="flex border-b border-gray-200 dark:border-slate-700">
+        <button
+          type="button"
+          (click)="receiptTab.set('customer')"
+          [class.text-primary]="receiptTab() === 'customer'"
+          [class.border-primary]="receiptTab() === 'customer'"
+          [class.text-gray-500]="receiptTab() !== 'customer'"
+          [class.border-transparent]="receiptTab() !== 'customer'"
+          class="flex-1 border-b-2 px-4 py-2.5 text-xs font-semibold transition-colors dark:text-gray-400"
+        >
+          Customer Receipt
+        </button>
+        <button
+          type="button"
+          (click)="receiptTab.set('audit')"
+          [class.text-primary]="receiptTab() === 'audit'"
+          [class.border-primary]="receiptTab() === 'audit'"
+          [class.text-gray-500]="receiptTab() !== 'audit'"
+          [class.border-transparent]="receiptTab() !== 'audit'"
+          class="flex-1 border-b-2 px-4 py-2.5 text-xs font-semibold transition-colors dark:text-gray-400"
+        >
+          Sales Audit Breakdown
+        </button>
+      </div>
+
+      <!-- Tab 1: Customer Receipt - printable, package components collapsed under one heading with no sub-prices -->
+      <div
+        *ngIf="receiptTab() === 'customer'"
+        class="print-area p-6 text-gray-900 dark:text-gray-100"
+      >
         <div class="text-center">
           <p class="text-sm font-bold">ChardWorkz</p>
           <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
@@ -454,25 +632,50 @@
         </div>
 
         <div
-          class="mt-3 space-y-1 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
+          class="mt-3 space-y-2 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
         >
-          <div *ngFor="let line of receipt.lines" class="flex justify-between gap-2">
-            <div class="min-w-0">
-              <p class="truncate font-medium">
-                {{ line.productName }}
-                <span
-                  *ngIf="line.category === 'SERVICES'"
-                  class="font-normal text-gray-500 dark:text-gray-400"
-                  >(service)</span
-                >
-              </p>
-              <p class="text-gray-500 dark:text-gray-400">
-                {{ line.quantity }} × ₱{{ line.unitPrice | number: '1.2-2' }}
-              </p>
+          <div *ngFor="let group of groupedReceiptLines(receipt)">
+            <!-- Package group: headline + net total on one row, components as a vertical bulleted list with no individual prices -->
+            <div *ngIf="group.packageName as pkgName; else plainLines">
+              <div class="flex justify-between gap-2">
+                <p class="truncate font-medium">{{ pkgName }}</p>
+                <p class="shrink-0 font-medium">₱{{ group.total | number: '1.2-2' }}</p>
+              </div>
+              <ul class="mt-1 space-y-0.5 pl-3 text-gray-500 dark:text-gray-400">
+                <li *ngFor="let line of group.lines">
+                  • {{ line.productName }}{{ line.quantity > 1 ? ' ×' + line.quantity : '' }}
+                  <span *ngIf="line.category === 'SERVICES'">(Labor)</span>
+                </li>
+              </ul>
             </div>
-            <p class="shrink-0 font-medium">₱{{ line.lineTotal | number: '1.2-2' }}</p>
+            <ng-template #plainLines>
+              <div *ngFor="let line of group.lines" class="flex justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="truncate font-medium">
+                    {{ line.productName }}
+                    <span
+                      *ngIf="line.category === 'SERVICES'"
+                      class="font-normal text-gray-500 dark:text-gray-400"
+                      >(service)</span
+                    >
+                  </p>
+                  <p class="text-gray-500 dark:text-gray-400">
+                    {{ line.quantity }} × ₱{{ line.unitPrice | number: '1.2-2' }}
+                  </p>
+                </div>
+                <p class="shrink-0 font-medium">₱{{ line.lineTotal | number: '1.2-2' }}</p>
+              </div>
+            </ng-template>
           </div>
         </div>
+
+        <p
+          *ngIf="receipt.remarks"
+          class="mt-3 border-t border-dashed border-gray-300 pt-3 text-xs text-gray-500 dark:border-slate-600 dark:text-gray-400"
+        >
+          <span class="font-medium text-gray-700 dark:text-gray-300">Remarks:</span>
+          {{ receipt.remarks }}
+        </p>
 
         <div
           class="mt-3 space-y-1 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
@@ -501,6 +704,53 @@
         >
           Thank you!
         </p>
+      </div>
+
+      <!-- Tab 2: Sales Audit Breakdown - screen-only, full itemization for margin/reconciliation, every line shown individually regardless of package -->
+      <div *ngIf="receiptTab() === 'audit'" class="p-6 text-gray-900 dark:text-gray-100">
+        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">
+          {{ receipt.transactionNumber }} · {{ receipt.soldAt | date: 'medium' }}
+        </p>
+
+        <div
+          class="mt-3 space-y-1 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
+        >
+          <div *ngFor="let line of receipt.lines" class="flex justify-between gap-2">
+            <div class="min-w-0">
+              <p class="truncate font-medium">
+                {{ line.productName }}
+                <span *ngIf="line.packageName" class="font-normal text-primary"
+                  >({{ line.packageName }})</span
+                >
+              </p>
+              <p class="text-gray-500 dark:text-gray-400">
+                {{ line.quantity }} × ₱{{ line.unitPrice | number: '1.2-2' }} · {{ line.category }}
+              </p>
+            </div>
+            <p class="shrink-0 font-medium">₱{{ line.lineTotal | number: '1.2-2' }}</p>
+          </div>
+        </div>
+
+        <p
+          *ngIf="receipt.remarks"
+          class="mt-3 border-t border-dashed border-gray-300 pt-3 text-xs text-gray-500 dark:border-slate-600 dark:text-gray-400"
+        >
+          <span class="font-medium text-gray-700 dark:text-gray-300">Remarks:</span>
+          {{ receipt.remarks }}
+        </p>
+
+        <div
+          class="mt-3 space-y-1 border-t border-dashed border-gray-300 pt-3 text-xs dark:border-slate-600"
+        >
+          <div class="flex justify-between">
+            <span>Subtotal</span>
+            <span>₱{{ receipt.subtotal | number: '1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between text-sm font-bold">
+            <span>Total Revenue</span>
+            <span>₱{{ receipt.total | number: '1.2-2' }}</span>
+          </div>
+        </div>
       </div>
 
       <div class="flex gap-2 border-t border-gray-200 p-4 dark:border-slate-700">

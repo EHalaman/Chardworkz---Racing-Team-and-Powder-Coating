@@ -58,6 +58,10 @@ public class Sale {
     @Column(name = "customer_email", length = 100)
     private String customerEmail;
 
+    /** Free-text counter note (migration V24) - e.g. what a cashier excluded from a package sale and why. */
+    @Column(columnDefinition = "text")
+    private String remarks;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
 

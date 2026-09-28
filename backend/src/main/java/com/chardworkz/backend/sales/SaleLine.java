@@ -1,5 +1,6 @@
 package com.chardworkz.backend.sales;
 
+import com.chardworkz.backend.bundle.ServicePackage;
 import com.chardworkz.backend.catalog.Product;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -25,6 +26,22 @@ public class SaleLine {
     @ManyToOne(optional = false)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
+
+    /** Set only when this line came from a package selection (migration V24) - null for a plain individually-added line. Lets the receipt's Customer tab group components under the package name. */
+    @ManyToOne
+    @JoinColumn(name = "package_id")
+    private ServicePackage servicePackage;
+
+    /**
+     * Snapshotted from {@link ServicePackage#getName()} at the moment of sale
+     * (migration V26) - null for a plain individually-added line. Editing a
+     * package's name later (PackageController's PUT endpoint) must never
+     * change what an already-completed sale's receipt displays, so this is
+     * the read path for {@code SaleReceiptResponse.packageName} instead of a
+     * live join through {@link #servicePackage}.
+     */
+    @Column(name = "package_name")
+    private String packageName;
 
     @Column(nullable = false)
     private int quantity;

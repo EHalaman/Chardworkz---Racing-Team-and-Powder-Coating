@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.chardworkz.backend.account.AccountRepository;
 import com.chardworkz.backend.branch.BranchRepository;
+import com.chardworkz.backend.bundle.ServicePackageRepository;
 import com.chardworkz.backend.catalog.ProductCostService;
 import com.chardworkz.backend.catalog.ProductRepository;
 import com.chardworkz.backend.inventory.StockLevelRepository;
@@ -37,17 +38,18 @@ class SaleServiceRealtimeEventTest {
     private final ProductRepository productRepository = mock(ProductRepository.class);
     private final StockLevelRepository stockLevelRepository = mock(StockLevelRepository.class);
     private final ProductCostService productCostService = mock(ProductCostService.class);
+    private final ServicePackageRepository servicePackageRepository = mock(ServicePackageRepository.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
     private final SaleService saleService = new SaleService(
         saleRepository, saleLineRepository, branchRepository, accountRepository,
-        productRepository, stockLevelRepository, productCostService, eventPublisher);
+        productRepository, stockLevelRepository, productCostService, servicePackageRepository, eventPublisher);
 
     @Test
     void doesNotPublishAnEventOnAnAlreadySyncedReplay() {
         CreateSaleRequest request = new CreateSaleRequest(
-            UUID.randomUUID(), PaymentMethod.CASH, null, null, null, null,
-            Instant.now(), List.of(new CreateSaleLineRequest(1L, 1, BigDecimal.TEN)));
+            UUID.randomUUID(), PaymentMethod.CASH, null, null, null, null, null,
+            Instant.now(), List.of(new CreateSaleLineRequest(1L, 1, BigDecimal.TEN, null)));
         when(saleRepository.existsById(request.id())).thenReturn(true);
 
         SaleAckResponse response = saleService.recordSale(request, "MAIN", 1L);
@@ -62,7 +64,7 @@ class SaleServiceRealtimeEventTest {
     @Test
     void publishesASaleCreatedEventOnGenuineFirstTimePersistence() {
         CreateSaleRequest request = new CreateSaleRequest(
-            UUID.randomUUID(), PaymentMethod.CASH, null, null, null, null,
+            UUID.randomUUID(), PaymentMethod.CASH, null, null, null, null, null,
             Instant.now(), List.of());
         when(saleRepository.existsById(request.id())).thenReturn(false);
         when(branchRepository.findByCode("MAIN"))

@@ -1,0 +1,55 @@
+<div #wrapper class="relative">
+  <input
+    #searchBox
+    type="text"
+    role="combobox"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="isOpen()"
+    [placeholder]="placeholder"
+    [value]="searchTerm()"
+    (input)="onSearchInput(searchBox.value)"
+    (focus)="open()"
+    (keydown)="onKeydown($event)"
+    class="w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+  />
+
+  <ul
+    *ngIf="isOpen() && (results.length > 0 || noneLabel)"
+    role="listbox"
+    class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-surface py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
+  >
+    <li
+      *ngIf="noneLabel"
+      role="option"
+      (click)="selectNone()"
+      class="cursor-pointer px-3 py-2 text-sm text-gray-500 dark:text-gray-400"
+    >
+      {{ noneLabel }}
+    </li>
+    <li
+      *ngFor="let option of results; let i = index"
+      role="option"
+      (click)="select(option)"
+      [class.bg-nav-bg]="i === highlightedIndex()"
+      [class.dark:bg-slate-700]="i === highlightedIndex()"
+      class="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+    >
+      <span class="min-w-0 truncate"
+        >{{ option.label
+        }}<span *ngIf="option.sublabel" class="text-gray-500 dark:text-gray-400">
+          · {{ option.sublabel }}</span
+        ></span
+      >
+      <span *ngIf="option.meta" class="shrink-0 text-gray-500 dark:text-gray-400">{{
+        option.meta
+      }}</span>
+    </li>
+  </ul>
+
+  <p
+    *ngIf="isOpen() && results.length === 0 && !noneLabel"
+    class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm text-gray-500 shadow-lg dark:border-slate-600 dark:bg-slate-800 dark:text-gray-400"
+  >
+    No matches.
+  </p>
+</div>
