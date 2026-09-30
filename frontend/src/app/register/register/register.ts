@@ -297,11 +297,27 @@ export class Register implements OnInit, OnDestroy {
     return blocks.join('\n\n');
   }
 
+  /** Matches backend CreateSaleRequest.remarks' @Size(max = 2000) - truncated here so a long cashier note plus a large exclusions block can never fail that validation after the sale is already queued/optimistically shown as recorded. */
+  private static readonly MAX_REMARKS_LENGTH = 2000;
+
   /** What actually gets submitted and printed - the cashier's own note first, then the compact exclusions block. */
   get combinedRemarks(): string {
-    return [this.cashierRemarks().trim(), this.formattedExclusionsBlock]
+    const combined = [this.cashierRemarks().trim(), this.formattedExclusionsBlock]
       .filter((r) => r)
       .join('\n\n');
+    if (combined.length <= Register.MAX_REMARKS_LENGTH) {
+      return combined;
+    }
+    // Cut on a whole-line boundary (a row sliced mid-price would no longer
+    // match formatRemarksForCustomer's regex and would leak onto the customer
+    // receipt), drop a dangling "Excluded:" header, and put the ellipsis on
+    // its own line so it never attaches to a row's price.
+    const cut = combined.slice(0, Register.MAX_REMARKS_LENGTH - 2);
+    const lastNewline = cut.lastIndexOf('\n');
+    const wholeLines = (lastNewline > 0 ? cut.slice(0, lastNewline) : cut)
+      .replace(/\s*Excluded:\s*$/, '')
+      .trimEnd();
+    return wholeLines + '\n…';
   }
 
   addToCart(product: ProductSummary): void {

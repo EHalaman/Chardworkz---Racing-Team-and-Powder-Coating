@@ -1,4 +1,12 @@
-import { Component, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  OnInit,
+  effect,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../core/auth';
 import { PermissionFlag, PermissionsService } from '../../core/permissions';
@@ -48,9 +56,25 @@ export class Products implements OnInit {
   readonly partsSearchTerm = signal('');
   /** Non-null while editing an existing package (drawer pre-populated, submit calls PUT instead of POST) - see startEditPackage/cancelPackageEdit. */
   readonly editingPackageId = signal<number | null>(null);
+  /** Snapshot of the package's name at the moment Edit was clicked - drives the "Edit Service Package: X" drawer title without shifting while the user retypes the name field. */
+  readonly editingPackageName = signal<string | null>(null);
   readonly packageNameDraft = signal('');
   readonly packageDescriptionDraft = signal('');
   readonly packageBasePriceDraft = signal('');
+  /** New-package form state parked while the Edit modal is open - see startEditPackage/cancelPackageEdit. */
+  private createDraftSnapshot: {
+    formMode: FormMode;
+    name: string;
+    description: string;
+    basePrice: string;
+    laborProductId: number | null;
+    selectedParts: Set<number>;
+    searchTerm: string;
+  } | null = null;
+
+  /** Auto-grows the description textarea to fit its content (Requirement 2) - re-runs whenever the element mounts or the draft it was prefilled with changes, so opening Edit on a long description doesn't leave it clipped until the user types. */
+  private readonly packageDescriptionEl =
+    viewChild<ElementRef<HTMLTextAreaElement>>('packageDescription');
 
   readonly categoryOptions: { value: ProductCategory; label: string }[] = [
     { value: 'CARB', label: 'Carb' },
@@ -74,6 +98,26 @@ export class Products implements OnInit {
     route: ActivatedRoute,
   ) {
     this.archived = route.snapshot.data['archived'] === true;
+
+    effect(() => {
+      const el = this.packageDescriptionEl()?.nativeElement;
+      const draft = this.packageDescriptionDraft();
+      if (el) {
+        el.style.height = 'auto';
+        el.style.height = `${Math.max(el.scrollHeight, 90)}px`;
+      }
+      void draft;
+    });
+  }
+
+  /** Bound to the description textarea's (input) event so it keeps growing while the user types, not just on prefill. */
+  autoGrowTextarea(target: EventTarget | null): void {
+    const el = target as HTMLTextAreaElement | null;
+    if (!el) {
+      return;
+    }
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 90)}px`;
   }
 
   ngOnInit(): void {
@@ -173,6 +217,15 @@ export class Products implements OnInit {
     return this.packageSelectedParts().has(productId);
   }
 
+  clearSelectedParts(): void {
+    this.packageSelectedParts.set(new Set());
+  }
+
+  /** Selected parts reshaped for the removable-chip summary below the checklist (Requirement 3.4). */
+  get selectedPartsList(): ProductSummary[] {
+    return this.products().filter((p) => this.packageSelectedParts().has(p.id));
+  }
+
   /** Sum of the labor line (if chosen) plus every selected part - the "Sum of parts" side of the savings calculator. */
   get packageComponentsSum(): number {
     const labor = this.products().find((p) => p.id === this.packageLaborProductId());
@@ -185,9 +238,23 @@ export class Products implements OnInit {
 
   /** Prefills the same builder drawer used for Create - the drawer's own submit button calls submitPackage() either way, branching on editingPackageId(). */
   startEditPackage(pkg: ServicePackage): void {
+    // Edit reuses the same draft signals as the New-package form, so park
+    // whatever is in progress there and put it back when the modal closes.
+    if (this.editingPackageId() === null) {
+      this.createDraftSnapshot = {
+        formMode: this.formMode(),
+        name: this.packageNameDraft(),
+        description: this.packageDescriptionDraft(),
+        basePrice: this.packageBasePriceDraft(),
+        laborProductId: this.packageLaborProductId(),
+        selectedParts: new Set(this.packageSelectedParts()),
+        searchTerm: this.partsSearchTerm(),
+      };
+    }
     this.formMode.set('PACKAGE');
     this.packageErrorMessage.set(null);
     this.editingPackageId.set(pkg.id);
+    this.editingPackageName.set(pkg.name);
     this.packageNameDraft.set(pkg.name);
     this.packageDescriptionDraft.set(pkg.description ?? '');
     this.packageBasePriceDraft.set(pkg.basePrice !== null ? String(pkg.basePrice) : '');
@@ -199,15 +266,40 @@ export class Products implements OnInit {
     this.partsSearchTerm.set('');
   }
 
+  /** Closes the Edit modal (restoring any New-package draft parked by startEditPackage), or resets the New form after a successful create. */
   cancelPackageEdit(): void {
+    const snapshot = this.createDraftSnapshot;
+    this.createDraftSnapshot = null;
     this.editingPackageId.set(null);
-    this.packageNameDraft.set('');
-    this.packageDescriptionDraft.set('');
-    this.packageBasePriceDraft.set('');
-    this.packageLaborProductId.set(null);
-    this.packageSelectedParts.set(new Set());
-    this.partsSearchTerm.set('');
+    this.editingPackageName.set(null);
+    this.packageNameDraft.set(snapshot?.name ?? '');
+    this.packageDescriptionDraft.set(snapshot?.description ?? '');
+    this.packageBasePriceDraft.set(snapshot?.basePrice ?? '');
+    this.packageLaborProductId.set(snapshot?.laborProductId ?? null);
+    this.packageSelectedParts.set(snapshot?.selectedParts ?? new Set());
+    this.partsSearchTerm.set(snapshot?.searchTerm ?? '');
+    if (snapshot) {
+      this.formMode.set(snapshot.formMode);
+    }
     this.packageErrorMessage.set(null);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.editingPackageId() !== null && !this.packageSubmitting()) {
+      this.cancelPackageEdit();
+    }
+  }
+
+  /** Mirrors a text/number input into its draft signal so template reads (Bundle savings) and the New-draft snapshot see live values, not just the DOM. */
+  onPackageDraftInput(field: 'name' | 'basePrice', target: EventTarget | null): void {
+    const value = (target as HTMLInputElement | null)?.value ?? '';
+    (field === 'name' ? this.packageNameDraft : this.packageBasePriceDraft).set(value);
+  }
+
+  onPackageDescriptionInput(target: EventTarget | null): void {
+    this.packageDescriptionDraft.set((target as HTMLTextAreaElement | null)?.value ?? '');
+    this.autoGrowTextarea(target);
   }
 
   submitPackage(name: string, description: string, basePrice: string): void {

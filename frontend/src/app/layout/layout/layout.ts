@@ -159,16 +159,21 @@ export class Layout implements OnInit, OnDestroy {
     // opening their own connection (see docs/realtime-sales-sync-spec-2026-09-25.md).
     this.salesEventsService.connect();
 
+    // Layout is created while the router activates the first /admin/* route,
+    // so that navigation's NavigationEnd fires after this subscription
+    // attaches only on later navigations - Router.events is not replayed.
+    // Prime from the in-flight (or current) navigation so the first page
+    // after a hard load still gets a tab/title.
+    // Guarded: if finalUrl is missing, router.url can still be the previous
+    // route ('/' or the login page) - never register that as a tab.
+    const initialUrl = this.router.getCurrentNavigation()?.finalUrl?.toString() ?? this.router.url;
+    if (initialUrl.startsWith('/admin/') && !initialUrl.startsWith('/admin/login')) {
+      this.syncActiveTab(initialUrl);
+    }
+
     this.routerSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
-      .subscribe(() => {
-        let child = this.route.firstChild;
-        while (child?.firstChild) {
-          child = child.firstChild;
-        }
-        const title = child?.snapshot.data['title'] ?? '';
-        this.openTab(this.router.url, title);
-      });
+      .subscribe(() => this.syncActiveTab(this.router.url));
 
     // Employee has no Products/Inventory/Reports access, so stock alerts
     // (the only alert type today) wouldn't be actionable for that role -
@@ -242,6 +247,15 @@ export class Layout implements OnInit, OnDestroy {
   logout(): void {
     this.auth.logout();
     this.router.navigateByUrl('/admin/login');
+  }
+
+  private syncActiveTab(url: string): void {
+    let child = this.route.firstChild;
+    while (child?.firstChild) {
+      child = child.firstChild;
+    }
+    const title = child?.snapshot.data['title'] ?? '';
+    this.openTab(url, title);
   }
 
   /**

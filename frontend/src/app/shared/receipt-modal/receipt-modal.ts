@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { SaleReceipt } from '../../register/sales';
+import { formatRemarksForCustomer } from '../../core/utils/remarks.util';
 
 export interface ReceiptLineGroup {
   packageId: number | null;
@@ -47,6 +48,11 @@ export class ReceiptModal implements OnChanges {
       this.isClosing.set(false);
       this.tab.set('customer');
     }
+  }
+
+  /** Customer-safe version of the stored remarks - names only, no prices/quantities for excluded components. See remarks.util.ts. */
+  get customerRemarks(): string | null {
+    return formatRemarksForCustomer(this.receipt.remarks);
   }
 
   /** Groups by packageId (not packageName - two distinct packages could share a name, since service_package.name has no unique constraint) so the Customer tab can nest components under one heading with no sub-prices. */

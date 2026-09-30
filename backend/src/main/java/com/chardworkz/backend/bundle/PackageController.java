@@ -7,8 +7,10 @@ import com.chardworkz.backend.catalog.ProductRepository;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -116,6 +118,11 @@ public class PackageController {
         servicePackage = servicePackageRepository.save(servicePackage);
 
         packageItemRepository.deleteAll(packageItemRepository.findByServicePackage_IdIn(List.of(id)));
+        // Hibernate flushes inserts before deletes within a transaction regardless of code
+        // order, so without this flush, keeping a component from the old set (same
+        // package_id/product_id) trips package_item's unique constraint before the delete
+        // above ever reaches the DB.
+        packageItemRepository.flush();
 
         List<PackageItem> items = buildItems(servicePackage, request.components(), productsById);
         packageItemRepository.saveAll(items);
@@ -133,9 +140,15 @@ public class PackageController {
             .map(CreatePackageRequest.PackageComponentRequest::productId).toList();
         Map<Long, Product> productsById = productRepository.findAllById(productIds).stream()
             .collect(Collectors.toMap(Product::getId, p -> p));
+        Set<Long> seen = new HashSet<>();
         for (Long productId : productIds) {
             if (!productsById.containsKey(productId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown product " + productId);
+            }
+            // package_item is unique on (package_id, product_id) - reject here as a 400
+            // instead of letting the insert fail as an unhandled 500.
+            if (!seen.add(productId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duplicate product " + productId);
             }
         }
         return productsById;

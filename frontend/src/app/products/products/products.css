@@ -1,0 +1,29 @@
+/* Custom checkbox for the package parts checklist - native checkboxes have
+   no consistent cross-browser/dark-mode styling, and @tailwindcss/forms
+   isn't installed app-wide (installing it would restyle every other
+   checkbox/radio/select in the app, which is out of scope here). */
+.part-checkbox {
+  @apply grid h-3.5 w-3.5 shrink-0 cursor-pointer appearance-none place-content-center rounded border border-gray-300 bg-white transition-colors dark:border-slate-600 dark:bg-slate-700;
+}
+
+.part-checkbox::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform: scale(0);
+  transition: transform 100ms ease-in-out;
+  @apply bg-white;
+}
+
+.part-checkbox:checked {
+  @apply border-emerald-600 bg-emerald-600;
+}
+
+.part-checkbox:checked::before {
+  transform: scale(1);
+}
+
+.part-checkbox:focus-visible {
+  @apply outline-none ring-1 ring-emerald-500;
+}

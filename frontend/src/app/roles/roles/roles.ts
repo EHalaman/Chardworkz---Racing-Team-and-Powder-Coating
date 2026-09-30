@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, HostListener, OnInit, signal } from '@angular/core';
 import { AuthService } from '../../core/auth';
 import { backendErrorMessage } from '../../core/utils/http-error.util';
 import { Account, AccountRole, AccountsService } from '../accounts';
@@ -145,6 +145,10 @@ export class Roles implements OnInit {
     this.currentPage.set(1);
   }
 
+  get editingAccount(): Account | null {
+    return this.accounts().find((a) => a.id === this.editingId()) ?? null;
+  }
+
   startEdit(account: Account): void {
     this.errorMessage.set(null);
     this.editingRole.set(account.role);
@@ -154,6 +158,13 @@ export class Roles implements OnInit {
 
   cancelEdit(): void {
     this.editingId.set(null);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.editingId() !== null && !this.editSubmitting()) {
+      this.cancelEdit();
+    }
   }
 
   saveEdit(account: Account, fullName: string): void {
@@ -225,7 +236,17 @@ export class Roles implements OnInit {
 
   private loadAccounts(): void {
     this.accountsService.list().subscribe({
-      next: (accounts) => this.accounts.set(accounts),
+      next: (accounts) => {
+        this.accounts.set(accounts);
+        // The edited account can drop out of a reload (deactivated/removed
+        // elsewhere) - close the modal explicitly and say why, instead of
+        // letting it vanish with editingId still set.
+        const editingId = this.editingId();
+        if (editingId !== null && !accounts.some((a) => a.id === editingId)) {
+          this.editingId.set(null);
+          this.errorMessage.set('That account is no longer available, so the edit was closed.');
+        }
+      },
       error: () => this.errorMessage.set('Could not load accounts.'),
     });
   }

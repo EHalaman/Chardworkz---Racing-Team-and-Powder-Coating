@@ -36,10 +36,7 @@
           *ngFor="let account of pagedAccounts"
           class="rounded-lg border border-gray-200 px-3 py-2 dark:border-slate-700"
         >
-          <div
-            *ngIf="editingId() !== account.id"
-            class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-          >
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div class="min-w-0">
               <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {{ account.fullName }}
@@ -86,68 +83,6 @@
                 {{ account.active ? 'Deactivate' : 'Activate' }}
               </button>
             </div>
-          </div>
-
-          <div *ngIf="editingId() === account.id" class="flex flex-wrap items-end gap-2">
-            <div class="min-w-0 flex-1 basis-40">
-              <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Full name</label>
-              <input
-                #editingFullName
-                type="text"
-                [value]="account.fullName"
-                class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-2 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-              />
-              <!-- Username stays plain, disabled text - never an editable input, so it can never be
-                   submitted as part of this edit (see security-qa-audit-2026-09-25.md's immutability note). -->
-              <p class="mt-1 text-xs font-normal text-gray-500 dark:text-gray-400">
-                {{ account.username }}
-              </p>
-            </div>
-            <div class="flex gap-1">
-              <button
-                *ngFor="let role of editableRoleOptions"
-                type="button"
-                (click)="editingRole.set(role.value)"
-                [ngClass]="
-                  editingRole() === role.value
-                    ? 'bg-primary text-white'
-                    : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
-                "
-                class="rounded-lg px-2 py-1.5 text-xs font-medium transition-colors"
-              >
-                {{ role.label }}
-              </button>
-            </div>
-            <div class="flex gap-1">
-              <button
-                *ngFor="let branch of branchOptions"
-                type="button"
-                (click)="editingBranch.set(branch.value)"
-                [ngClass]="
-                  editingBranch() === branch.value
-                    ? 'bg-primary text-white'
-                    : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
-                "
-                class="rounded-lg px-2 py-1.5 text-xs font-medium transition-colors"
-              >
-                {{ branch.label }}
-              </button>
-            </div>
-            <button
-              type="button"
-              [disabled]="editSubmitting()"
-              (click)="saveEdit(account, editingFullName.value)"
-              class="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
-            >
-              {{ editSubmitting() ? 'Saving…' : 'Save' }}
-            </button>
-            <button
-              type="button"
-              (click)="cancelEdit()"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
-            >
-              Cancel
-            </button>
           </div>
         </div>
 
@@ -274,6 +209,95 @@
       >
         {{ submitting() ? 'Creating…' : 'Create account' }}
       </button>
+    </div>
+  </div>
+
+  <!-- Edit Staff Account modal - replaces the old inline-row edit form (caused horizontal scroll/clutter on the account list). -->
+  <div
+    *ngIf="editingAccount as account"
+    role="dialog"
+    aria-modal="true"
+    (click)="$event.target === $event.currentTarget && !editSubmitting() && cancelEdit()"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+  >
+    <div class="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl dark:bg-slate-800">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Edit Staff Account</h2>
+      <p class="mt-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+        {{ account.username }}
+      </p>
+
+      <div
+        *ngIf="errorMessage()"
+        class="mt-3 rounded-lg bg-danger-light px-4 py-2 text-sm font-medium text-danger dark:bg-danger/20"
+      >
+        {{ errorMessage() }}
+      </div>
+
+      <div class="mt-3">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Full name</label>
+        <input
+          #editingFullName
+          type="text"
+          [value]="account.fullName"
+          class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+        />
+      </div>
+
+      <div class="mt-3">
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Role</p>
+        <div class="mt-1 flex gap-2">
+          <button
+            *ngFor="let role of editableRoleOptions"
+            type="button"
+            (click)="editingRole.set(role.value)"
+            [ngClass]="
+              editingRole() === role.value
+                ? 'bg-primary text-white'
+                : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+            "
+            class="flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors"
+          >
+            {{ role.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Branch</p>
+        <div class="mt-1 flex gap-2">
+          <button
+            *ngFor="let branch of branchOptions"
+            type="button"
+            (click)="editingBranch.set(branch.value)"
+            [ngClass]="
+              editingBranch() === branch.value
+                ? 'bg-primary text-white'
+                : 'bg-nav-bg text-gray-700 dark:bg-slate-700 dark:text-gray-300'
+            "
+            class="flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors"
+          >
+            {{ branch.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 flex justify-end gap-2">
+        <button
+          type="button"
+          (click)="cancelEdit()"
+          class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-nav-bg dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          [disabled]="editSubmitting()"
+          (click)="saveEdit(account, editingFullName.value)"
+          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+        >
+          {{ editSubmitting() ? 'Saving…' : 'Save Changes' }}
+        </button>
+      </div>
     </div>
   </div>
 

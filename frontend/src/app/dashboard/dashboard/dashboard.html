@@ -74,10 +74,10 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <div class="dashboard-card">
       <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Avg Order Value</p>
-      <p class="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+      <p class="mt-2 break-words text-xl font-bold text-gray-900 dark:text-gray-100">
         ₱{{ summary().averageOrderValue | number: '1.2-2' }}
       </p>
       <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">This month</p>
@@ -89,30 +89,30 @@
       >
         Gross Margin (Parts)
       </p>
-      <p class="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+      <p class="mt-2 break-words text-xl font-bold text-gray-900 dark:text-gray-100">
         <ng-container *ngIf="summary().estimatedMarginPercent !== null; else noMargin">
           {{ summary().estimatedMarginPercent | number: '1.0-1' }}%
         </ng-container>
         <ng-template #noMargin>—</ng-template>
       </p>
-      <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+      <p class="mt-1 break-words text-xs font-normal text-gray-400 dark:text-gray-500">
         Based on {{ summary().lineCountWithKnownCost }}/{{ summary().lineCountTotal }} part lines
         with known cost
       </p>
     </div>
     <div class="dashboard-card">
       <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Parts Revenue</p>
-      <p class="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+      <p class="mt-2 break-words text-xl font-bold text-gray-900 dark:text-gray-100">
         ₱{{ summary().partsRevenue | number: '1.2-2' }}
       </p>
       <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">This month</p>
     </div>
     <div class="dashboard-card">
       <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Labor Revenue</p>
-      <p class="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100">
+      <p class="mt-2 break-words text-xl font-bold text-gray-900 dark:text-gray-100">
         ₱{{ summary().laborRevenue | number: '1.2-2' }}
       </p>
-      <p class="mt-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+      <p class="mt-1 break-words text-xs font-normal text-gray-400 dark:text-gray-500">
         Workshop services, this month
       </p>
     </div>
