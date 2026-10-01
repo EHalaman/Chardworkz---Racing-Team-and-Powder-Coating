@@ -1,6 +1,7 @@
 package com.chardworkz.backend.config;
 
 import com.chardworkz.backend.security.JwtAuthenticationFilter;
+import java.time.Duration;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -70,6 +71,9 @@ public class SecurityConfig {
             config.setAllowedOrigins(List.of(allowedOrigin));
             config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
             config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+            // Without this the browser caches a preflight for only ~5s, so every API call
+            // from the Vercel-hosted frontend paid an extra OPTIONS round trip to the backend.
+            config.setMaxAge(Duration.ofHours(1));
         }
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
