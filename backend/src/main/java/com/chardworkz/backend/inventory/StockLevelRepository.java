@@ -2,6 +2,7 @@ package com.chardworkz.backend.inventory;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
 
+    // StockLevel.product is an EAGER @ManyToOne, so without this graph Hibernate loaded each
+    // product with its own SELECT (~400 extra queries per dashboard call). Join-fetch it instead.
+    @EntityGraph(attributePaths = "product")
     List<StockLevel> findByBranchId(Long branchId);
 
     Optional<StockLevel> findByProductIdAndBranchId(Long productId, Long branchId);

@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, finalize, shareReplay } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 type BranchKey = string | null;
@@ -109,12 +109,24 @@ export class DashboardService {
     });
   }
 
+  /** Layout's alert bell and the Dashboard page both ask for alerts on every load - share one in-flight request per branch instead of sending two identical ones. */
+  private readonly alertsInFlight = new Map<string, Observable<DashboardAlert[]>>();
+
   alerts(branchCode?: string | null): Observable<DashboardAlert[]> {
+    const key = branchCode ?? '';
+    const inFlight = this.alertsInFlight.get(key);
+    if (inFlight) return inFlight;
+
     let params = new HttpParams();
     if (branchCode) params = params.set('branchCode', branchCode);
-    return this.http.get<DashboardAlert[]>(`${environment.apiBaseUrl}/api/dashboard/alerts`, {
-      params,
-    });
+    const request = this.http
+      .get<DashboardAlert[]>(`${environment.apiBaseUrl}/api/dashboard/alerts`, { params })
+      .pipe(
+        finalize(() => this.alertsInFlight.delete(key)),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+    this.alertsInFlight.set(key, request);
+    return request;
   }
 
   activity(limit?: number, branchCode?: string | null): Observable<DashboardActivity[]> {
