@@ -1,7 +1,7 @@
 ---
 title: Railway Singapore region migration plan
 type: plan
-status: proposed
+status: cancelled-2026-10-01-user-decision-stay-in-current-region
 created: 2026-10-01
 updated: 2026-10-01
 ai_generated: true
@@ -17,6 +17,14 @@ ai_generated: true
 - Production dashboard calls took 0.7-3.0 s; the same calls on a local backend took 23-167 ms with comparable data (232 products, no sales this month). The queries are not the bottleneck.
 - `backend` and `Postgres` are both in `sfo` (San Francisco), 1 replica each. Users are in the Philippines.
 - The frontend is a static SPA on Vercel (`vercel.json` only rewrites to `/index.html`). The browser calls the Railway backend directly, so Railway's region is the user-facing latency.
+
+## Update 2026-10-01 (later): confirmed facts, and recommendation
+
+- **Confirmed by the user:** the team and all users are in the Philippines, so Singapore is the right region if a move happens.
+- **Railway credit:** the dashboard showed 25 days or $3.14 left. Running two sets of services during the overlap week likely needs a paid plan first.
+- **No backups exist:** built-in backups are Pro-plan only, and the volume has none. A `pg_dump` was taken on 2026-10-01 (outside the repo, in `~/chardworkz-backups`); it has not been test-restored (needs a Postgres 18 target).
+- **Plan limits seen:** 2 vCPU / 1 GB RAM per replica; Postgres and backend both in US West (California).
+- **Recommendation:** do not migrate yet. First merge the repeated dashboard calls, then decide on a paid plan, and only move if the site still feels slow. Nothing in this plan has been executed.
 
 ## Why Singapore (and not "the Philippines")
 
