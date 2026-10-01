@@ -314,7 +314,13 @@ export class Register implements OnInit, OnDestroy {
     // its own line so it never attaches to a row's price.
     const cut = combined.slice(0, Register.MAX_REMARKS_LENGTH - 2);
     const lastNewline = cut.lastIndexOf('\n');
-    const wholeLines = (lastNewline > 0 ? cut.slice(0, lastNewline) : cut)
+    // No newline in the cut means it is entirely inside the cashier's own note
+    // (never an exclusion row), so fall back to a word boundary instead of
+    // slicing mid-word.
+    const lastSpace = cut.lastIndexOf(' ');
+    const boundary = lastNewline > 0 ? lastNewline : lastSpace > 0 ? lastSpace : cut.length;
+    const wholeLines = cut
+      .slice(0, boundary)
       .replace(/\s*Excluded:\s*$/, '')
       .trimEnd();
     return wholeLines + '\n…';

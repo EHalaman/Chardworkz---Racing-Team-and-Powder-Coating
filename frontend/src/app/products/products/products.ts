@@ -5,7 +5,7 @@ import {
   OnInit,
   effect,
   signal,
-  viewChild,
+  viewChildren,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../core/auth';
@@ -73,8 +73,8 @@ export class Products implements OnInit {
   } | null = null;
 
   /** Auto-grows the description textarea to fit its content (Requirement 2) - re-runs whenever the element mounts or the draft it was prefilled with changes, so opening Edit on a long description doesn't leave it clipped until the user types. */
-  private readonly packageDescriptionEl =
-    viewChild<ElementRef<HTMLTextAreaElement>>('packageDescription');
+  private readonly packageDescriptionEls =
+    viewChildren<ElementRef<HTMLTextAreaElement>>('packageDescription');
 
   readonly categoryOptions: { value: ProductCategory; label: string }[] = [
     { value: 'CARB', label: 'Carb' },
@@ -100,9 +100,10 @@ export class Products implements OnInit {
     this.archived = route.snapshot.data['archived'] === true;
 
     effect(() => {
-      const el = this.packageDescriptionEl()?.nativeElement;
+      // The New drawer and the Edit modal each have a #packageDescription textarea, so grow every one that is mounted.
+      const els = this.packageDescriptionEls();
       const draft = this.packageDescriptionDraft();
-      if (el) {
+      for (const { nativeElement: el } of els) {
         el.style.height = 'auto';
         el.style.height = `${Math.max(el.scrollHeight, 90)}px`;
       }
