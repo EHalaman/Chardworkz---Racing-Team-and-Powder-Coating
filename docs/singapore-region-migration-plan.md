@@ -18,11 +18,13 @@ ai_generated: true
 - `backend` and `Postgres` are both in `sfo` (San Francisco), 1 replica each. Users are in the Philippines.
 - The frontend is a static SPA on Vercel (`vercel.json` only rewrites to `/index.html`). The browser calls the Railway backend directly, so Railway's region is the user-facing latency.
 
+> **SUPERSEDED 2026-10-01:** the user cancelled this migration (stay in the current Railway region). Everything below is kept for history only - do not treat any part of it as a live option or re-propose it unless the user asks. The real cause of the slowness turned out to be a database N+1, fixed in DEC-091.
+
 ## Update 2026-10-01 (later): confirmed facts, and recommendation
 
 - **Confirmed by the user:** the team and all users are in the Philippines, so Singapore is the right region if a move happens.
 - **Railway credit:** the dashboard showed 25 days or $3.14 left. Running two sets of services during the overlap week likely needs a paid plan first.
-- **No backups exist:** built-in backups are Pro-plan only, and the volume has none. A `pg_dump` was taken on 2026-10-01 (outside the repo, in `~/chardworkz-backups`); it has not been test-restored (needs a Postgres 18 target).
+- **No backups exist:** built-in backups are Pro-plan only, and the volume has none. A `pg_dump` was taken on 2026-10-01 (stored outside the repo); it has not been test-restored (needs a Postgres 18 target).
 - **Plan limits seen:** 2 vCPU / 1 GB RAM per replica; Postgres and backend both in US West (California).
 - **Recommendation:** do not migrate yet. First merge the repeated dashboard calls, then decide on a paid plan, and only move if the site still feels slow. Nothing in this plan has been executed.
 
