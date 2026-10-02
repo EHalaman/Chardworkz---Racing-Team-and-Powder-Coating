@@ -2,13 +2,16 @@ import {
   Component,
   ElementRef,
   HostListener,
+  OnDestroy,
   OnInit,
+  inject,
   effect,
   signal,
   viewChildren,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { ProductDrafts } from '../product-drafts';
 import { AuthService } from '../../core/auth';
 import { PermissionFlag, PermissionsService } from '../../core/permissions';
 import { PackageRequest, PackagesService, ServicePackage } from '../../register/packages';
@@ -32,7 +35,9 @@ const PAGE_SIZE = 10;
   styleUrl: './products.css',
   templateUrl: './products.html',
 })
-export class Products implements OnInit {
+export class Products implements OnInit, OnDestroy {
+  private readonly drafts = inject(ProductDrafts);
+
   readonly archived: boolean;
 
   readonly products = signal<ProductSummary[]>([]);
@@ -40,7 +45,11 @@ export class Products implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly submitting = signal(false);
   readonly editingId = signal<number | null>(null);
-  readonly newCategory = signal<ProductCategory>('OTHERS');
+  readonly newCategory = this.drafts.productCategory;
+  readonly newName = this.drafts.productName;
+  readonly newBrandTag = this.drafts.productBrandTag;
+  readonly newOemPartNo = this.drafts.productOemPartNo;
+  readonly newUnitPrice = this.drafts.productUnitPrice;
   readonly editingCategory = signal<ProductCategory>('OTHERS');
   readonly categoryFilter = signal<ProductCategory | 'ALL'>('ALL');
   readonly branchView = signal<BranchView>('ALL');
@@ -59,22 +68,22 @@ export class Products implements OnInit {
   readonly justCreatedId = signal<number | null>(null);
 
   /** DEC-085: "New product" panel toggle - Single Product (existing form, unchanged) vs Service Package (new builder below). */
-  readonly formMode = signal<FormMode>('PRODUCT');
+  readonly formMode = this.drafts.formMode;
   readonly packages = signal<ServicePackage[]>([]);
   readonly packageSubmitting = signal(false);
   readonly packageErrorMessage = signal<string | null>(null);
-  readonly packageLaborProductId = signal<number | null>(null);
+  readonly packageLaborProductId = this.drafts.packageLaborProductId;
   /** productIds of physical parts checked into the package being built. */
-  readonly packageSelectedParts = signal<Set<number>>(new Set());
+  readonly packageSelectedParts = this.drafts.packageSelectedParts;
   /** Filters partOptions below the sticky search box - doesn't touch packageSelectedParts, so filtering never unchecks anything already picked. */
-  readonly partsSearchTerm = signal('');
+  readonly partsSearchTerm = this.drafts.partsSearchTerm;
   /** Non-null while editing an existing package (drawer pre-populated, submit calls PUT instead of POST) - see startEditPackage/cancelPackageEdit. */
   readonly editingPackageId = signal<number | null>(null);
   /** Snapshot of the package's name at the moment Edit was clicked - drives the "Edit Service Package: X" drawer title without shifting while the user retypes the name field. */
   readonly editingPackageName = signal<string | null>(null);
-  readonly packageNameDraft = signal('');
-  readonly packageDescriptionDraft = signal('');
-  readonly packageBasePriceDraft = signal('');
+  readonly packageNameDraft = this.drafts.packageName;
+  readonly packageDescriptionDraft = this.drafts.packageDescription;
+  readonly packageBasePriceDraft = this.drafts.packageBasePrice;
   /** New-package form state parked while the Edit modal is open - see startEditPackage/cancelPackageEdit. */
   private createDraftSnapshot: {
     formMode: FormMode;
@@ -133,6 +142,29 @@ export class Products implements OnInit {
     }
     el.style.height = 'auto';
     el.style.height = `${Math.max(el.scrollHeight, 90)}px`;
+  }
+
+  ngOnDestroy(): void {
+    // The Edit modal borrows the New-package draft signals; leaving mid-edit must restore the parked draft, not keep the edit as the "draft".
+    if (this.editingPackageId() !== null) {
+      this.cancelPackageEdit();
+    }
+    this.loadSub?.unsubscribe();
+  }
+
+  /** Mirrors a single-product text input into its draft signal so the typed text survives tab switches and navigation. */
+  onProductDraftInput(
+    field: 'name' | 'brandTag' | 'oemPartNo' | 'unitPrice',
+    target: EventTarget | null,
+  ): void {
+    const value = (target as HTMLInputElement | null)?.value ?? '';
+    const draft = {
+      name: this.newName,
+      brandTag: this.newBrandTag,
+      oemPartNo: this.newOemPartNo,
+      unitPrice: this.newUnitPrice,
+    }[field];
+    draft.set(value);
   }
 
   ngOnInit(): void {
@@ -492,8 +524,14 @@ export class Products implements OnInit {
     this.editingId.set(null);
   }
 
-  createProduct(name: string, brandTag: string, oemPartNo: string, unitPrice: string): void {
-    const request = this.toRequest(name, brandTag, oemPartNo, unitPrice, this.newCategory());
+  createProduct(): void {
+    const request = this.toRequest(
+      this.newName(),
+      this.newBrandTag(),
+      this.newOemPartNo(),
+      this.newUnitPrice(),
+      this.newCategory(),
+    );
     if (!request) {
       this.errorMessage.set('Enter a name and a valid price.');
       return;
@@ -504,6 +542,8 @@ export class Products implements OnInit {
     this.productsService.create(request).subscribe({
       next: (product) => {
         this.submitting.set(false);
+        // Only a successful add clears the draft - a failed add or a validation error keeps what was typed.
+        this.drafts.clearProduct();
         this.products.update((products) => [product, ...products]);
         this.successMessage.set(`"${product.name}" added.`);
         setTimeout(() => this.successMessage.set(null), 3000);

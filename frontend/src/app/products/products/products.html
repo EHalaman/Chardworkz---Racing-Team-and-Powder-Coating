@@ -526,7 +526,8 @@
         <div>
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
           <input
-            #name
+            [value]="newName()"
+            (input)="onProductDraftInput('name', $event.target)"
             type="text"
             class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
           />
@@ -535,7 +536,8 @@
         <div>
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Brand tag</label>
           <input
-            #brandTag
+            [value]="newBrandTag()"
+            (input)="onProductDraftInput('brandTag', $event.target)"
             type="text"
             class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
           />
@@ -544,7 +546,8 @@
         <div>
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">OEM part no.</label>
           <input
-            #oemPartNo
+            [value]="newOemPartNo()"
+            (input)="onProductDraftInput('oemPartNo', $event.target)"
             type="text"
             placeholder="e.g. 09482-00646-000"
             class="mt-1 w-full rounded-lg border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
@@ -558,7 +561,8 @@
             >Selling Price (SRP)</label
           >
           <input
-            #unitPrice
+            [value]="newUnitPrice()"
+            (input)="onProductDraftInput('unitPrice', $event.target)"
             type="number"
             min="0"
             step="0.01"
@@ -588,13 +592,7 @@
         <button
           type="button"
           [disabled]="submitting()"
-          (click)="
-            createProduct(name.value, brandTag.value, oemPartNo.value, unitPrice.value);
-            name.value = '';
-            brandTag.value = '';
-            oemPartNo.value = '';
-            unitPrice.value = ''
-          "
+          (click)="createProduct()"
           class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
         >
           {{ submitting() ? 'Adding…' : 'Add product' }}
