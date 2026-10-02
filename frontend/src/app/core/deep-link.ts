@@ -10,6 +10,8 @@ const HIGHLIGHT_CLASS: Record<HighlightKind, string> = {
 
 const HIGHLIGHT_MS = 2500;
 
+const removalTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+
 /**
  * Scrolls an element to the top of the viewport and flags it for ~2.5s with a temporary
  * highlight class (styles.css), then removes it. Used by notification clicks and the catalog
@@ -27,7 +29,15 @@ export function highlightElement(
   el.classList.remove(cls);
   void el.offsetWidth;
   el.classList.add(cls);
-  setTimeout(() => el.classList.remove(cls), durationMs);
+  // One removal timer per element: a second highlight inside the window must not be cut short by the first one's timer.
+  clearTimeout(removalTimers.get(el));
+  removalTimers.set(
+    el,
+    setTimeout(() => {
+      el.classList.remove(cls);
+      removalTimers.delete(el);
+    }, durationMs),
+  );
 }
 
 /** Waits for the next paint(s) so a just-rendered target exists, then runs fn. Gives up quietly if the element never appears. */

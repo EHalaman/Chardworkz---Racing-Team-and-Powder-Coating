@@ -88,6 +88,7 @@ export class Inventory implements OnInit, OnDestroy {
   private paramsInitialised = false;
   private lastHighlightId = '';
   private lastHadRestock = false;
+  private lastBranch = '';
   private replaySub?: Subscription;
 
   readonly branchOptions = [
@@ -304,19 +305,35 @@ export class Inventory implements OnInit, OnDestroy {
       this.pendingFormPulse = !!params.get('restock');
       this.lastHighlightId = this.pendingHighlightId;
       this.lastHadRestock = this.pendingFormPulse;
+      this.lastBranch = branch ?? '';
 
       // The first emission is followed by ngOnInit's own loads; later ones (same instance, new query string) must reload on a branch change.
-      if (this.paramsInitialised && branchChanged) {
+      const reloading = this.paramsInitialised && branchChanged;
+      if (reloading) {
         this.loadInventory();
         this.loadReceipts();
       }
       this.paramsInitialised = true;
-      this.applyRestockSelection();
-      this.applyPendingHighlight();
+      // After a branch switch the rows on screen are still the old branch's until its data arrives, so let loadInventory apply the
+      // restock selection and highlight against the new branch's items instead of consuming them here against stale rows.
+      if (!reloading) {
+        this.applyRestockSelection();
+        this.applyPendingHighlight();
+      }
     });
     this.replaySub = this.deepLinkReplay.replay$.subscribe(() => {
       this.pendingHighlightId = this.lastHighlightId;
       this.pendingFormPulse = this.lastHadRestock;
+      // The user may have switched branch tabs since the alert was opened (that doesn't change the URL), so go back to the alert's branch.
+      if (
+        this.isOwner &&
+        this.lastBranch &&
+        this.lastBranch !== this.selectedBranch() &&
+        this.branchOptions.some((option) => option.value === this.lastBranch)
+      ) {
+        this.selectBranch(this.lastBranch);
+        return;
+      }
       this.applyRestockSelection();
       this.applyPendingHighlight();
     });
