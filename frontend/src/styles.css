@@ -114,6 +114,15 @@ body {
  * so the cue is still visible (the global reduced-motion block above would otherwise squash
  * the keyframes to nothing).
  */
+:root {
+  --deep-link-blink-bg: #e7f4f0;
+}
+
+/* A light tint would flash near-white behind the light text rows use in dark mode. */
+.dark {
+  --deep-link-blink-bg: rgba(63, 164, 133, 0.28);
+}
+
 @keyframes deep-link-blink {
   0%,
   100% {
@@ -121,7 +130,7 @@ body {
     box-shadow: none;
   }
   50% {
-    background-color: #e7f4f0;
+    background-color: var(--deep-link-blink-bg);
     box-shadow: 0 0 0 2px #3fa485;
   }
 }

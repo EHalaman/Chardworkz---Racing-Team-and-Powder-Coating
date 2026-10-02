@@ -613,10 +613,15 @@ export class Inventory implements OnInit, OnDestroy {
 
     this.inventoryService.list(branchCode).subscribe({
       next: (items) => {
+        // Always remember the result for its own branch, but only show it (and consume a one-shot deep-link highlight against it)
+        // if that branch is still the one selected - a slow response for a branch the user has since left must not win.
+        this.inventoryStore.set(branchCode, items);
+        if (branchCode !== this.selectedBranch()) {
+          return;
+        }
         this.items.set(items);
         this.applyRestockSelection();
         this.applyPendingHighlight();
-        this.inventoryStore.set(branchCode, items);
       },
       error: () => this.errorMessage.set('Could not load inventory.'),
     });

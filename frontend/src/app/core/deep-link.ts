@@ -24,7 +24,8 @@ export function highlightElement(
 ): void {
   const cls = HIGHLIGHT_CLASS[kind];
   el.classList.add('deep-link-target');
-  el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  el.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
   // Re-adding the class restarts the animation if the same target is highlighted twice in a row.
   el.classList.remove(cls);
   void el.offsetWidth;
