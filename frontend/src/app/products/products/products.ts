@@ -12,7 +12,13 @@ import { AuthService } from '../../core/auth';
 import { PermissionFlag, PermissionsService } from '../../core/permissions';
 import { PackageRequest, PackagesService, ServicePackage } from '../../register/packages';
 import { ComboboxOption } from '../../shared/searchable-combobox/searchable-combobox';
-import { ProductCategory, ProductRequest, ProductsService, ProductSummary } from '../products';
+import {
+  BranchView,
+  ProductCategory,
+  ProductRequest,
+  ProductsService,
+  ProductSummary,
+} from '../products';
 
 type SortOption = 'DATE_NEWEST' | 'DATE_OLDEST' | 'PRICE_HIGH' | 'PRICE_LOW';
 type FormMode = 'PRODUCT' | 'PACKAGE';
@@ -36,6 +42,12 @@ export class Products implements OnInit {
   readonly newCategory = signal<ProductCategory>('OTHERS');
   readonly editingCategory = signal<ProductCategory>('OTHERS');
   readonly categoryFilter = signal<ProductCategory | 'ALL'>('ALL');
+  readonly branchView = signal<BranchView>('ALL');
+  readonly branchViewOptions: { value: BranchView; label: string }[] = [
+    { value: 'ALL', label: 'All branches' },
+    { value: 'MAIN', label: 'Main' },
+    { value: 'MASINAG', label: 'Masinag' },
+  ];
   readonly searchTerm = signal('');
   readonly sortBy = signal<SortOption>('DATE_NEWEST');
   readonly currentPage = signal(1);
@@ -444,6 +456,15 @@ export class Products implements OnInit {
     this.currentPage.set(page);
   }
 
+  /** Owner-only stock view: All = summed across branches. Reloads because the server computes each view's quantities. */
+  setBranchView(view: BranchView): void {
+    if (this.branchView() === view) {
+      return;
+    }
+    this.branchView.set(view);
+    this.loadProducts();
+  }
+
   setCategoryFilter(category: ProductCategory | 'ALL'): void {
     this.categoryFilter.set(category);
     this.currentPage.set(1);
@@ -511,7 +532,7 @@ export class Products implements OnInit {
     this.productsService.update(product.id, request).subscribe({
       next: (updated) => {
         this.products.update((products) =>
-          products.map((p) => (p.id === updated.id ? updated : p)),
+          products.map((p) => (p.id === updated.id ? this.keepStock(p, updated) : p)),
         );
         this.editingId.set(null);
       },
@@ -553,9 +574,14 @@ export class Products implements OnInit {
 
     this.products.update((products) =>
       belongsHere
-        ? products.map((p) => (p.id === updated.id ? updated : p))
+        ? products.map((p) => (p.id === updated.id ? this.keepStock(p, updated) : p))
         : products.filter((p) => p.id !== updated.id),
     );
+  }
+
+  /** Write responses carry the caller's own-branch quantity, so keep the row's stock figure from the active branch view. */
+  private keepStock(previous: ProductSummary, updated: ProductSummary): ProductSummary {
+    return { ...updated, stockQuantity: previous.stockQuantity };
   }
 
   private toRequest(
@@ -580,9 +606,11 @@ export class Products implements OnInit {
   }
 
   private loadProducts(): void {
+    // Only Owner gets the branch views; everyone else keeps their own branch's stock (server enforces this too).
+    const branch = this.isOwner ? this.branchView() : undefined;
     const request = this.archived
-      ? this.productsService.archivedList()
-      : this.productsService.adminList();
+      ? this.productsService.archivedList(branch)
+      : this.productsService.adminList(branch);
     request.subscribe({
       next: (products) => this.products.set(products),
       error: () => this.errorMessage.set('Could not load products.'),

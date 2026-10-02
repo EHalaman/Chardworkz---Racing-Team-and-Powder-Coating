@@ -53,13 +53,14 @@ public class ProductController {
 
     @GetMapping
     public List<ProductSummaryResponse> list(Authentication authentication) {
-        return merge(productRepository.findByActiveTrue(), authentication);
+        return merge(productRepository.findByActiveTrue(), null, authentication);
     }
 
     @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @GetMapping("/admin")
-    public List<ProductSummaryResponse> adminList(Authentication authentication) {
-        return merge(productRepository.findAll(), authentication);
+    public List<ProductSummaryResponse> adminList(
+        @RequestParam(required = false) String branch, Authentication authentication) {
+        return merge(productRepository.findAll(), branch, authentication);
     }
 
     /**
@@ -72,8 +73,9 @@ public class ProductController {
      */
     @PreAuthorize("hasRole('OWNER') or (hasRole('MANAGER') and @permissionService.isEnabled('" + MANAGER_MANAGE + "'))")
     @GetMapping("/archived")
-    public List<ProductSummaryResponse> archivedList(Authentication authentication) {
-        return merge(productRepository.findAll(), authentication).stream()
+    public List<ProductSummaryResponse> archivedList(
+        @RequestParam(required = false) String branch, Authentication authentication) {
+        return merge(productRepository.findAll(), branch, authentication).stream()
             .filter(p -> !p.active())
             .toList();
     }
@@ -167,11 +169,29 @@ public class ProductController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     }
 
-    private List<ProductSummaryResponse> merge(List<Product> products, Authentication authentication) {
-        Branch branch = callerBranch(authentication);
+    /**
+     * {@code branchView} is the optional {@code ?branch=} query param: {@code ALL} sums stock across every
+     * branch, a branch code shows that one branch. Only Owner may look beyond their own branch - for anyone
+     * else (and when the param is absent) the caller's own branch is used, same as before, so Register's
+     * per-branch availability is unaffected.
+     */
+    private List<ProductSummaryResponse> merge(
+        List<Product> products, String branchView, Authentication authentication) {
         Map<Long, Integer> quantityByProductId = new HashMap<>();
-        for (StockLevel stockLevel : stockLevelRepository.findByBranchId(branch.getId())) {
-            quantityByProductId.put(stockLevel.getProduct().getId(), stockLevel.getQuantity());
+        boolean owner = authentication.getAuthorities().stream()
+            .anyMatch(a -> "ROLE_OWNER".equals(a.getAuthority()));
+        if (owner && branchView != null && "ALL".equalsIgnoreCase(branchView.trim())) {
+            for (Object[] row : stockLevelRepository.sumQuantityByProduct()) {
+                quantityByProductId.put((Long) row[0], ((Number) row[1]).intValue());
+            }
+        } else {
+            Branch branch = owner && branchView != null && !branchView.isBlank()
+                ? branchRepository.findByCode(branchView.trim().toUpperCase())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown branch"))
+                : callerBranch(authentication);
+            for (StockLevel stockLevel : stockLevelRepository.findByBranchId(branch.getId())) {
+                quantityByProductId.put(stockLevel.getProduct().getId(), stockLevel.getQuantity());
+            }
         }
 
         return products.stream()

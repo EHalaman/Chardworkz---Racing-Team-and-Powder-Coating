@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export type ProductCategory = 'CARB' | 'FI' | 'OTHERS' | 'SERVICES';
+/** Owner-only stock view on the Products page: ALL sums every branch. */
+export type BranchView = 'ALL' | 'MAIN' | 'MASINAG';
 
 export interface ProductSummary {
   id: number;
@@ -34,12 +36,17 @@ export class ProductsService {
     return this.http.get<ProductSummary[]>(`${environment.apiBaseUrl}/api/products`);
   }
 
-  adminList(): Observable<ProductSummary[]> {
-    return this.http.get<ProductSummary[]>(`${environment.apiBaseUrl}/api/products/admin`);
+  /** branch (Owner only; ignored server-side for anyone else): ALL sums every branch, otherwise a branch code. Omitted = caller own branch. */
+  adminList(branch?: string): Observable<ProductSummary[]> {
+    return this.http.get<ProductSummary[]>(`${environment.apiBaseUrl}/api/products/admin`, {
+      params: branch ? { branch } : {},
+    });
   }
 
-  archivedList(): Observable<ProductSummary[]> {
-    return this.http.get<ProductSummary[]>(`${environment.apiBaseUrl}/api/products/archived`);
+  archivedList(branch?: string): Observable<ProductSummary[]> {
+    return this.http.get<ProductSummary[]>(`${environment.apiBaseUrl}/api/products/archived`, {
+      params: branch ? { branch } : {},
+    });
   }
 
   create(request: ProductRequest): Observable<ProductSummary> {

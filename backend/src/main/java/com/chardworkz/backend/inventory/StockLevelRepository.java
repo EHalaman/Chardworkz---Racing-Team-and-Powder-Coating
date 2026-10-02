@@ -15,6 +15,10 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @EntityGraph(attributePaths = "product")
     List<StockLevel> findByBranchId(Long branchId);
 
+    /** Per-product stock summed across every branch, as [productId, total] rows (aggregated in SQL, no entity loading). */
+    @Query("select s.product.id, sum(s.quantity) from StockLevel s group by s.product.id")
+    List<Object[]> sumQuantityByProduct();
+
     Optional<StockLevel> findByProductIdAndBranchId(Long productId, Long branchId);
 
     /**
