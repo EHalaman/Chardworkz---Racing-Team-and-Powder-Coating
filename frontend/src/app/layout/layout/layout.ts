@@ -11,6 +11,7 @@ import {
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subscription, catchError, filter, of } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { DeepLinkReplay } from '../../core/deep-link';
 import { PermissionFlag, PermissionKey, PermissionsService } from '../../core/permissions';
 import { SalesEventsService } from '../../core/sales-events';
 import { ThemeService } from '../../core/theme';
@@ -135,6 +136,7 @@ export class Layout implements OnInit, OnDestroy {
     private dashboardService: DashboardService,
     private permissionsService: PermissionsService,
     private salesEventsService: SalesEventsService,
+    private deepLinkReplay: DeepLinkReplay,
   ) {
     this.isDarkMode = this.theme.isDarkMode;
   }
@@ -226,12 +228,27 @@ export class Layout implements OnInit, OnDestroy {
     this.isAlertsOpen.update((open) => !open);
   }
 
-  /** Deep-links straight into Inventory's restock flow for this specific product, pre-filling the suggested reorder quantity. */
+  /**
+   * Deep-links straight into Inventory's restock flow for this specific product, pre-filling the suggested reorder quantity.
+   * branch + highlight additionally open the alert's own branch tab (Owner only - Inventory ignores it for branch-bound roles)
+   * and blink the item's row so it is easy to spot in the paginated list.
+   */
   routeToAlert(alert: DashboardAlert): void {
     this.isAlertsOpen.set(false);
-    this.router.navigate(['/admin/inventory'], {
-      queryParams: { restock: alert.productId, qty: alert.suggestedReorderQty },
-    });
+    const commands = ['/admin/inventory'];
+    const queryParams = {
+      restock: alert.productId,
+      qty: alert.suggestedReorderQty,
+      branch: alert.branchCode,
+      highlight: alert.productId,
+    };
+    // Already on exactly this URL: Angular would ignore the navigation, so replay the highlight instead.
+    const target = this.router.serializeUrl(this.router.createUrlTree(commands, { queryParams }));
+    if (this.router.url === target) {
+      this.deepLinkReplay.replay$.next();
+      return;
+    }
+    this.router.navigate(commands, { queryParams });
   }
 
   /** Title-cases the JWT's uppercase role claim (e.g. "OWNER") for display. */

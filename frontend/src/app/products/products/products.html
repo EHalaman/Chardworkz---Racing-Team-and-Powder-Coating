@@ -150,7 +150,11 @@
                     product.active && product.category !== 'SERVICES' && product.stockQuantity === 0
                   "
                   [routerLink]="'/admin/inventory'"
-                  [queryParams]="{ restock: product.id }"
+                  [queryParams]="
+                    isOwner && branchView() !== 'ALL'
+                      ? { restock: product.id, branch: branchView() }
+                      : { restock: product.id }
+                  "
                   class="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
                 >
                   Restock

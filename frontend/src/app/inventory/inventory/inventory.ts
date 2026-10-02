@@ -10,6 +10,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
+import { DeepLinkReplay, highlightElement, whenElementReady } from '../../core/deep-link';
 import { downloadBlob } from '../../core/utils/download.util';
 import {
   BranchInventorySummary,
@@ -81,6 +82,13 @@ export class Inventory implements OnInit, OnDestroy {
   @ViewChild('productCombobox') private productComboboxWrapper?: ElementRef<HTMLElement>;
 
   private queryParamsSub?: Subscription;
+  /** Deep-link state from ?highlight= / ?restock= - applied once the matching item has loaded, then cleared. */
+  private pendingHighlightId = '';
+  private pendingFormPulse = false;
+  private paramsInitialised = false;
+  private lastHighlightId = '';
+  private lastHadRestock = false;
+  private replaySub?: Subscription;
 
   readonly branchOptions = [
     { value: 'MAIN', label: 'Main Branch' },
@@ -92,6 +100,7 @@ export class Inventory implements OnInit, OnDestroy {
     private inventoryStore: InventoryStore,
     readonly auth: AuthService,
     private route: ActivatedRoute,
+    private deepLinkReplay: DeepLinkReplay,
   ) {}
 
   get isOwner(): boolean {
@@ -278,7 +287,38 @@ export class Inventory implements OnInit, OnDestroy {
       this.restockProductId.set(params.get('restock') ?? '');
       this.restockQty.set(params.get('qty') ?? '');
       this.currentPage.set(1);
+
+      // ?branch= opens that branch's tab - Owner only, since every other role is bound to their own branch.
+      const branch = params.get('branch');
+      const branchChanged =
+        this.isOwner &&
+        branch !== null &&
+        branch !== this.selectedBranch() &&
+        this.branchOptions.some((option) => option.value === branch);
+      if (branchChanged) {
+        this.selectedBranch.set(branch);
+        this.editingThresholdFor.set(null);
+        this.receiptCurrentPage.set(1);
+      }
+      this.pendingHighlightId = params.get('highlight') ?? '';
+      this.pendingFormPulse = !!params.get('restock');
+      this.lastHighlightId = this.pendingHighlightId;
+      this.lastHadRestock = this.pendingFormPulse;
+
+      // The first emission is followed by ngOnInit's own loads; later ones (same instance, new query string) must reload on a branch change.
+      if (this.paramsInitialised && branchChanged) {
+        this.loadInventory();
+        this.loadReceipts();
+      }
+      this.paramsInitialised = true;
       this.applyRestockSelection();
+      this.applyPendingHighlight();
+    });
+    this.replaySub = this.deepLinkReplay.replay$.subscribe(() => {
+      this.pendingHighlightId = this.lastHighlightId;
+      this.pendingFormPulse = this.lastHadRestock;
+      this.applyRestockSelection();
+      this.applyPendingHighlight();
     });
     this.loadInventory();
     this.loadReceipts();
@@ -290,6 +330,7 @@ export class Inventory implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.queryParamsSub?.unsubscribe();
+    this.replaySub?.unsubscribe();
   }
 
   selectBranch(branchCode: string): void {
@@ -503,7 +544,36 @@ export class Inventory implements OnInit, OnDestroy {
     const item = this.items().find((i) => String(i.productId) === id);
     if (item) {
       this.selectProduct(item);
+      if (this.pendingFormPulse) {
+        this.pendingFormPulse = false;
+        whenElementReady('inv-receive-panel', (el) => highlightElement(el, 'pulse'));
+      }
     }
+  }
+
+  /**
+   * ?highlight=<productId>: jump to the page the item is on, scroll its row to the top and blink it. Safe to call whenever
+   * items change - it does nothing until the matching item has loaded for the selected branch, then clears itself. If a search
+   * or stock filter is hiding the item, those are reset so the target is actually visible.
+   */
+  private applyPendingHighlight(): void {
+    const id = this.pendingHighlightId;
+    if (!id) {
+      return;
+    }
+    const indexOf = () => this.filteredItems.findIndex((item) => String(item.productId) === id);
+    let index = indexOf();
+    if (index === -1 && this.items().some((item) => String(item.productId) === id)) {
+      this.searchTerm.set('');
+      this.stockFilter.set('ALL');
+      index = indexOf();
+    }
+    if (index === -1) {
+      return;
+    }
+    this.pendingHighlightId = '';
+    this.currentPage.set(Math.floor(index / PAGE_SIZE) + 1);
+    whenElementReady(`inv-row-${id}`, (el) => highlightElement(el, 'blink'));
   }
 
   private loadInventory(): void {
@@ -516,12 +586,14 @@ export class Inventory implements OnInit, OnDestroy {
     if (cached) {
       this.items.set(cached);
       this.applyRestockSelection();
+      this.applyPendingHighlight();
     }
 
     this.inventoryService.list(branchCode).subscribe({
       next: (items) => {
         this.items.set(items);
         this.applyRestockSelection();
+        this.applyPendingHighlight();
         this.inventoryStore.set(branchCode, items);
       },
       error: () => this.errorMessage.set('Could not load inventory.'),
