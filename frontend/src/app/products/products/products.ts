@@ -8,6 +8,7 @@ import {
   viewChildren,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import { PermissionFlag, PermissionsService } from '../../core/permissions';
 import { PackageRequest, PackagesService, ServicePackage } from '../../register/packages';
@@ -43,6 +44,7 @@ export class Products implements OnInit {
   readonly editingCategory = signal<ProductCategory>('OTHERS');
   readonly categoryFilter = signal<ProductCategory | 'ALL'>('ALL');
   readonly branchView = signal<BranchView>('ALL');
+  private loadSub?: Subscription;
   readonly branchViewOptions: { value: BranchView; label: string }[] = [
     { value: 'ALL', label: 'All branches' },
     { value: 'MAIN', label: 'Main' },
@@ -611,7 +613,9 @@ export class Products implements OnInit {
     const request = this.archived
       ? this.productsService.archivedList(branch)
       : this.productsService.adminList(branch);
-    request.subscribe({
+    // Cancel any in-flight load so a slow earlier response (e.g. a previous branch tab) can't land last and overwrite this one.
+    this.loadSub?.unsubscribe();
+    this.loadSub = request.subscribe({
       next: (products) => this.products.set(products),
       error: () => this.errorMessage.set('Could not load products.'),
     });
