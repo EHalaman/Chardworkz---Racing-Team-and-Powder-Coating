@@ -580,6 +580,7 @@ export class Products implements OnInit, OnDestroy {
         // Only a successful add clears the draft - a failed add or a validation error keeps what was typed.
         // And only if it still holds what was submitted: the response can land after the user started a new draft.
         const unchanged =
+          !this.priceBadInput &&
           this.newName() === submitted[0] &&
           this.newBrandTag() === submitted[1] &&
           this.newOemPartNo() === submitted[2] &&

@@ -42,7 +42,7 @@ export class ProductDrafts {
     this.productBrandTag.set('');
     this.productOemPartNo.set('');
     this.productUnitPrice.set('');
-    this.productCategory.set('OTHERS');
+    // Category is deliberately kept: adding several products in a row usually stays in one category (matches the pre-draft behavior).
   }
 
   clearPackage(): void {
@@ -57,6 +57,7 @@ export class ProductDrafts {
   clearAll(): void {
     this.formMode.set('PRODUCT');
     this.clearProduct();
+    this.productCategory.set('OTHERS');
     this.clearPackage();
   }
 }
