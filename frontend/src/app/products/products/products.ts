@@ -285,6 +285,17 @@ export class Products implements OnInit {
     this.packageErrorMessage.set(null);
   }
 
+  /**
+   * Backdrop-only close. Kept as a void method rather than an inline `a && b && c()` template
+   * expression: Angular treats a `false` handler result as preventDefault(), which cancelled
+   * every checkbox toggle inside the modal as the click bubbled up to the backdrop.
+   */
+  onEditBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget && !this.packageSubmitting()) {
+      this.cancelPackageEdit();
+    }
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.editingPackageId() !== null && !this.packageSubmitting()) {

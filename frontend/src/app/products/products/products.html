@@ -652,7 +652,7 @@
     *ngIf="editingPackageId() !== null"
     role="dialog"
     aria-modal="true"
-    (click)="$event.target === $event.currentTarget && !packageSubmitting() && cancelPackageEdit()"
+    (click)="onEditBackdropClick($event)"
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
   >
     <div class="my-8 w-full max-w-lg rounded-2xl bg-surface p-6 shadow-xl dark:bg-slate-800">
