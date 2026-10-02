@@ -146,7 +146,8 @@ export class Products implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     // The Edit modal borrows the New-package draft signals; leaving mid-edit must restore the parked draft, not keep the edit as the "draft".
-    if (this.editingPackageId() !== null) {
+    // Skipped when signed out: the auth effect has already wiped the drafts, and restoring the snapshot would hand the old user's half-typed package to the next login.
+    if (this.editingPackageId() !== null && this.auth.currentUser()) {
       this.cancelPackageEdit();
     }
     this.loadSub?.unsubscribe();
@@ -157,7 +158,12 @@ export class Products implements OnInit, OnDestroy {
     field: 'name' | 'brandTag' | 'oemPartNo' | 'unitPrice',
     target: EventTarget | null,
   ): void {
-    const value = (target as HTMLInputElement | null)?.value ?? '';
+    const input = target as HTMLInputElement | null;
+    // A number input reports '' while the text is mid-edit and not yet valid (e.g. "1e"); writing that back via [value] would erase what was typed.
+    if (input?.validity?.badInput) {
+      return;
+    }
+    const value = input?.value ?? '';
     const draft = {
       name: this.newName,
       brandTag: this.newBrandTag,
@@ -525,11 +531,17 @@ export class Products implements OnInit, OnDestroy {
   }
 
   createProduct(): void {
-    const request = this.toRequest(
+    const submitted = [
       this.newName(),
       this.newBrandTag(),
       this.newOemPartNo(),
       this.newUnitPrice(),
+    ];
+    const request = this.toRequest(
+      submitted[0],
+      submitted[1],
+      submitted[2],
+      submitted[3],
       this.newCategory(),
     );
     if (!request) {
@@ -543,7 +555,15 @@ export class Products implements OnInit, OnDestroy {
       next: (product) => {
         this.submitting.set(false);
         // Only a successful add clears the draft - a failed add or a validation error keeps what was typed.
-        this.drafts.clearProduct();
+        // And only if it still holds what was submitted: the response can land after the user started a new draft.
+        const unchanged =
+          this.newName() === submitted[0] &&
+          this.newBrandTag() === submitted[1] &&
+          this.newOemPartNo() === submitted[2] &&
+          this.newUnitPrice() === submitted[3];
+        if (unchanged) {
+          this.drafts.clearProduct();
+        }
         this.products.update((products) => [product, ...products]);
         this.successMessage.set(`"${product.name}" added.`);
         setTimeout(() => this.successMessage.set(null), 3000);
