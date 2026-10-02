@@ -104,6 +104,11 @@ export class Inventory implements OnInit, OnDestroy {
     private deepLinkReplay: DeepLinkReplay,
   ) {}
 
+  /** Keeps a row's DOM element across a refresh (cached list, then fresh response) so a deep-link highlight class on it isn't wiped. */
+  trackByProductId(_index: number, item: InventoryItem): number {
+    return item.productId;
+  }
+
   get isOwner(): boolean {
     return this.auth.currentUser()?.role === 'OWNER';
   }
