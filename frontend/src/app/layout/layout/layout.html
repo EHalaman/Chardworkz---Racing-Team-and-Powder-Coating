@@ -100,10 +100,10 @@
 
         <div
           *ngIf="isAlertsOpen()"
-          class="absolute right-0 top-full z-10 mt-2 w-80 rounded-lg border border-gray-200 bg-surface p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+          class="fixed left-3 right-3 top-[4.25rem] z-50 rounded-lg border border-gray-200 bg-surface p-1 shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-full sm:z-10 sm:mt-2 sm:w-80 dark:border-slate-700 dark:bg-slate-800"
         >
           <p class="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-100">Alerts</p>
-          <div class="max-h-72 overflow-y-auto">
+          <div class="max-h-[60dvh] overflow-y-auto sm:max-h-72">
             <button
               *ngFor="let alert of alerts()"
               type="button"
