@@ -217,7 +217,7 @@
     *ngIf="editingAccount as account"
     role="dialog"
     aria-modal="true"
-    (click)="$event.target === $event.currentTarget && !editSubmitting() && cancelEdit()"
+    (click)="onEditBackdropClick($event)"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
   >
     <div class="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl dark:bg-slate-800">

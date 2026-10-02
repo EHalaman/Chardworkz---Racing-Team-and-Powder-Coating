@@ -160,6 +160,13 @@ export class Roles implements OnInit {
     this.editingId.set(null);
   }
 
+  /** Void method (not an inline `a && b && c()`): Angular treats a `false` handler result as preventDefault(), which would cancel toggles of any checkbox added to this modal. */
+  onEditBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget && !this.editSubmitting()) {
+      this.cancelEdit();
+    }
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.editingId() !== null && !this.editSubmitting()) {
