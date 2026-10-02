@@ -327,16 +327,19 @@ export class Inventory implements OnInit, OnDestroy {
       }
     });
     this.replaySub = this.deepLinkReplay.replay$.subscribe(() => {
-      this.pendingHighlightId = this.lastHighlightId;
-      this.pendingFormPulse = this.lastHadRestock;
       // The user may have switched branch tabs since the alert was opened (that doesn't change the URL), so go back to the alert's branch.
-      if (
+      // selectBranch clears pending deep-link state, so re-arm it afterwards (loadInventory then applies it once the branch's items land).
+      const switching =
         this.isOwner &&
         this.lastBranch &&
         this.lastBranch !== this.selectedBranch() &&
-        this.branchOptions.some((option) => option.value === this.lastBranch)
-      ) {
+        this.branchOptions.some((option) => option.value === this.lastBranch);
+      if (switching) {
         this.selectBranch(this.lastBranch);
+      }
+      this.pendingHighlightId = this.lastHighlightId;
+      this.pendingFormPulse = this.lastHadRestock;
+      if (switching) {
         return;
       }
       this.applyRestockSelection();
@@ -356,6 +359,10 @@ export class Inventory implements OnInit, OnDestroy {
   }
 
   selectBranch(branchCode: string): void {
+    // A manual branch switch abandons any deep-link that hasn't landed yet (e.g. its product wasn't in the first branch's list),
+    // so it can't fire later against whatever branch the user ends up on. The replay handler re-arms these after calling this.
+    this.pendingHighlightId = '';
+    this.pendingFormPulse = false;
     this.selectedBranch.set(branchCode);
     this.editingThresholdFor.set(null);
     this.receiptCurrentPage.set(1);
