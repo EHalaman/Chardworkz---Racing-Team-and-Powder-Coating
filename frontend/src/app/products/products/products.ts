@@ -54,6 +54,9 @@ export class Products implements OnInit, OnDestroy {
   readonly categoryFilter = signal<ProductCategory | 'ALL'>('ALL');
   readonly branchView = signal<BranchView>('ALL');
   private loadSub?: Subscription;
+  private destroyed = false;
+  /** True while the Selling Price box holds text the browser can't parse as a number (the draft signal keeps the last valid value). */
+  private priceBadInput = false;
   readonly branchViewOptions: { value: BranchView; label: string }[] = [
     { value: 'ALL', label: 'All branches' },
     { value: 'MAIN', label: 'Main' },
@@ -145,6 +148,7 @@ export class Products implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     // The Edit modal borrows the New-package draft signals; leaving mid-edit must restore the parked draft, not keep the edit as the "draft".
     // Skipped when signed out: the auth effect has already wiped the drafts, and restoring the snapshot would hand the old user's half-typed package to the next login.
     if (this.editingPackageId() !== null && this.auth.currentUser()) {
@@ -159,9 +163,13 @@ export class Products implements OnInit, OnDestroy {
     target: EventTarget | null,
   ): void {
     const input = target as HTMLInputElement | null;
-    // A number input reports '' while the text is mid-edit and not yet valid (e.g. "1e"); writing that back via [value] would erase what was typed.
-    if (input?.validity?.badInput) {
-      return;
+    if (field === 'unitPrice') {
+      // A number input reports '' while the text is mid-edit and not yet valid (e.g. "1e"); writing that back via [value] would erase
+      // what was typed, so leave the draft alone - but remember the input is invalid so Add product rejects it rather than using the stale draft.
+      this.priceBadInput = input?.validity?.badInput === true;
+      if (this.priceBadInput) {
+        return;
+      }
     }
     const value = input?.value ?? '';
     const draft = {
@@ -397,6 +405,15 @@ export class Products implements OnInit, OnDestroy {
       components,
     };
     const editingId = this.editingPackageId();
+    const draftKey = (): string =>
+      JSON.stringify([
+        this.packageNameDraft(),
+        this.packageDescriptionDraft(),
+        this.packageBasePriceDraft(),
+        this.packageLaborProductId(),
+        [...this.packageSelectedParts()],
+      ]);
+    const submittedKey = draftKey();
 
     this.packageErrorMessage.set(null);
     this.packageSubmitting.set(true);
@@ -416,7 +433,13 @@ export class Products implements OnInit, OnDestroy {
           editingId !== null ? `"${pkg.name}" updated.` : `"${pkg.name}" added.`,
         );
         setTimeout(() => this.successMessage.set(null), 3000);
-        this.cancelPackageEdit();
+        if (!this.destroyed) {
+          this.cancelPackageEdit();
+        } else if (editingId === null && draftKey() === submittedKey) {
+          // The page was left mid-request. A create's draft is cleared only if it still holds what was submitted (not a newer draft);
+          // an edit's snapshot was already restored in ngOnDestroy, so there is nothing to reset.
+          this.drafts.clearPackage();
+        }
       },
       error: () => {
         this.packageSubmitting.set(false);
@@ -544,7 +567,7 @@ export class Products implements OnInit, OnDestroy {
       submitted[3],
       this.newCategory(),
     );
-    if (!request) {
+    if (!request || this.priceBadInput) {
       this.errorMessage.set('Enter a name and a valid price.');
       return;
     }
@@ -563,6 +586,7 @@ export class Products implements OnInit, OnDestroy {
           this.newUnitPrice() === submitted[3];
         if (unchanged) {
           this.drafts.clearProduct();
+          this.priceBadInput = false;
         }
         this.products.update((products) => [product, ...products]);
         this.successMessage.set(`"${product.name}" added.`);
