@@ -126,6 +126,13 @@ export class Products implements OnInit, OnDestroy {
     this.archived = route.snapshot.data['archived'] === true;
 
     effect(() => {
+      // The Selling Price input is destroyed and recreated (from the draft) whenever the New panel switches tabs, so any
+      // "box holds unparseable text" state belongs to the old input and must not outlive it.
+      this.drafts.formMode();
+      this.priceBadInput = false;
+    });
+
+    effect(() => {
       // The New drawer and the Edit modal each have a #packageDescription textarea, so grow every one that is mounted.
       const els = this.packageDescriptionEls();
       const draft = this.packageDescriptionDraft();
